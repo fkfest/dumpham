@@ -1,0 +1,36 @@
+#!/bin/bash
+
+MEM=100
+
+if [ $# -lt 1 ]; then
+  echo 'Use as "fcidumpcalc FCIDUMP"'
+  exit
+fi
+FCIDUMP="$1"
+getvar() {
+  ttt=$(grep -i $1 "$FCIDUMP")
+  rmv="*$1="
+  ttt=${ttt#$rmv}
+  echo $(echo "${ttt%%,*}" | tr -d '[:space:]')
+}
+NORB=$(getvar "NORB")
+NELEC=$(getvar "NELEC")
+MS2=$(getvar "MS2")
+
+echo "memory,$MEM,m
+aoint,c_final=0
+nosym
+geometry={h}
+basis={
+s,h,$(seq -s, 1 $NORB)
+}
+
+set,nelec=$NELEC
+set,ms2=$MS2
+GTHRESH,THROVL=-1
+int
+{HAMILTONIAN,$(basename "$FCIDUMP")}
+{hf;noenest;
+start,H0
+}
+"

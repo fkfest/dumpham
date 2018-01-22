@@ -1,0 +1,5 @@
+*.o
+*~
+*.kdev4
+dumpham
+dumpham.exe
