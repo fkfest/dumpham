@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2015, Peter J Knowles.
+Copyright (c) 2018, Daniel Kats.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -71,7 +72,7 @@ public:
 
   ~FCIdump();
 
-//   FCIdump(FCIdump&&);
+  FCIdump(FCIdump&&);
 
   /*!
      * \brief Construct FCIdump object from bytestream
@@ -144,6 +145,48 @@ public:
    */
   void addParameter(const std::string& key, const double& value);
 
+  /*!
+   * \brief Modify a parameter with array values
+   * \param key key
+   * \param values values
+   */
+  void modifyParameter(const std::string& key, const std::vector<std::string>& values);
+
+  /*!
+   * \brief Modify a parameter with array values
+   * \param key key
+   * \param values values
+   */
+  void modifyParameter(const std::string& key, const std::vector<int>& values);
+
+  /*!
+   * \brief Modify a parameter with array values
+   * \param key key
+   * \param values values
+   */
+  void modifyParameter(const std::string& key, const std::vector<double>& values);
+
+  /*!
+   * \brief Modify a parameter with a scalar value
+   * \param key key
+   * \param value value
+   */
+  void modifyParameter(const std::string& key, const std::string& value);
+
+  /*!
+   * \brief Modify a parameter with a scalar value
+   * \param key key
+   * \param value value
+   */
+  void modifyParameter(const std::string& key, const int& value);
+
+  /*!
+   * \brief Modify a parameter with a scalar value
+   * \param key key
+   * \param value value
+   */
+  void modifyParameter(const std::string& key, const double& value);
+  
    /*!
      * \brief The file containing the FCIDUMP data
      */

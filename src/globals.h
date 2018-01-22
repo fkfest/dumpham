@@ -3,9 +3,11 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
 #include <map>
 #include <list>
 #include <cmath>
+#include <assert.h>
 
 typedef long unsigned int lui;
 typedef unsigned int uint;
@@ -23,6 +25,9 @@ typedef std::map< std::string, TaPar > TaParSet;
 typedef double TFactor;
 #define _abs std::abs
 #define _todouble
+
+typedef std::vector<double> Integrals;
+typedef std::vector<int> FDPar;
 
 namespace Numbers
 {

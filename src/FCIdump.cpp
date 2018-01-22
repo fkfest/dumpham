@@ -1,5 +1,6 @@
 /*
 Copyright (c) 2015, Peter J Knowles.
+Copyright (c) 2018, Daniel Kats.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -161,6 +162,54 @@ void FCIdump::addParameter(const std::string &key, const int &value)
 void FCIdump::addParameter(const std::string &key, const double &value)
 {
   addParameter(key,std::vector<double>(1,value));
+}
+
+void FCIdump::modifyParameter(const std::string& key, const std::vector< std::string >& values)
+{
+//   xout << "FCIdump::addParameter namelistData originally "<< namelistData << std::endl;
+  size_t pos = namelistData.find(","+key+"=");
+  if (pos == std::string::npos) return addParameter(key,values);
+  size_t posb = pos;
+  pos = namelistData.find("=",pos)+1;
+  size_t pose = namelistData.find("=",pos);
+  pose = namelistData.find_last_of(",",pose)+1;
+  namelistData.erase(posb,pose-posb);
+  for (std::vector<std::string>::const_reverse_iterator s=values.rbegin(); s != values.rend(); s++)
+    namelistData.insert(posb,(*s)+",");
+  namelistData.insert(posb,","+key+"=");
+//   xout << "FCIdump::addParameter namelistData set to "<< namelistData << std::endl;
+}
+void FCIdump::modifyParameter(const std::string& key, const std::vector<int>& values)
+{
+  std::vector<std::string> valuess;
+  for (std::vector<int>::const_iterator v=values.begin(); v!=values.end(); v++) {
+    std::ostringstream ss;
+    ss << *v;
+    valuess.push_back(ss.str());
+  }
+  modifyParameter(key,valuess);
+}
+void FCIdump::modifyParameter(const std::string& key, const std::vector<double>& values)
+{
+  std::vector<std::string> valuess;
+  for (std::vector<double>::const_iterator v=values.begin(); v!=values.end(); v++) {
+    std::ostringstream ss;
+    ss << *v;
+    valuess.push_back(ss.str());
+  }
+  modifyParameter(key,valuess);
+}
+void FCIdump::modifyParameter(const std::string &key, const std::string &value)
+{
+  modifyParameter(key,std::vector<std::string>(1,value));
+}
+void FCIdump::modifyParameter(const std::string &key, const int &value)
+{
+  modifyParameter(key,std::vector<int>(1,value));
+}
+void FCIdump::modifyParameter(const std::string &key, const double &value)
+{
+  modifyParameter(key,std::vector<double>(1,value));
 }
 
 void FCIdump::rewind() const

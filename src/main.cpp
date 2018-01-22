@@ -1,114 +1,83 @@
-#include "FCIdump.h"
-
-#ifdef __cplusplus
-#include <iostream>
 #include <string>
+#include <cstring> 
+#include <iostream>
+#include <fstream>
 #include <vector>
-#include <stdexcept>
-#else
-#include <stdio.h>
-#endif
+#include "utilities.h"
+#include "globals.h"
+#include "finput.h"
+#include "hdump.h"
 
-#ifdef FCIDUMP_MPI
-#include "mpi.h"
-#endif
-
-int main(int argc, char *argv[])
-//int main()
+int main(int argc, char **argv)
 {
-  int parallel_size=1, parallel_rank=0;
-#ifdef FCIDUMP_MPI
-  MPI_Init(&argc,&argv);
-  MPI_Comm_size(MPI_COMM_WORLD,&parallel_size);
-  MPI_Comm_rank(MPI_COMM_WORLD,&parallel_rank);
-  //  if (parallel_rank > 0) freopen("/dev/null", "w", stdout);
-#endif
-
-  int oneelectron[] = {2,1};
-  int twoelectron[] = {4,3,2,1};
-  std::vector<std::string> files(1,"H2SYM.FCIDUMP"); //files.push_back("uhf.fcidump");
-  int ifile;
-  if (parallel_rank == 0) {
-      std::cout << std::endl<<"Process file "<<files[ifile]<<std::endl;
-      FCIdump dump(files[ifile]);
-      std::vector<int> NELEC=dump.parameter("NELEC");
-      std::cout << "NELEC="<<NELEC[0]<<std::endl;
-      std::vector<int> MS2=dump.parameter("MS2");
-      std::cout << "MS2="<<MS2[0]<<std::endl;
-      std::vector<int> NORB=dump.parameter("NORB");
-      std::cout << "NORB="<<NORB[0]<<std::endl;
-      std::vector<int> IUHF=dump.parameter("IUHF");
-      std::cout << "IUHF="<<IUHF[0]<<std::endl;
-      std::vector<int> ORBSYM=dump.parameter("ORBSYM");
-      std::cout << "ORBSYM="; for (std::vector<int>::const_iterator s=ORBSYM.begin(); s<ORBSYM.end(); s++) std::cout <<*s<<","; std::cout<<std::endl;
-      int i,j,k,l;
-      double value;
-      int nn = NORB[0];
-      int n1el = nn*(nn+1)/2;
-      int n2el = n1el*(n1el+1)/2;
-      std::cout << "n2el: " << n2el << std::endl;
-        
-      
-      std::vector<double> twoel(n2el,0.0),oneel(n1el,0.0);
-      double Ecore = 0.0;
-      FCIdump::integralType type;
-      dump.rewind();
-      
-      while ((type = dump.nextIntegral(i,j,k,l,value)) != FCIdump::endOfFile) {
-        if ( type == FCIdump::endOfRecord ) {
-            // store
-            for (i = 1; i <= nn; ++i )
-                for (j = 1; j <= i; ++j )
-                    for (k = 1; k <= nn; ++k )
-                        for (l = 1; l <= k; ++l ) {
-                            int ij = (i-1)*i/2 + j;
-                            int kl = (k-1)*k/2 + l;
-                            if ( kl <= ij ){
-                                int ijkl = (ij-1)*ij/2 + kl - 1;
-                                std::cout << twoel[ijkl] << ": " << i << " " << j << " " << k << " " << l << std::endl;
-                            }
-                        }
+  // handle input and output
+  std::string inputfile, outputfile,
+    exePath = exepath();
+  int iarg=1;
+  bool fcidump = false;
+  while ( iarg<argc && argv[iarg][0]=='-') {// handle options
+    if (strcmp(argv[iarg],"-h")==0 || strcmp(argv[iarg],"--help")==0) {
+      xout << "dumpham <input-file> [<output-file>]" << std::endl;
+      // print README file if exists
+      std::ifstream readme;
+      readme.open((exePath+"README.md").c_str());
+      if (readme.is_open()) {
+        std::string line;
+        while (readme.good()) {
+          getline (readme,line);
+          xout << line << std::endl;
         }
-        if ( k != 0 && l !=0 ) {
-            // Two-electron integrals
-            int ij = (i-1)*i/2 + j;
-            int kl = (k-1)*k/2 + l;
-            int ijkl = (ij-1)*ij/2 + kl - 1;
-            twoel[ijkl] = value;
-        } else if ( i != 0 && j != 0 ) {
-            // One-electron integrals
-            int ij = (i-1)*i/2 + j - 1;
-            oneel[ij] = value;
-        } else if ( type == FCIdump::I0 ){
-            Ecore = value;
-        }
+      }
+      return 0;
+    } else if (strcmp(argv[iarg],"-v")==0 || strcmp(argv[iarg],"--verbose")==0) {
+      if ( iarg == argc-1 || !str2num<int>(Input::verbose,argv[iarg+1],std::dec)){
+        Input::verbose = 1;
+      } else {
+        ++iarg;
+      }
+    } else if (strcmp(argv[iarg],"-d")==0 || strcmp(argv[iarg],"--dump")==0) {
+      // the input file is an FCIDUMP file
+      fcidump = true;
     }
-    if (dump.write("new.fcidump",FCIdump::FileFormatted,false))
-        std::cout << "will be written to new file"<<std::endl;
-    else
-        std::cout << "failure to write to new file"<<std::endl;
-    for (i = 1; i <= nn; ++i)
-        for (j = 1; j <= i; ++j )
-            for (k = 1; k <= nn; ++k )
-                for (l = 1; l <= k; ++l ) {
-                    int ij = (i-1)*i/2 + j;
-                    int kl = (k-1)*k/2 + l;
-                    if ( kl <= ij ){
-                        int ijkl = (ij-1)*ij/2 + kl - 1;
-                        dump.writeIntegral(i,j,k,l,twoel[ijkl]);
-//                         std::cout<< twoel[ijkl] << ": " << i << " " << j << " " << k << " " << l << std::endl;
-                    }
-                }
-    for (i = 1; i <= nn; ++i)
-        for (j = 1; j <= i; ++j ) {
-            int ij = (i-1)*i/2 + j - 1;
-            dump.writeIntegral(i,j,0,0,oneel[ij]);
-        }
-    dump.writeIntegral(0,0,0,0,Ecore); 
+    ++iarg;
   }
+  if (iarg >= argc) error("Please provide an input file!");
+  inputfile=argv[iarg];
+  if (argc>iarg+1)
+    outputfile=argv[iarg+1];
+  else 
+    outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
+  
+  if (fcidump) {
+    // de-symmetrize FCIDUMP
+    Hdump dump(inputfile);
+    dump.store(outputfile);
+  } else {
+      
+    // read input
+    Finput finput(exePath);
+    std::ifstream fin;
+    fin.open(inputfile.c_str());
+    // save input file
+    std::vector< std::string > inp;
+    if (fin.is_open()) {
+      std::string line;
+      while (fin.good()) {
+        std::getline (fin,line);
+        _xout1(line << std::endl);
+        inp.push_back(line);
+      }
+    } else
+      error("Bad input file!");
+    fin.close();
+    std::ofstream fout;
+    fout.open(outputfile.c_str());
 
-#ifdef FCIDUMP_MPI
-  MPI_Finalize();
-#endif
+    if ( inp.size() == 0 ){
+      say("Empty input file!");
+      return 1;
+    }
+
+  }
   return 0;
 }
