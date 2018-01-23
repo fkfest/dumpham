@@ -8,7 +8,7 @@ if [ $# -lt 1 ]; then
 fi
 FCIDUMP="$1"
 getvar() {
-  ttt=$(grep -i $1 "$FCIDUMP")
+  ttt=$(grep -m 1 -i $1 "$FCIDUMP")
   rmv="*$1="
   ttt=${ttt#$rmv}
   echo $(echo "${ttt%%,*}" | tr -d '[:space:]')
