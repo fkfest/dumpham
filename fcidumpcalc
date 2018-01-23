@@ -1,6 +1,8 @@
 #!/bin/bash
 
 MEM=100
+# prefered number of basis functions per atom
+NBAS=10
 
 if [ $# -lt 1 ]; then
   echo 'Use as "fcidumpcalc FCIDUMP"'
@@ -20,9 +22,23 @@ MS2=$(getvar "MS2")
 echo "memory,$MEM,m
 aoint,c_final=0
 nosym
-geometry={h}
-basis={
-s,h,$(seq -s, 1 $NORB)
+noextra
+geometry={"
+let NAT=$NORB/$NBAS
+let NREST=$NORB-$NAT*$NBAS
+if [[ $NREST -ne 0 ]]; then
+  echo "h0,,0,0,0"
+fi
+let ENDCOOR=$NAT*10
+for i in $(seq 10 10 $ENDCOOR); do
+  echo "h1,,$i,0,0"
+done
+echo "}
+basis={"
+if [[ $NREST -ne 0 ]]; then
+  echo "s,h0,$(seq -s, 1 $NREST)"
+fi
+echo "s,h1,$(seq -s, 1 $NBAS)
 }
 
 set,nelec=$NELEC
