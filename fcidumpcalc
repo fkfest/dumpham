@@ -42,7 +42,7 @@ echo "s,h1,$(seq -s, 1 $NBAS)
 }
 
 set,nelec=$NELEC
-set,ms2=$MS2
+set,spin=$MS2
 GTHRESH,THROVL=-1
 int
 {HAMILTONIAN,$(basename "$FCIDUMP")}
