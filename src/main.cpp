@@ -7,6 +7,7 @@
 #include "globals.h"
 #include "finput.h"
 #include "hdump.h"
+#include "odump.h"
 
 int main(int argc, char **argv)
 {
@@ -26,9 +27,10 @@ int main(int argc, char **argv)
     }
     ++iarg;
   }  
-  std::string inputfile, outputfile,
+  std::string inputfile, outputfile, orboutputfile,
     exePath = exepath();
   bool fcidump = false;
+  bool orbdump = false;
   // handle options  
   for ( uint iopt = 0; iopt < options.size(); ++iopt ) {
     const std::string & opt = options[iopt];
@@ -54,25 +56,40 @@ int main(int argc, char **argv)
     } else if ( opt == "d" || opt == "-dump" ) {
       // the input file is an FCIDUMP file
       fcidump = true;
+    } else if ( opt == "o" || opt == "-orbs" ) {
+      // generate the corresponding orbital file as unity
+      orbdump = true;
     } else {
       error("Unknown paratemer -"+opt);
     }
   }
   if (iarg >= argc) error("Please provide an input file!");
   inputfile=argv[iarg];
-  if (argc>iarg+1)
-    outputfile=argv[iarg+1];
-  else 
+  ++iarg;
+  if ( argc > iarg ) {
+    outputfile=argv[iarg];
+    ++iarg;
+  } else 
     outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
-  
+  if ( orbdump && argc > iarg ) {
+    orboutputfile=argv[iarg];
+    ++iarg;
+  } else if ( orbdump ) 
+    orboutputfile = FileName(inputfile,true)+"_NEW.ORBDUMP";
+ 
+  // read input
+  Finput finput(exePath);
+  if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
+    outputfile = uppercase(outputfile);
+  if ( orbdump && Input::iPars["output"]["orbnamtolower"] > 0 )
+    orboutputfile = lowercase(orboutputfile);
   if (fcidump) {
     // de-symmetrize FCIDUMP
     Hdump dump(inputfile);
     dump.store(outputfile);
+    Odump odump(dump.norb());
+    odump.store(orboutputfile);
   } else {
-      
-    // read input
-    Finput finput(exePath);
     std::ifstream fin;
     fin.open(inputfile.c_str());
     // save input file

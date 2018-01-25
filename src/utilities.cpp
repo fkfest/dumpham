@@ -74,3 +74,16 @@ std::size_t curlyfind(const std::string& str, const std::string& what, std::size
     ires = std::string::npos;
   return ires;
 }
+
+std::string lowercase(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), 
+                   [](unsigned char c){ return std::tolower(c); }
+                  );
+    return s;
+}
+std::string uppercase(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), 
+                   [](unsigned char c){ return std::toupper(c); }
+                  );
+    return s;
+}

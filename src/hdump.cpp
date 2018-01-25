@@ -20,6 +20,10 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   int i,j,k,l;
   double value;
   int nn = NORB[0];
+  if ( nn < 0 ) {
+    error("NORB < 0 in FCIDUMP!");
+  }
+  _norb = nn;
   int n1el = nn*(nn+1)/2;
   int n2el = n1el*(n1el+1)/2;
   xout << "n2el: " << n2el << std::endl;
@@ -73,13 +77,10 @@ void Hdump::store(std::string fcidump)
     xout << "will be written to file " << fcidump << std::endl;
   else
     error("failure to write to file "+fcidump);
-  FDPar NORB = _dump.parameter("NORB");
-  assert( NORB.size() > 0 );
-  uint nn = NORB[0];
   
-  for ( uint i = 1; i <= nn; ++i)
+  for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j )
-      for ( uint k = 1; k <= nn; ++k )
+      for ( uint k = 1; k <= _norb; ++k )
         for ( uint l = 1; l <= k; ++l ) {
           uint ij = (i-1)*i/2 + j;
           uint kl = (k-1)*k/2 + l;
@@ -88,7 +89,7 @@ void Hdump::store(std::string fcidump)
             _dump.writeIntegral(i,j,k,l,_twoel[ijkl]);
           }
         }
-  for ( uint i = 1; i <= nn; ++i)
+  for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j ) {
       uint ij = (i-1)*i/2 + j - 1;
       _dump.writeIntegral(i,j,0,0,_oneel[ij]);

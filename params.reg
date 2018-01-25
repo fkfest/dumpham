@@ -1,0 +1,4 @@
+%OUTPUT PARAMETERS
+set="output",type=i,name="maxncoef",value=6,desc="max number of orbital coefs on one line"
+set="output",type=i,name="fcinamtoupper",value=1,desc="transform FCIDUMP filename to uppercase"
+set="output",type=i,name="orbnamtolower",value=1,desc="transform ORBDUMP filename to lowercase"

@@ -66,6 +66,10 @@ std::string any2str(const T& t)
   oss << t;
   return oss.str();
 }
+// to lower case
+std::string lowercase(std::string s);
+// to upper case
+std::string uppercase(std::string s);
 
 #define Error(what) error(what,"file "+std::string(__FILE__)+" line "+any2str<int>(__LINE__))
 

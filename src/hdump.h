@@ -10,11 +10,12 @@
 */
 class Hdump {
 public:  
-  Hdump():_escal(0){};
+  Hdump():_escal(0),_norb(0){};
   // construct from FCIdump
   Hdump(std::string fcidump);
   
   void store(std::string fcidump);
+  uint norb() const { return _norb; }
 private:
   // Two-electron integrals
   Integrals _twoel;
@@ -23,7 +24,7 @@ private:
   // Scalar
   double _escal;
   FCIdump _dump;
-  
+  uint _norb; 
 };
 
 
