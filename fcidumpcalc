@@ -3,9 +3,43 @@
 MEM=100
 # prefered number of basis functions per atom
 NBAS=10
+# orbitals file
+ORBS=
+PROGNAME=$(basename $0)
+function Usage(){
+echo "$PROGNAME"
+echo "Generate Molpro input for a FCIdump file"
+echo "Usage: $PROGNAME [OPTION(s)] FCIDUMP --> print Molpro input for the FCIDUMP"
+echo "Options:"
+echo "-m NUMBER   Memory for Molpro input in megawords (default: $MEM)"
+echo "-b NUMBER   Prefered number of basis functions per atom (default: $NBAS)"
+echo "-o FILE     Use orbitals in FILE as starting guess in Molpro"    
+echo "-h          display this help"
+echo
+echo "Examples:"
+echo "$PROGNAME /tmp/H2O.FCIDUMP > test.mol"
+echo "  --> create test.mol Molpro input in $PWD with ${MEM}m and HF starting guess from H0"
+echo "$PROGNAME -m 1000 /tmp/H2O.FCIDUMP -o h2o.orbdump > test.mol"
+echo "  --> create test.mol Molpro input in $PWD with 1000m and starting guess from h2o.orbdump"
+}
+
+while getopts  "m:b:o:h" flag
+do
+  case "$flag" in
+  m)  MEM=$OPTARG;;
+  b)  NBAS=$OPTARG;;
+  o)  ORBS="$OPTARG";;
+  h)  Usage
+      exit;;
+  [?])Usage
+      exit 1;;
+  esac
+done
+ishift=$(($OPTIND-1))
+shift $ishift
 
 if [ $# -lt 1 ]; then
-  echo 'Use as "fcidumpcalc FCIDUMP"'
+  echo "Usage: $PROGNAME [OPTION(s)] FCIDUMP or $PROGNAME -h" 
   exit
 fi
 FCIDUMP="$1"
@@ -45,8 +79,22 @@ set,nelec=$NELEC
 set,spin=$MS2
 GTHRESH,THROVL=-1
 int
-{HAMILTONIAN,$(basename "$FCIDUMP")}
+{HAMILTONIAN,$(basename "$FCIDUMP")}"
+if [[ "x$ORBS" == "x" ]]; then
+  echo "
 {hf;noenest;
 start,H0
+}"
+else
+  # start from orbitals 
+  echo "
+{matrop
+read,ORB,ORB,CANONICAL,FILE=$ORBS
+save,ORB,2100.2,ORBITALS
 }
-"
+
+{hf;noenest;
+start,2100.2
+}"
+fi
+echo
