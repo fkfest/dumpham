@@ -11,12 +11,28 @@
 int main(int argc, char **argv)
 {
   // handle input and output
+  int iarg=1;
+  std::vector<std::string> options; 
+  while ( iarg < argc && argv[iarg][0]=='-') {
+    // get options
+    if ( strlen(argv[iarg]) > 2 && argv[iarg][1]=='-' ){
+      // long option "--word"
+      options.push_back(std::string(&argv[iarg][1]));
+    } else {
+      // short options "-wo"
+      for ( uint i = 1; i < strlen(argv[iarg]); ++i ){
+        options.push_back(std::string(1,argv[iarg][i]));
+      }
+    }
+    ++iarg;
+  }  
   std::string inputfile, outputfile,
     exePath = exepath();
-  int iarg=1;
   bool fcidump = false;
-  while ( iarg<argc && argv[iarg][0]=='-') {// handle options
-    if (strcmp(argv[iarg],"-h")==0 || strcmp(argv[iarg],"--help")==0) {
+  // handle options  
+  for ( uint iopt = 0; iopt < options.size(); ++iopt ) {
+    const std::string & opt = options[iopt];
+    if ( opt == "h" || opt == "-help" ) {
       xout << "dumpham <input-file> [<output-file>]" << std::endl;
       // print README file if exists
       std::ifstream readme;
@@ -29,17 +45,18 @@ int main(int argc, char **argv)
         }
       }
       return 0;
-    } else if (strcmp(argv[iarg],"-v")==0 || strcmp(argv[iarg],"--verbose")==0) {
+    } else if ( opt == "v" || opt == "-verbose" ) {
       if ( iarg == argc-1 || !str2num<int>(Input::verbose,argv[iarg+1],std::dec)){
         Input::verbose = 1;
       } else {
         ++iarg;
       }
-    } else if (strcmp(argv[iarg],"-d")==0 || strcmp(argv[iarg],"--dump")==0) {
+    } else if ( opt == "d" || opt == "-dump" ) {
       // the input file is an FCIDUMP file
       fcidump = true;
+    } else {
+      error("Unknown paratemer -"+opt);
     }
-    ++iarg;
   }
   if (iarg >= argc) error("Please provide an input file!");
   inputfile=argv[iarg];
