@@ -104,14 +104,17 @@ int main(int argc, char **argv)
     } else
       error("Bad input file!");
     fin.close();
-    std::ofstream fout;
-    fout.open(outputfile.c_str());
+//     std::ofstream fout;
+//     fout.open(outputfile.c_str());
 
     if ( inp.size() == 0 ){
       say("Empty input file!");
       return 1;
     }
-
+    for ( uint il = 0; il < inp.size(); ++il ){
+      if ( finput.addline(inp[il]) ){
+      }
+    }
   }
   return 0;
 }

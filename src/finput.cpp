@@ -111,6 +111,13 @@ std::string Finput::input() const
 
 bool Finput::analyzeline()
 {
+  const TParArray& occ = Input::aPars["orbs"]["occ"];
+  xout << "analyzeline " << _input << std::endl;
+  _foreach_cauto(TParArray,iocc,occ){
+    xout << *iocc << " ";
+  }
+  xout << std::endl;
+  
   return true;
 }
 

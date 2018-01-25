@@ -2,3 +2,23 @@
 set="output",type=i,name="maxncoef",value=6,desc="max number of orbital coefs on one line"
 set="output",type=i,name="fcinamtoupper",value=1,desc="transform FCIDUMP filename to uppercase"
 set="output",type=i,name="orbnamtolower",value=1,desc="transform ORBDUMP filename to lowercase"
+set="output",type=i,name="level",value=0,desc="output level"
+
+%HAMILTONIAN
+set="ham",type=s,name="file",value="",desc="fcidump file output"
+
+%ORBITALS
+set="orbs",type=s,name="file",value="",desc="orbdump file"
+set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
+
+%SYNTAX
+set="syntax",type=s,name="brackets",value="(){}[]<>",desc="brackets"
+set="syntax",type=s,name="separator",value=" \{}()[]+-*/=&<>|%:,",desc="word separators"
+set="syntax",type=s,name="gluer",value="^_",desc="neglect word separator after the gluer"
+set="syntax",type=a,name="bham",value={"\bham"},desc="begin hamiltonian specification"
+set="syntax",type=a,name="eham",value={"\eham"},desc="begin hamiltonian specification"
+set="syntax",type=a,name="newcommand",value={"\newcommand"}
+set="syntax",type=a,name="newoperator",value={"\newoperator","\newop"}
+set="syntax",type=a,name="comment",value={"%"}
+
+
