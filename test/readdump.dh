@@ -1,0 +1,9 @@
+output,fcinamtoupper=0,orbnamtolower=0
+
+ham,out="readdump.FCIDUMP"
+orbs,out="readdump.ORBDUMP"
+orbs,occ={1, 2, 4, 6, 7,8}
+
+\bham
+H2O.FCIDUMP
+\eham
