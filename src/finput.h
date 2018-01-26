@@ -9,6 +9,8 @@
 #include "utilities.h"
 #include "globals.h"
 #include "inpline.h"
+#include "hdump.h"
+#include "odump.h"
 
 /*!
     Input analyzer 

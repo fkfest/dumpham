@@ -66,6 +66,23 @@ std::string any2str(const T& t)
   oss << t;
   return oss.str();
 }
+
+// list of string (TParArray) to vector of numbers transformation
+// call: apars2nums<double>(x,apar,std::dec), std::vector<double> will be in x
+template <class T>
+inline
+void apars2nums(std::vector<T>& t, const TParArray& s,
+             std::ios_base& (*f)(std::ios_base&))
+{
+  _foreach_cauto(TParArray,is,s){
+    T x;
+    if ( str2num<T>(x,*is,f) )
+      t.push_back(x);
+    else
+      error("Not a number: "+*is);
+  }
+}
+
 // to lower case
 std::string lowercase(std::string s);
 // to upper case

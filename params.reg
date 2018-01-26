@@ -5,10 +5,10 @@ set="output",type=i,name="orbnamtolower",value=1,desc="transform ORBDUMP filenam
 set="output",type=i,name="level",value=0,desc="output level"
 
 %HAMILTONIAN
-set="ham",type=s,name="file",value="",desc="fcidump file output"
+set="ham",type=s,name="out",value="",desc="fcidump file output"
 
 %ORBITALS
-set="orbs",type=s,name="file",value="",desc="orbdump file"
+set="orbs",type=s,name="out",value="",desc="orbdump file"
 set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
 
 %SYNTAX
@@ -20,5 +20,6 @@ set="syntax",type=a,name="eham",value={"\eham"},desc="begin hamiltonian specific
 set="syntax",type=a,name="newcommand",value={"\newcommand"}
 set="syntax",type=a,name="newoperator",value={"\newoperator","\newop"}
 set="syntax",type=a,name="comment",value={"%"}
+set="syntax",type=a,name="input",value={"\input","\file"},desc="specifies FCIDUMP input"
 
 

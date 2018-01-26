@@ -82,12 +82,13 @@ bool Finput::addline(const std::string& line)
   ipos = 0;
   ipend = IL::nextwordpos(linesp,ipos,false);
   if (ipos == ipend){ // empty line
-  } else if (InSet(linesp, bham)) {// begin equation
+  } else if (InSet(linesp, bham)) {// begin hamiltonian specification
     _input="";
     if ( iprint > 1 && !_ham )
       _inlines.pop_back();
     _ham=true;
-  } else if (InSet(linesp, eham)) {// end equation
+    //analyzenewops();
+  } else if (InSet(linesp, eham)) {// end hamiltonian specification
     if ( iprint > 0 && _ham )
       _inham.pop_back();
     _ham=false;
@@ -111,13 +112,43 @@ std::string Finput::input() const
 
 bool Finput::analyzeline()
 {
+//   xout << "analyzeline " << _input << std::endl;
   const TParArray& occ = Input::aPars["orbs"]["occ"];
-  xout << "analyzeline " << _input << std::endl;
-  _foreach_cauto(TParArray,iocc,occ){
-    xout << *iocc << " ";
+  // TODO: move somewhere else!
+  // TODO: the input file should be in the \input command!
+  lui
+    ibeg = IL::skip(_input,0," ,"),
+    iend = IL::skipr(_input,_input.size()," ,");
+  std::string inputfile = _input.substr(ibeg,iend-ibeg);
+  if ( inputfile == "" ) {
+    error("Empty hamiltonian specification!");
   }
-  xout << std::endl;
+  xout << "inputfile: *" << inputfile << "*" << std::endl;
+  std::string outputfile = Input::sPars["ham"]["out"];
+  if ( outputfile == "" ) {
+    outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
+  }
+  std::string orboutputfile = Input::sPars["orbs"]["out"];
+  bool orbdump = ( orboutputfile != "" );
+  if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
+    outputfile = uppercase(outputfile);
+  if ( orbdump && Input::iPars["output"]["orbnamtolower"] > 0 )
+    orboutputfile = lowercase(orboutputfile);
   
+  Hdump dump(inputfile);
+  dump.store(outputfile);
+  if ( orbdump ) {
+    if ( occ.size() > 0 ) xout << "Occupation: ";
+    _foreach_cauto(TParArray,iocc,occ){
+      xout << *iocc << ",";
+    }
+    if ( occ.size() > 0 ) xout << std::endl;
+    std::vector<int> occ_spin;
+    apars2nums<int>(occ_spin,occ,std::dec);
+    Occupation occupation(occ_spin);
+    Odump odump(dump.norb(),occupation);
+    odump.store(orboutputfile);
+  }
   return true;
 }
 
