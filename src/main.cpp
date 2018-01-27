@@ -11,21 +11,25 @@
 
 int main(int argc, char **argv)
 {
-  // handle input and output
-  int iarg=1;
+  // options
   std::vector<std::string> options; 
-  while ( iarg < argc && argv[iarg][0]=='-') {
-    // get options
-    if ( strlen(argv[iarg]) > 2 && argv[iarg][1]=='-' ){
-      // long option "--word"
-      options.push_back(std::string(&argv[iarg][1]));
-    } else {
-      // short options "-wo"
-      for ( uint i = 1; i < strlen(argv[iarg]); ++i ){
-        options.push_back(std::string(1,argv[iarg][i]));
+  // position of the option in the argv list
+  std::vector<int> argpos;
+  for ( int iarg = 1; iarg < argc; ++iarg ) {
+    if ( argv[iarg][0]=='-' ) {
+      // get options
+      if ( strlen(argv[iarg]) > 2 && argv[iarg][1]=='-' ){
+        // long option "--word"
+        options.push_back(std::string(&argv[iarg][1]));
+        argpos.push_back(iarg);
+      } else {
+        // short options "-wo"
+        for ( uint i = 1; i < strlen(argv[iarg]); ++i ){
+          options.push_back(std::string(1,argv[iarg][i]));
+          argpos.push_back(iarg);
+        }
       }
     }
-    ++iarg;
   }  
   std::string inputfile, outputfile, orboutputfile,
     exePath = exepath();
@@ -34,6 +38,7 @@ int main(int argc, char **argv)
   // handle options  
   for ( uint iopt = 0; iopt < options.size(); ++iopt ) {
     const std::string & opt = options[iopt];
+    int iarg = argpos[iopt];
     if ( opt == "h" || opt == "-help" ) {
       xout << "dumpham <input-file> [<output-file>]" << std::endl;
       // print README file if exists
@@ -48,11 +53,13 @@ int main(int argc, char **argv)
       }
       return 0;
     } else if ( opt == "v" || opt == "-verbose" ) {
-      if ( iarg == argc-1 || !str2num<int>(Input::verbose,argv[iarg+1],std::dec)){
-        Input::verbose = 1;
+      ++iarg;
+      if ( iarg < argc && str2num<int>(Input::verbose,argv[iarg],std::dec)){
+        argpos.push_back(iarg);
       } else {
-        ++iarg;
+        Input::verbose = 1;
       }
+//       xout << "Verbosity: " << Input::verbose << std::endl;
     } else if ( opt == "d" || opt == "-dump" ) {
       // the input file is an FCIDUMP file
       fcidump = true;
@@ -63,17 +70,22 @@ int main(int argc, char **argv)
       error("Unknown paratemer -"+opt);
     }
   }
-  if (iarg >= argc) error("Please provide an input file!");
-  inputfile=argv[iarg];
-  ++iarg;
-  if ( argc > iarg ) {
-    outputfile=argv[iarg];
-    ++iarg;
+  // not-a-option arguments
+  std::vector<std::string> args;
+  for ( int iarg = 1; iarg < argc; ++iarg ) {
+    if ( std::find(argpos.begin(),argpos.end(),iarg) == argpos.end() ){
+      args.push_back(argv[iarg]);
+    }
+  }
+  if ( args.size() == 0 ) error("Please provide an input file!");
+  uint iarg = 0;
+  inputfile=args[iarg]; ++iarg;
+  if ( iarg < args.size() ) {
+    outputfile=args[iarg]; ++iarg;
   } else 
     outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
-  if ( orbdump && argc > iarg ) {
-    orboutputfile=argv[iarg];
-    ++iarg;
+  if ( orbdump && iarg < args.size() ) {
+    orboutputfile=args[iarg]; ++iarg;
   } else if ( orbdump ) 
     orboutputfile = FileName(inputfile,true)+"_NEW.ORBDUMP";
  
