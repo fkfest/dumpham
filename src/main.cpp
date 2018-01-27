@@ -99,8 +99,10 @@ int main(int argc, char **argv)
     // de-symmetrize FCIDUMP
     Hdump dump(inputfile);
     dump.store(outputfile);
-    Odump odump(dump.norb());
-    odump.store(orboutputfile);
+    if ( orbdump ) {
+      Odump odump(dump.norb());
+      odump.store(orboutputfile);
+    }
   } else {
     std::ifstream fin;
     fin.open(inputfile.c_str());
