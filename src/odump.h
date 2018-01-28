@@ -13,7 +13,7 @@
  */
 class Occupation : public std::vector<int> {
 public:
-  Occupation() : std::vector<int>() {};
+  Occupation() : std::vector<int>() {}
   // occupy first norb orbitals
   Occupation(uint norb) { for (uint i = 0; i < norb; ++i ) push_back(i);}
   // occupation from a list of occupied spin orbitals
@@ -25,12 +25,12 @@ public:
 */
 class Odump {
 public:  
-  Odump() : _nAO(0),_norb(0) {};
+  Odump() : _nAO(0),_norb(0) {}
   // construct a unity matrix for norb orbitals
   // orbitals can be swapped according to the occupation vector
   Odump(uint norb, const Occupation & occs = Occupation());
   // zero orbitals
-  void zero() { _orbs.assign(_nAO*_norb,0.0);};
+  void zero() { _orbs.assign(_nAO*_norb,0.0);}
   // element (i,j) (i and j zero based)
   double & operator()(const uint i, const uint j) {
       assert(_orbs.size() == _nAO*_norb);

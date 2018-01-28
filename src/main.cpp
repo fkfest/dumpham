@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include "argpars.h"
 #include "utilities.h"
 #include "globals.h"
 #include "finput.h"
@@ -11,34 +12,14 @@
 
 int main(int argc, char **argv)
 {
-  // options
-  std::vector<std::string> options; 
-  // position of the option in the argv list
-  std::vector<int> argpos;
-  for ( int iarg = 1; iarg < argc; ++iarg ) {
-    if ( argv[iarg][0]=='-' ) {
-      // get options
-      if ( strlen(argv[iarg]) > 2 && argv[iarg][1]=='-' ){
-        // long option "--word"
-        options.push_back(std::string(&argv[iarg][1]));
-        argpos.push_back(iarg);
-      } else {
-        // short options "-wo"
-        for ( uint i = 1; i < strlen(argv[iarg]); ++i ){
-          options.push_back(std::string(1,argv[iarg][i]));
-          argpos.push_back(iarg);
-        }
-      }
-    }
-  }  
+  ArgPars args(argc,argv);
+  std::string opt, arg;
   std::string inputfile, outputfile, orboutputfile,
     exePath = exepath();
   bool fcidump = false;
   bool orbdump = false;
   // handle options  
-  for ( uint iopt = 0; iopt < options.size(); ++iopt ) {
-    const std::string & opt = options[iopt];
-    int iarg = argpos[iopt];
+  while ( args.nextoption(opt) ) {
     if ( opt == "h" || opt == "-help" ) {
       xout << "dumpham <input-file> [<output-file>]" << std::endl;
       // print README file if exists
@@ -53,9 +34,8 @@ int main(int argc, char **argv)
       }
       return 0;
     } else if ( opt == "v" || opt == "-verbose" ) {
-      ++iarg;
-      if ( iarg < argc && str2num<int>(Input::verbose,argv[iarg],std::dec)){
-        argpos.push_back(iarg);
+      if ( args.optarg(arg) && str2num<int>(Input::verbose,arg,std::dec)){
+        args.itsoption();
       } else {
         Input::verbose = 1;
       }
@@ -70,25 +50,18 @@ int main(int argc, char **argv)
       error("Unknown paratemer -"+opt);
     }
   }
-  // not-a-option arguments
-  std::vector<std::string> args;
-  for ( int iarg = 1; iarg < argc; ++iarg ) {
-    if ( std::find(argpos.begin(),argpos.end(),iarg) == argpos.end() ){
-      args.push_back(argv[iarg]);
-    }
-  }
-  if ( args.size() == 0 ) error("Please provide an input file!");
-  uint iarg = 0;
-  inputfile=args[iarg]; ++iarg;
-  if ( iarg < args.size() ) {
-    outputfile=args[iarg]; ++iarg;
+  
+  if ( !args.nextremaining(arg) ) error("Please provide an input file!");
+  inputfile=arg;
+  if ( args.nextremaining(arg) ) {
+    outputfile=arg;
   } else 
     outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
-  if ( orbdump && iarg < args.size() ) {
-    orboutputfile=args[iarg]; ++iarg;
+  if ( orbdump && args.nextremaining(arg) ) {
+    orboutputfile=arg;
   } else if ( orbdump ) 
     orboutputfile = FileName(inputfile,true)+"_NEW.ORBDUMP";
- 
+  
   // read input
   Finput finput(exePath);
   if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
