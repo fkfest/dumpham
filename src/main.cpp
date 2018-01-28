@@ -35,7 +35,7 @@ int main(int argc, char **argv)
       return 0;
     } else if ( opt == "v" || opt == "-verbose" ) {
       if ( args.optarg(arg) && str2num<int>(Input::verbose,arg,std::dec)){
-        args.itsoption();
+        args.markasoption();
       } else {
         Input::verbose = 1;
       }
