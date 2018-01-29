@@ -20,6 +20,9 @@ public:
   // ibase - base for the indices in occs
   Occupation(const std::vector<int>& occs, int ibase = 1);
 };
+
+std::ostream & operator << (std::ostream & o, Occupation const & occ);
+
 /*!
     Orbitals dump without point-group symmetry
 */

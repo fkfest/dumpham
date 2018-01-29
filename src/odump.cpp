@@ -25,17 +25,34 @@ Occupation::Occupation(const std::vector< int >& occs, int ibase)
   }
 }
 
+std::ostream& operator<<(std::ostream& o, const Occupation& occ)
+{
+  _foreach_cauto(Occupation,iocc,occ){
+    o << *iocc << ",";
+  }
+  return o;
+}
+
+
 Odump::Odump(uint norb, const Occupation& occs ) : _nAO(norb), _norb(norb)
 {
   this->zero();
   uint iao;
-  for ( uint imo = 0; imo < norb; ++imo ) {
-    if ( imo < occs.size() ) 
-      iao = occs[imo];
-    else
-      iao = imo;
+  xout << "Spatial orbital occupation: " << occs << std::endl;
+  std::vector<bool> occupied(norb,false);
+  for ( uint imo = 0; imo < occs.size(); ++imo ) {
+    iao = occs[imo];
     (*this)(iao,imo) = 1.0;
+    occupied[iao] = true;
   }
+  uint imo = occs.size(); 
+  for ( uint iao = 0; iao < norb; ++iao ) {
+    if (!occupied[iao]) {
+      (*this)(iao,imo) = 1.0;
+      ++imo;
+    }
+  }
+  assert( imo == norb );
 }
 
 void Odump::store(std::string orbdump)
@@ -49,9 +66,9 @@ void Odump::store(std::string orbdump)
   int precision = Input::iPars["output"]["precisioncoef"];
   outputStream<<std::scientific<<std::setprecision(precision);
   int maxlen = Input::iPars["output"]["maxncoef"];
-  for ( uint j = 0; j < _norb; ++j ) {
-    for ( uint i = 0; i < _nAO; ++i ) {
-      if ( i > 0 && maxlen > 0 && i % maxlen == 0 ) outputStream << std::endl;
+  for ( uint i = 0; i < _nAO; ++i ) {
+    for ( uint j = 0; j < _norb; ++j ) {
+      if ( j > 0 && maxlen > 0 && j % maxlen == 0 ) outputStream << std::endl;
       outputStream << (*this)(i,j) << ", ";
     }
     outputStream << std::endl;
