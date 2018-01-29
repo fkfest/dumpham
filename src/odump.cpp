@@ -46,7 +46,8 @@ void Odump::store(std::string orbdump)
     outputStream.close();
     error("Odump::store failed to open "+ orbdump);
   }
-  outputStream<<std::scientific<<std::setprecision(15);
+  int precision = Input::iPars["output"]["precisioncoef"];
+  outputStream<<std::scientific<<std::setprecision(precision);
   int maxlen = Input::iPars["output"]["maxncoef"];
   for ( uint j = 0; j < _norb; ++j ) {
     for ( uint i = 0; i < _nAO; ++i ) {
