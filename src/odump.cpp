@@ -106,3 +106,27 @@ void Odump::store(std::string orbdump)
     outputStream << std::endl;
   }
 }
+
+Occupation Odump::guess_occupation(uint nocc) const
+{
+  double throcc = Input::fPars["orbs"]["occuwarning"];
+  Occupation occ;
+  if (nocc == 0 ) nocc = _norb;
+  for ( uint j = 0; j < nocc; ++j ) {
+    uint iao = 0;
+    double maxcoef = 0.0;
+    for ( uint i = 0; i < _nAO; ++i ) {
+      double val = std::abs((*this)(i,j));
+      if ( val > maxcoef ) {
+        iao = i;
+        maxcoef = val;
+      }
+    }
+    occ.push_back(iao);
+    if ( maxcoef < throcc ) {
+      warning("Small max occupation for AO "+num2str(iao,std::dec)+": "+num2str(maxcoef,std::dec));
+    }
+  }
+  
+  return occ;
+}

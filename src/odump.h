@@ -43,8 +43,16 @@ public:
       assert(i < _nAO && j < _norb);
       return _orbs[i+j*_nAO];
     }
+  const double & operator()(const uint i, const uint j) const {
+      assert(_orbs.size() == _nAO*_norb);
+      assert(i < _nAO && j < _norb);
+      return _orbs[i+j*_nAO];
+    }
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
+  // guess AO-occupation vector from orbital coefficients
+  // if nocc=0 - print all orbitals
+  Occupation guess_occupation(uint nocc = 0) const;
 private:
   // Two-electron integrals
   Integrals _orbs;

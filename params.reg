@@ -12,6 +12,7 @@ set="ham",type=s,name="out",value="",desc="fcidump file output"
 set="orbs",type=s,name="out",value="",desc="orbdump file"
 set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
 set="orbs",type=s,name="in",value="",desc="orbdump file"
+set="orbs",type=f,name="occuwarning",value=0.5,desc="small occupation warning"
 
 %SYNTAX
 set="syntax",type=s,name="brackets",value="(){}[]<>",desc="brackets"

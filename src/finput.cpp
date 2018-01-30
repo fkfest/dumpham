@@ -141,14 +141,16 @@ bool Finput::analyzeline()
   const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
   if ( orbcoefs_input != "" ) {
     Odump odump(orbcoefs_input,dump.norb());
-  }
-  
-  if ( orbdump ) {
-    if ( occ.size() > 0 ) xout << "Occupation: ";
-    _foreach_cauto(TParArray,iocc,occ){
-      xout << *iocc << ",";
+    if ( orbdump ) {
+      odump.store(orboutputfile);
     }
-    if ( occ.size() > 0 ) xout << std::endl;
+  } else if ( orbdump ) {
+    if ( occ.size() > 0 ) {
+      xout << "Occupation: ";
+      _foreach_cauto(TParArray,iocc,occ)
+        xout << *iocc << ",";
+      xout << std::endl;
+    }
     std::vector<int> occ_spin;
     apars2nums<int>(occ_spin,occ,std::dec);
     Occupation occupation(occ_spin);
