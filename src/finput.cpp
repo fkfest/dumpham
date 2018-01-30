@@ -137,6 +137,12 @@ bool Finput::analyzeline()
   
   Hdump dump(inputfile);
   dump.store(outputfile);
+  
+  const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
+  if ( orbcoefs_input != "" ) {
+    Odump odump(orbcoefs_input,dump.norb());
+  }
+  
   if ( orbdump ) {
     if ( occ.size() > 0 ) xout << "Occupation: ";
     _foreach_cauto(TParArray,iocc,occ){
@@ -149,6 +155,8 @@ bool Finput::analyzeline()
     Odump odump(dump.norb(),occupation);
     odump.store(orboutputfile);
   }
+  
+  
   return true;
 }
 

@@ -54,6 +54,37 @@ Odump::Odump(uint norb, const Occupation& occs ) : _nAO(norb), _norb(norb)
   }
   assert( imo == norb );
 }
+Odump::Odump(std::string orbdump, uint norb)
+{
+  std::ifstream oin;
+  oin.open(orbdump.c_str());
+  if ( !oin.is_open() ) {
+    error("Error opening "+ orbdump);
+  }
+  if (norb <= 0) {
+    error("Orbital number guess is not implemented yet");
+  }
+  std::string line;
+  Integrals coefs;
+  while (oin.good()) {
+    std::getline(oin,line);
+    if ( line.empty() || line[0] == '#' || 
+         line.compare("BEGIN_DATA,") == 0 || line.compare("END_DATA,") == 0  ) continue;
+    TParArray coefs_line = IL::parray(line);
+    _foreach_cauto(TParArray,ic,coefs_line){
+      double val;
+      if ( str2num<double>(val,*ic,std::dec) )
+        _orbs.push_back(val);
+      else
+        error("Not a number: "+*ic);
+    }
+  }
+  if ( norb == 0 ) norb = int(sqrt(_orbs.size())+0.1);
+  _nAO = norb;
+  _norb = norb;
+  if (_nAO*_norb != _orbs.size() )
+    error("Number of orbital coefficients not consistens with the number of orbitals");
+}
 
 void Odump::store(std::string orbdump)
 {
@@ -63,6 +94,7 @@ void Odump::store(std::string orbdump)
     outputStream.close();
     error("Odump::store failed to open "+ orbdump);
   }
+  xout << "will be written to file " << orbdump << std::endl;
   int precision = Input::iPars["output"]["precisioncoef"];
   outputStream<<std::scientific<<std::setprecision(precision);
   int maxlen = Input::iPars["output"]["maxncoef"];

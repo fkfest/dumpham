@@ -6,6 +6,7 @@
 #include <iomanip>
 #include "globals.h"
 #include "utilities.h"
+#include "inpline.h"
 
 /*!
  *  Occupation vector, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals} 
@@ -32,6 +33,8 @@ public:
   // construct a unity matrix for norb orbitals
   // orbitals can be swapped according to the occupation vector
   Odump(uint norb, const Occupation & occs = Occupation());
+  // construct from an orbdump file (comma-separated)
+  Odump(std::string orbdump, uint norb = 0);
   // zero orbitals
   void zero() { _orbs.assign(_nAO*_norb,0.0);}
   // element (i,j) (i and j zero based)
@@ -40,7 +43,7 @@ public:
       assert(i < _nAO && j < _norb);
       return _orbs[i+j*_nAO];
     }
-  // store orbitals in file orbdump
+  // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
 private:
   // Two-electron integrals
