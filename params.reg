@@ -16,11 +16,11 @@ set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
 set="syntax",type=s,name="brackets",value="(){}[]<>",desc="brackets"
 set="syntax",type=s,name="separator",value=" \{}()[]+-*/=&<>|%:,",desc="word separators"
 set="syntax",type=s,name="gluer",value="^_",desc="neglect word separator after the gluer"
+set="syntax",type=s,name="listseparator",value=" ,;:",desc="separator for parameter-array lists"
 set="syntax",type=a,name="bham",value={"\bham"},desc="begin hamiltonian specification"
 set="syntax",type=a,name="eham",value={"\eham"},desc="begin hamiltonian specification"
 set="syntax",type=a,name="newcommand",value={"\newcommand"}
 set="syntax",type=a,name="newoperator",value={"\newoperator","\newop"}
 set="syntax",type=a,name="comment",value={"%"}
 set="syntax",type=a,name="input",value={"\input","\file"},desc="specifies FCIDUMP input"
-
 
