@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& o, const Occupation& occ)
 }
 
 
-Odump::Odump(uint norb, const Occupation& occs ) : _nAO(norb), _norb(norb)
+Odump::Odump(uint norb, const Occupation& occs ) : _nbas(norb), _norb(norb)
 {
   this->zero();
   uint iao;
@@ -92,9 +92,9 @@ Odump::Odump(std::string orbdump, uint norb)
     }
   }
   if ( norb == 0 ) norb = int(sqrt(_orbs.size())+0.1);
-  _nAO = norb;
+  _nbas = norb;
   _norb = norb;
-  if (_nAO*_norb != _orbs.size() )
+  if (_nbas*_norb != _orbs.size() )
     error("Number of orbital coefficients not consistens with the number of orbitals");
   // transpose to get the AO index fastest
   for ( uint j = 0; j < _norb; ++j ){
@@ -122,7 +122,7 @@ void Odump::store(std::string orbdump)
     outputStream << std::fixed;
   outputStream << std::setprecision(precision);
   int maxlen = Input::iPars["output"]["maxncoef"];
-  for ( uint i = 0; i < _nAO; ++i ) {
+  for ( uint i = 0; i < _nbas; ++i ) {
     for ( uint j = 0; j < _norb; ++j ) {
       if ( j > 0 && maxlen > 0 && j % maxlen == 0 ) outputStream << std::endl;
       double val = (*this)(i,j);
@@ -143,7 +143,7 @@ Occupation Odump::guess_occupation(uint nclos, uint nopen) const
   for ( uint j = 0; j < nocc; ++j ) {
     uint iao = 0;
     double maxcoef = 0.0;
-    for ( uint i = 0; i < _nAO; ++i ) {
+    for ( uint i = 0; i < _nbas; ++i ) {
       double val = std::abs((*this)(i,j));
       if ( val > maxcoef ) {
         iao = i;
@@ -152,7 +152,7 @@ Occupation Odump::guess_occupation(uint nclos, uint nopen) const
     }
     occ.push_back(iao);
     if ( maxcoef < throcc ) {
-      warning("Small max occupation for AO "+num2str(iao,std::dec)+": "+num2str(maxcoef,std::dec));
+      warning("Small max occupation for the basis function "+num2str(iao+1,std::dec)+": "+num2str(maxcoef,std::dec));
     }
   }
   bool sortocc = Input::iPars["orbs"]["occusort"];

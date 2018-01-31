@@ -31,35 +31,35 @@ std::ostream & operator << (std::ostream & o, Occupation const & occ);
 */
 class Odump {
 public:  
-  Odump() : _nAO(0),_norb(0) {}
+  Odump() : _nbas(0),_norb(0) {}
   // construct a unity matrix for norb orbitals
   // orbitals can be swapped according to the occupation vector
   Odump(uint norb, const Occupation & occs = Occupation());
   // construct from an orbdump file (comma-separated)
   Odump(std::string orbdump, uint norb = 0);
   // zero orbitals
-  void zero() { _orbs.assign(_nAO*_norb,0.0);}
+  void zero() { _orbs.assign(_nbas*_norb,0.0);}
   // element (i,j) (i and j zero based)
   double & operator()(const uint i, const uint j) {
-      assert(_orbs.size() == _nAO*_norb);
-      assert(i < _nAO && j < _norb);
-      return _orbs[i+j*_nAO];
+      assert(_orbs.size() == _nbas*_norb);
+      assert(i < _nbas && j < _norb);
+      return _orbs[i+j*_nbas];
     }
   const double & operator()(const uint i, const uint j) const {
-      assert(_orbs.size() == _nAO*_norb);
-      assert(i < _nAO && j < _norb);
-      return _orbs[i+j*_nAO];
+      assert(_orbs.size() == _nbas*_norb);
+      assert(i < _nbas && j < _norb);
+      return _orbs[i+j*_nbas];
     }
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
-  // guess AO-occupation vector from orbital coefficients
+  // guess Basis-occupation vector from orbital coefficients
   // if nclos=nopen=0 - print all orbitals
   Occupation guess_occupation(uint nclos = 0, uint nopen = 0) const;
 private:
   // Two-electron integrals
   Integrals _orbs;
-  // number of AO and MO orbitals
-  uint _nAO, _norb;
+  // number of basis and molecular orbitals
+  uint _nbas, _norb;
 };
 
 
