@@ -1,5 +1,6 @@
 %OUTPUT PARAMETERS
 set="output",type=i,name="maxncoef",value=6,desc="max number of orbital coefs on one line"
+set="output",type=i,name="scientificoef",value=1,desc="output orbital coefs in the scientific format"
 set="output",type=i,name="precisioncoef",value=15,desc="precision for orbital coefs"
 set="output",type=i,name="fcinamtoupper",value=1,desc="transform FCIDUMP filename to uppercase"
 set="output",type=i,name="orbnamtolower",value=1,desc="transform ORBDUMP filename to lowercase"
@@ -13,6 +14,7 @@ set="orbs",type=s,name="out",value="",desc="orbdump file"
 set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
 set="orbs",type=s,name="in",value="",desc="orbdump file"
 set="orbs",type=f,name="occuwarning",value=0.5,desc="small occupation warning"
+set="orbs",type=i,name="occusort",value=1,desc="sort closed- and open-shell orbitals in the occupation vector"
 
 %SYNTAX
 set="syntax",type=s,name="brackets",value="(){}[]<>",desc="brackets"

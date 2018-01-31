@@ -24,6 +24,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
     error("NORB < 0 in FCIDUMP!");
   }
   _norb = nn;
+  _nelec = NELEC[0];
+  _ms2 = MS2[0];
   int n1el = nn*(nn+1)/2;
   int n2el = n1el*(n1el+1)/2;
   xout << "n2el: " << n2el << std::endl;
@@ -95,4 +97,14 @@ void Hdump::store(std::string fcidump)
       _dump.writeIntegral(i,j,0,0,_oneel[ij]);
     }
   _dump.writeIntegral(0,0,0,0,_escal); 
+}
+
+uint Hdump::nclosed() const
+{
+  uint nclos = (_nelec - _ms2)/2;
+  if ( nclos*2 + _ms2 != _nelec ) {
+    xout << "NELEC: " << _nelec << " MS2: " << _ms2 << std::endl;
+    error("Mismatch in NELEC and MS2 in Hdump");
+  }
+  return nclos;
 }

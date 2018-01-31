@@ -20,6 +20,8 @@ public:
   // occupation from a list of occupied spin orbitals
   // ibase - base for the indices in occs
   Occupation(const std::vector<int>& occs, int ibase = 1);
+  // return a list of occupied spin orbitals
+  std::vector<int> spinocc(uint nclos) const;
 };
 
 std::ostream & operator << (std::ostream & o, Occupation const & occ);
@@ -51,8 +53,8 @@ public:
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
   // guess AO-occupation vector from orbital coefficients
-  // if nocc=0 - print all orbitals
-  Occupation guess_occupation(uint nocc = 0) const;
+  // if nclos=nopen=0 - print all orbitals
+  Occupation guess_occupation(uint nclos = 0, uint nopen = 0) const;
 private:
   // Two-electron integrals
   Integrals _orbs;

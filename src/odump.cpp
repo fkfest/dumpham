@@ -25,6 +25,18 @@ Occupation::Occupation(const std::vector< int >& occs, int ibase)
   }
 }
 
+std::vector< int > Occupation::spinocc(uint nclos) const
+{
+  std::vector<int> socc;
+  for ( uint imo = 0; imo < this->size(); ++imo ){
+    socc.push_back((*this)[imo]*2+1);
+    if ( imo < nclos )
+      socc.push_back((*this)[imo]*2+2);
+  }
+  std::sort(socc.begin(),socc.end());
+  return socc;
+}
+
 std::ostream& operator<<(std::ostream& o, const Occupation& occ)
 {
   _foreach_cauto(Occupation,iocc,occ){
@@ -84,6 +96,13 @@ Odump::Odump(std::string orbdump, uint norb)
   _norb = norb;
   if (_nAO*_norb != _orbs.size() )
     error("Number of orbital coefficients not consistens with the number of orbitals");
+  // transpose to get the AO index fastest
+  for ( uint j = 0; j < _norb; ++j ){
+    for ( uint i = 0; i < j; ++i ){
+      std::swap((*this)(i,j),(*this)(j,i));
+    }
+  }
+  
 }
 
 void Odump::store(std::string orbdump)
@@ -95,23 +114,32 @@ void Odump::store(std::string orbdump)
     error("Odump::store failed to open "+ orbdump);
   }
   xout << "will be written to file " << orbdump << std::endl;
+  bool scientific = Input::iPars["output"]["scientificoef"];
   int precision = Input::iPars["output"]["precisioncoef"];
-  outputStream<<std::scientific<<std::setprecision(precision);
+  if ( scientific ) 
+    outputStream << std::scientific;
+  else
+    outputStream << std::fixed;
+  outputStream << std::setprecision(precision);
   int maxlen = Input::iPars["output"]["maxncoef"];
   for ( uint i = 0; i < _nAO; ++i ) {
     for ( uint j = 0; j < _norb; ++j ) {
       if ( j > 0 && maxlen > 0 && j % maxlen == 0 ) outputStream << std::endl;
-      outputStream << (*this)(i,j) << ", ";
+      double val = (*this)(i,j);
+      if ( !scientific && val <= 0.0 && val >= -1.e-20 ) val = 1.e-20;
+      if ( !scientific && val > -1.e-20 ) outputStream << " ";
+      outputStream << val << ", ";
     }
     outputStream << std::endl;
   }
 }
 
-Occupation Odump::guess_occupation(uint nocc) const
+Occupation Odump::guess_occupation(uint nclos, uint nopen) const
 {
   double throcc = Input::fPars["orbs"]["occuwarning"];
   Occupation occ;
-  if (nocc == 0 ) nocc = _norb;
+  uint nocc = nclos + nopen;
+  if ( nocc == 0 ) nocc = _norb;
   for ( uint j = 0; j < nocc; ++j ) {
     uint iao = 0;
     double maxcoef = 0.0;
@@ -127,6 +155,12 @@ Occupation Odump::guess_occupation(uint nocc) const
       warning("Small max occupation for AO "+num2str(iao,std::dec)+": "+num2str(maxcoef,std::dec));
     }
   }
-  
+  bool sortocc = Input::iPars["orbs"]["occusort"];
+  if ( sortocc ){
+    // sort closed-shell orbitals
+    std::sort(occ.begin(),occ.begin()+nclos);
+    // sort open-shell orbitals
+    std::sort(occ.begin()+nclos,occ.end());
+  }
   return occ;
 }
