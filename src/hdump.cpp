@@ -37,6 +37,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   FCIdump::integralType type;
   _dump.rewind();
   
+  bool redunwarn = Input::iPars["ham"]["redunwarning"];
+  
   while ((type = _dump.nextIntegral(i,j,k,l,value)) != FCIdump::endOfFile) {
 //     if ( type == FCIdump::endOfRecord ) {
 //         // store
@@ -56,12 +58,20 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
       // Two-electron integrals
       int ij = (i-1)*i/2 + j;
       int kl = (k-1)*k/2 + l;
-      int ijkl = (ij-1)*ij/2 + kl - 1;
-      _twoel[ijkl] = value;
+      if ( j <= i && l <= k && kl <= ij ) {
+        int ijkl = (ij-1)*ij/2 + kl - 1;
+        _twoel[ijkl] = value;
+      } else if ( redunwarn ){
+        warning("Redundant entry in " << fcidump << " : " << i << " " << j << " " << k << " " << l );
+      }
     } else if ( i != 0 && j != 0 ) {
       // One-electron integrals
-      int ij = (i-1)*i/2 + j - 1;
-      _oneel[ij] = value;
+      if ( j <= i ) {
+        int ij = (i-1)*i/2 + j - 1;
+        _oneel[ij] = value;
+      } else if ( redunwarn ){
+        warning("Redundant entry in " << fcidump << " : " << i << " " << j );
+      }
     } else if ( type == FCIdump::I0 ){
       _escal = value;
     }
