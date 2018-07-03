@@ -89,7 +89,7 @@ else
   # start from orbitals 
   echo "
 {matrop
-read,ORB,ORB,CANONICAL,FILE=$ORBS
+read,ORB,ORB,CANONICAL,FILE='$ORBS'
 save,ORB,2100.2,ORBITALS
 }
 
