@@ -19,6 +19,10 @@ Occupation::Occupation(const std::vector< int >& occs, int ibase)
       iorb0 = iorb1;
     }
   }
+  if ( iorb0 != -1 ) {
+    // iorb0 is singly occupied
+    singly.push_back(iorb0);
+  }
   // add singly occupied orbitals
   _foreach_cauto( std::vector< int >, iocc, singly ){
     push_back(*iocc);
