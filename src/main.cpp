@@ -20,32 +20,32 @@ int main(int argc, char **argv)
   bool orbdump = false;
   // handle options  
   while ( args.nextoption(opt) ) {
-    if ( opt == "h" || opt == "-help" ) {
-      xout << "dumpham <input-file> [<output-file>]" << std::endl;
-      // print README file if exists
-      std::ifstream readme;
-      readme.open((exePath+"README.md").c_str());
-      if (readme.is_open()) {
-        std::string line;
-        while (readme.good()) {
-          getline (readme,line);
-          xout << line << std::endl;
-        }
-      }
-      return 0;
-    } else if ( opt == "v" || opt == "-verbose" ) {
+    ArgOpts opts;
+    if ( opts.check(opt,ArgOpt("Verbosity level","v","-verbose" ))) {
       if ( args.optarg(arg) && str2num<int>(Input::verbose,arg,std::dec)){
         args.markasoption();
       } else {
         Input::verbose = 1;
       }
 //       xout << "Verbosity: " << Input::verbose << std::endl;
-    } else if ( opt == "d" || opt == "-dump" ) {
-      // the input file is an FCIDUMP file
+    } else if ( opts.check(opt,ArgOpt("the input file is an FCIDUMP file","d","-dump")) ) {
       fcidump = true;
-    } else if ( opt == "o" || opt == "-orbs" ) {
-      // generate the corresponding orbital file as unity
+    } else if ( opts.check(opt,ArgOpt("generate the corresponding orbital file","o","-orbs")) ) {
       orbdump = true;
+    } else if ( opts.check(opt,ArgOpt("print this help","h","-help")) ) {
+      opts.printhelp(xout,"dumpham [OPTIONS] <input-file> [<output-file>]",
+                     "Dump various model Hamiltonians as FCIDUMP files");
+//       // print README file if exists
+//       std::ifstream readme;
+//       readme.open((exePath+"README.md").c_str());
+//       if (readme.is_open()) {
+//         std::string line;
+//         while (readme.good()) {
+//           getline (readme,line);
+//           xout << line << std::endl;
+//         }
+//       }
+      return 0;
     } else {
       error("Unknown paratemer -"+opt);
     }
