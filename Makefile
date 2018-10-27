@@ -69,7 +69,7 @@ src/main.o: src/argpars.h src/utilities.h src/globals.h src/finput.h
 src/main.o: src/inpline.h src/hdump.h src/FCIdump.h src/odump.h
 src/FCIdump.o: src/FCIdump.h
 src/hdump.o: src/hdump.h src/globals.h src/utilities.h src/FCIdump.h
-src/odump.o: src/odump.h src/globals.h src/utilities.h
+src/odump.o: src/odump.h src/globals.h src/utilities.h src/inpline.h
 src/finput.o: src/finput.h src/utilities.h src/globals.h src/inpline.h
 src/finput.o: src/hdump.h src/FCIdump.h src/odump.h
 src/inpline.o: src/inpline.h src/utilities.h src/globals.h
