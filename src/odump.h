@@ -57,7 +57,7 @@ public:
   Occupation guess_occupation(uint nclos = 0, uint nopen = 0) const;
 private:
   // Two-electron integrals
-  Integrals _orbs;
+  IntegralsD _orbs;
   // number of basis and molecular orbitals
   uint _nbas, _norb;
 };

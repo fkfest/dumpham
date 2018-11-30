@@ -137,6 +137,8 @@ bool Finput::analyzeline()
   
   Hdump dump(inputfile);
   dump.store(outputfile);
+//   Input::iPars["ham"]["nosym"] = 0;
+//   dump.store(outputfile+"sym");
   
   const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
   if ( orbcoefs_input != "" ) {

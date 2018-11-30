@@ -81,7 +81,7 @@ Odump::Odump(std::string orbdump, uint norb)
     error("Orbital number guess is not implemented yet");
   }
   std::string line;
-  Integrals coefs;
+  IntegralsD coefs;
   while (oin.good()) {
     std::getline(oin,line);
     if ( line.empty() || line[0] == '#' || 

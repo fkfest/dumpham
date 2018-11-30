@@ -290,7 +290,12 @@ std::vector<char> FCIdump::bytestream(bool integrals)
 
 void FCIdump::writeIntegral(int i, int j, int k, int l, double value) const
 {
-    outputStream<<value<<" "<< i<<" "<<j<<" "<<k<<" "<<l<<std::endl;
+    outputStream << value << " " << i << " " << j << " " << k << " " << l << std::endl;
+//     outputStream << std::setw(23) << value << " ";
+//     outputStream << std::setw(3) << i<<" ";
+//     outputStream << std::setw(3) << j<<" ";
+//     outputStream << std::setw(3) << k<<" ";
+//     outputStream << std::setw(3) << l << std::endl;
 }
 
 FCIdump::integralType FCIdump::nextIntegral(int &i, int &j, int &k, int &l, double &value) const

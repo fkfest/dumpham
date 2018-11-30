@@ -1,0 +1,102 @@
+#include "integs.h"
+
+Integ2::Integ2(PGSym pgs): BaseTensors(pgs,2)
+{
+  FDPar norb4ir = _pgs.norbs_in_irreps();
+  uint nIrreps = _pgs.nIrreps();
+  _blocks.resize(nIrreps*nIrreps);
+  Irrep ir = 0;
+  BlkIdx nint = 0, norb = 0;
+  BlkIdx BlkLen;
+  _foreach_cauto(FDPar,ni,norb4ir) {
+    // triangular symmetry
+    BlkLen = *ni * (*ni + 1)/2;
+    assert(norb == BlkIdx(_pgs._firstorb4irrep[ir]));
+    _blocks[ir+ir*nIrreps] = nint;
+    ++ir;
+    norb += *ni;
+    nint += BlkLen;
+  }
+  _data = DData(nint,0.0);
+}
+
+
+
+Integ4::Integ4(PGSym pgs): BaseTensors(pgs,4)
+{
+  FDPar norb4ir = _pgs.norbs_in_irreps();
+  uint nIrreps = _pgs.nIrreps();
+  _blocks.resize(nIrreps*nIrreps*nIrreps*nIrreps);
+  BlkIdx nint = 0;
+  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+    std::vector<BlkIdx> len_of2, i_indx, j_indx;
+    for ( Irrep iri = 0; iri < _pgs.nIrreps(); ++iri ) {
+      for ( Irrep irj = 0; irj <= iri; ++irj ) {
+        if ( _pgs.product(iri,irj) != isym ) continue;
+        if ( iri == irj ) {
+          len_of2.push_back(norb4ir[iri]*(norb4ir[iri] + 1)/2);
+        } else {
+          len_of2.push_back(norb4ir[iri]*norb4ir[irj]);
+        }
+        i_indx.push_back(iri);
+        j_indx.push_back(irj);
+      }
+    }
+    for ( uint iblk = 0; iblk < len_of2.size(); ++iblk ) {
+      for ( uint jblk = 0; jblk < len_of2.size(); ++jblk ) {
+        // irreps
+        uint
+          p = i_indx[iblk],
+          q = j_indx[iblk],
+          r = i_indx[jblk],
+          s = j_indx[jblk];
+        if ( (p+1)*p/2 + q < (r+1)*r/2 + s ) continue;
+        _blocks[p+nIrreps*(q+nIrreps*(r+nIrreps*s))] = nint;
+        if ( iblk == jblk ) {
+          nint += len_of2[iblk]*(len_of2[iblk]+1)/2;
+        } else {
+          nint += len_of2[iblk]*len_of2[jblk];
+        }
+      }
+    }
+  }
+  _data = DData(nint,0.0);
+}
+
+Integ4ab::Integ4ab(PGSym pgs): BaseTensors(pgs,4)
+{
+  FDPar norb4ir = _pgs.norbs_in_irreps();
+  uint nIrreps = _pgs.nIrreps();
+  _blocks.resize(nIrreps*nIrreps*nIrreps*nIrreps);
+  BlkIdx nint = 0;
+  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+    std::vector<BlkIdx> len_of2, i_indx, j_indx;
+    for ( Irrep iri = 0; iri < _pgs.nIrreps(); ++iri ) {
+      for ( Irrep irj = 0; irj <= iri; ++irj ) {
+        if ( _pgs.product(iri,irj) != isym ) continue;
+        if ( iri == irj ) {
+          len_of2.push_back(norb4ir[iri]*(norb4ir[iri] + 1)/2);
+        } else {
+          len_of2.push_back(norb4ir[iri]*norb4ir[irj]);
+        }
+        i_indx.push_back(iri);
+        j_indx.push_back(irj);
+      }
+    }
+    for ( uint iblk = 0; iblk < len_of2.size(); ++iblk ) {
+      for ( uint jblk = 0; jblk < len_of2.size(); ++jblk ) {
+        // irreps
+        uint
+          p = i_indx[iblk],
+          q = j_indx[iblk],
+          r = i_indx[jblk],
+          s = j_indx[jblk];
+        _blocks[p+nIrreps*(q+nIrreps*(r+nIrreps*s))] = nint;
+        nint += len_of2[iblk]*len_of2[jblk];
+      }
+    }
+  }
+  _data = DData(nint,0.0);
+}
+
+
