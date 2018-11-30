@@ -50,6 +50,7 @@ private:
   void storerec_nosym(Integ4 * pInt);
   void storerec_nosym(Integ4ab * pInt);
   void storerec_nosym(Integ2 * pInt);
+  void check_addressing_integrals() const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
   // One-electron integrals (one set for cs rhf, otherwise alpha and beta)

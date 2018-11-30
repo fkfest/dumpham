@@ -56,41 +56,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   }
   
 #ifdef _DEBUG
-//   xout << "test one el" << std::endl;
-//   int oldidx=-1;
-//   for (uint i = 1; i <= _norb; ++i )
-//     for (uint j = 1; j <= i; ++j ) {
-//       if ( _pgs.totIrrep(i-1,j-1) != 0 ) continue;
-//       BlkIdx idx = _oneel.index(i-1,j-1);
-//       xout << i << " " << j << " " << idx << std::endl;
-//       assert( idx == BlkIdx(oldidx+1));
-//       oldidx = idx;
-//     }
-//   xout << "test two el" << std::endl;
-//   uint idxcan = 0;
-//   for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
-//     for ( uint i = 1; i <= _norb; ++i) {
-//       for ( uint j = 1; j <= i; ++j ) {
-//         if ( _pgs.totIrrep(i-1,j-1) != isym ) continue;
-//         for ( uint k = 1; k <= i; ++k ) {
-//           for ( uint l = 1; l <= k; ++l ) {
-//             if ( _pgs.totIrrep(k-1,l-1) != isym ) continue;
-//             uint ij = (i-1)*i/2 + j;
-//             uint kl = (k-1)*k/2 + l;
-//             if ( kl <= ij ){
-//               BlkIdx idx = _twoel.index(i-1,j-1,k-1,l-1);
-//               xout << i << " " << j << " " << k << " " << l << " " << idx << "  " << idxcan << std::endl;
-//               ++idxcan;
-//             }
-//           }
-//         }
-//       }
-//     }
-//   }
-//   
-//   xout << "n1el: " << _oneel.nelem() << std::endl;
-//   xout << "n2el: " << _twoel.nelem() << std::endl;
-#endif //_DEBUG
+//   check_addressing_integrals();
+#endif
   _escal = 0.0;
   
   FCIdump::integralType type;
@@ -327,4 +294,41 @@ uint Hdump::nclosed() const
   return nclos;
 }
 
+void Hdump::check_addressing_integrals() const
+{
+  xout << "test one el" << std::endl;
+  int oldidx=-1;
+  for (uint i = 1; i <= _norb; ++i )
+    for (uint j = 1; j <= i; ++j ) {
+      if ( _pgs.totIrrep(i-1,j-1) != 0 ) continue;
+      BlkIdx idx = (static_cast<Integ2*>(_oneel[aa].get()))->index(i-1,j-1);
+      xout << i << " " << j << " " << idx << std::endl;
+      if ( idx != BlkIdx(oldidx+1)) error("Indices are not consecutive in 1-el operator","check_addressing_integrals");
+      oldidx = idx;
+    }
+  xout << "test two el" << std::endl;
+  uint idxcan = 0;
+  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+    for ( uint i = 1; i <= _norb; ++i) {
+      for ( uint j = 1; j <= i; ++j ) {
+        if ( _pgs.totIrrep(i-1,j-1) != isym ) continue;
+        for ( uint k = 1; k <= i; ++k ) {
+          for ( uint l = 1; l <= k; ++l ) {
+            if ( _pgs.totIrrep(k-1,l-1) != isym ) continue;
+            uint ij = (i-1)*i/2 + j;
+            uint kl = (k-1)*k/2 + l;
+            if ( kl <= ij ){
+              BlkIdx idx = (static_cast<Integ4*>(_twoel[aaaa].get()))->index(i-1,j-1,k-1,l-1);
+              xout << i << " " << j << " " << k << " " << l << " " << idx << "  " << idxcan << std::endl;
+              ++idxcan;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  xout << "n1el: " << _oneel[aa]->nelem() << std::endl;
+  xout << "n2el: " << _twoel[aaaa]->nelem() << std::endl;
+}
 
