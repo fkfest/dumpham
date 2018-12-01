@@ -249,12 +249,7 @@ void Hdump::storerec_nosym(Integ4* pInt)
           uint ij = (i-1)*i/2 + j;
           uint kl = (k-1)*k/2 + l;
           if ( kl <= ij ){
-//             int ijkl = (ij-1)*ij/2 + kl - 1;
-            if ( _pgs.totIrrep(i-1,j-1,k-1,l-1) == 0 ) {
-              _dump.writeIntegral(i,j,k,l,pInt->value(i-1,j-1,k-1,l-1));
-            } else {
-              _dump.writeIntegral(i,j,k,l,0.0);
-            }
+            _dump.writeIntegral(i,j,k,l,pInt->value_pgs(i-1,j-1,k-1,l-1));
           }
         }
 }
@@ -264,22 +259,14 @@ void Hdump::storerec_nosym(Integ4ab* pInt)
     for ( uint j = 1; j <= i; ++j )
       for ( uint k = 1; k <= _norb; ++k )
         for ( uint l = 1; l <= k; ++l ) {
-          if ( _pgs.totIrrep(i-1,j-1,k-1,l-1) == 0 ) {
-            _dump.writeIntegral(i,j,k,l,pInt->value(i-1,j-1,k-1,l-1));
-          } else {
-            _dump.writeIntegral(i,j,k,l,0.0);
-          }
+          _dump.writeIntegral(i,j,k,l,pInt->value_pgs(i-1,j-1,k-1,l-1));
         }
 }
 void Hdump::storerec_nosym(Integ2* pInt)
 {
   for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j ) {
-      if ( _pgs.totIrrep(i-1,j-1) == 0 ) {
-        _dump.writeIntegral(i,j,0,0,pInt->value(i-1,j-1));
-      } else {
-        _dump.writeIntegral(i,j,0,0,0.0);
-      }
+      _dump.writeIntegral(i,j,0,0,pInt->value_pgs(i-1,j-1));
     }
 }
 

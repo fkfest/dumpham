@@ -47,8 +47,13 @@ class Integ2 : public BaseTensors {
 public:
   Integ2() : BaseTensors(2) {};
   Integ2(PGSym pgs);
-  // return (pq) value
-  double & value( uint p, uint q REDUNWAR_) { return _data[index(p,q REDUNWAR)];};
+  // return reference to (pq) value
+  double & value( uint p, uint q REDUNWAR_) { return _data[index(p,q REDUNWAR)];}
+  // return (pq) value with point-group symmetry handling
+  double value_pgs( uint p, uint q ) {
+    if ( _pgs.totIrrep(p,q) == 0 ) return value(p,q);
+    else return 0.0;
+  }
   inline BlkIdx index( uint p, uint q REDUNWAR_) const;
 };
 
@@ -60,8 +65,13 @@ class Integ4 : public BaseTensors {
 public:
   Integ4() : BaseTensors(4) {};
   Integ4(PGSym pgs);
-  // return (pq|rs) value
+  // return reference to (pq|rs) value
   double & value( uint p, uint q, uint r, uint s REDUNWAR_) { return _data[index(p,q,r,s REDUNWAR)];};
+  // return (pq|rs) value with point-group symmetry handling
+  double value_pgs( uint p, uint q, uint r, uint s ) {
+    if ( _pgs.totIrrep(p,q,r,s) == 0 ) return value(p,q,r,s);
+    else return 0.0;
+  }
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
 
@@ -74,8 +84,13 @@ class Integ4ab : public BaseTensors {
 public:
   Integ4ab() : BaseTensors(4) {};
   Integ4ab(PGSym pgs);
-  // return (pq|rs) value
+  // return reference to (pq|rs) value
   double & value( uint p, uint q, uint r, uint s REDUNWAR_) { return _data[index(p,q,r,s REDUNWAR)];};
+  // return (pq|rs) value with point-group symmetry handling
+  double value_pgs( uint p, uint q, uint r, uint s ) {
+    if ( _pgs.totIrrep(p,q,r,s) == 0 ) return value(p,q,r,s);
+    else return 0.0;
+  }
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
 
