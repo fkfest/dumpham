@@ -27,9 +27,11 @@ typedef uint64_t BlkIdx;
  */
 class BaseTensors {
 public:
-  BaseTensors(uint nidx = 0) : _nidx(nidx) {};
-  BaseTensors(const PGSym& pgs, uint nidx = 0) : p_pgs(&pgs), _nidx(nidx) {};
-  BlkIdx nelem() const { return _data.size(); };
+  BaseTensors(uint nidx = 0) : _nidx(nidx) {}
+  BaseTensors(const PGSym& pgs, uint nidx = 0) : p_pgs(&pgs), _nidx(nidx) {}
+  BlkIdx nelem() const { return _data.size(); }
+  // set value using the tuple index
+  void set( BlkIdx idx, double val ) { assert(idx < _data.size()); _data[idx] = val; }
   // set (pq) value
   void set( uint p, uint q, double val REDUNWAR_) { _data[index(p,q REDUNWAR)] = val; }
   // set (pq|rs) value
@@ -76,6 +78,17 @@ public:
 };
 
 /*! 
+ * Class for (pq) with group symmetry
+ */
+class Integ2ab : public BaseTensors {
+public:
+  Integ2ab() : BaseTensors(2) {};
+  Integ2ab(const PGSym& pgs);
+  // index of p,q value
+  inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
+};
+
+/*! 
  * Class for (pq|rs) with permutational (triangular) and group symmetry
  * (pq|rs)=(qp|rs)=(pq|sr)=(qp|sr)=(rs|pq)=(sr|pq)=(rs|qp)=(sr|qp)
  */
@@ -115,6 +128,18 @@ BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
        qb = q - p_pgs->_firstorb4irrep[qir];
   // triangular index
   return pb*(pb+1)/2+qb+blk_idx;
+}
+
+BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
+{
+  USERW;
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q);
+  BlkIdx blk_idx = _blocks[pir+qir*p_pgs->nIrreps()];
+  // indices relative to the block
+  uint pb = p - p_pgs->_firstorb4irrep[pir],
+       qb = q - p_pgs->_firstorb4irrep[qir];
+  return pb*p_pgs->_norb4irrep[qir]+qb+blk_idx;
 }
 
 inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const

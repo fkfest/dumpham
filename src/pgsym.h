@@ -32,19 +32,24 @@ public:
     _foreach_auto(FDPar,fo,_firstorb4irrep)
       --(*fo);
   };
+  // irrep of orbital orb. Orbitals are 0 based
+  Irrep irrep( uint orb ) const { return _irrep4orb[orb]; }
   // orbitals are 0 based
-  Irrep irrep( uint orb ) const { return _irrep4orb[orb]; }; 
-  // orbitals are 0 based
-  Irrep totIrrep( uint orb1, uint orb2 ) const { return product(_irrep4orb[orb1],_irrep4orb[orb2]); };
-//   Irrep totIrrep( uint orb1, uint orb2, uint orb3 ) { return product(_irrep4orb[orb1], totIrrep(orb2,orb3)); };
-  Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) const { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); };
+  Irrep totIrrep( uint orb1, uint orb2 ) const { return product(_irrep4orb[orb1],_irrep4orb[orb2]); }
+//   Irrep totIrrep( uint orb1, uint orb2, uint orb3 ) { return product(_irrep4orb[orb1], totIrrep(orb2,orb3)); }
+  Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) const 
+                { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); }
   // product of two irreps
-  Irrep product(Irrep i, Irrep j) const { return (i^j);};
+  Irrep product(Irrep i, Irrep j) const { return (i^j);}
   // return the original orbsym for fcidump
-  FDPar orbsym() const { FDPar osym; _foreach_cauto(IrrepVec,ir,_irrep4orb) osym.push_back(*ir+1); return osym;  };
+  FDPar orbsym() const { FDPar osym; _foreach_cauto(IrrepVec,ir,_irrep4orb) osym.push_back(*ir+1); return osym;  }
   // number of orbitals in each irrep
-  FDPar norbs_in_irreps() const { return _norb4irrep; };
-  uint nIrreps() const { return _nIrreps; };
+  FDPar norbs_in_irreps() const { return _norb4irrep; }
+  // number of orbitals in irrep
+  uint norbs( Irrep ir ) const { assert(ir < _norb4irrep.size()); return _norb4irrep[ir]; }
+  // total number of orbitals
+  uint ntotorbs() const { assert(_nIrreps > 0); return _norb4irrep[_nIrreps-1] + _firstorb4irrep[_nIrreps-1]; }
+  uint nIrreps() const { return _nIrreps; }
   
   uint _nIrreps;
   // Irreps of each orbital, Irrep is 0 based!

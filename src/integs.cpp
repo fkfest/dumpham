@@ -6,20 +6,34 @@ Integ2::Integ2(const PGSym& pgs): BaseTensors(pgs,2)
   uint nIrreps = p_pgs->nIrreps();
   _blocks.resize(nIrreps*nIrreps);
   Irrep ir = 0;
-  BlkIdx nint = 0, norb = 0;
+  BlkIdx nint = 0;
   BlkIdx BlkLen;
   _foreach_cauto(FDPar,ni,norb4ir) {
     // triangular symmetry
     BlkLen = *ni * (*ni + 1)/2;
-    assert(norb == BlkIdx(p_pgs->_firstorb4irrep[ir]));
     _blocks[ir+ir*nIrreps] = nint;
     ++ir;
-    norb += *ni;
     nint += BlkLen;
   }
-  _data = DData(nint,0.0);
+  _data.resize(nint,0.0);
 }
 
+Integ2ab::Integ2ab(const PGSym& pgs): BaseTensors(pgs,2)
+{
+  FDPar norb4ir = p_pgs->norbs_in_irreps();
+  uint nIrreps = p_pgs->nIrreps();
+  _blocks.resize(nIrreps*nIrreps);
+  Irrep ir = 0;
+  BlkIdx nint = 0;
+  BlkIdx BlkLen;
+  _foreach_cauto(FDPar,ni,norb4ir) {
+    BlkLen = *ni * *ni;
+    _blocks[ir+ir*nIrreps] = nint;
+    ++ir;
+    nint += BlkLen;
+  }
+  _data.resize(nint,0.0);
+}
 
 
 Integ4::Integ4(const PGSym& pgs): BaseTensors(pgs,4)
@@ -60,7 +74,7 @@ Integ4::Integ4(const PGSym& pgs): BaseTensors(pgs,4)
       }
     }
   }
-  _data = DData(nint,0.0);
+  _data.resize(nint,0.0);
 }
 
 Integ4ab::Integ4ab(const PGSym& pgs): BaseTensors(pgs,4)
@@ -96,7 +110,7 @@ Integ4ab::Integ4ab(const PGSym& pgs): BaseTensors(pgs,4)
       }
     }
   }
-  _data = DData(nint,0.0);
+  _data.resize(nint,0.0);
 }
 
 

@@ -35,6 +35,12 @@ public:
   uint nopen() const { return _ms2; }
   // number of occupied orbitals
   uint nocc() const { return nclosed()+nopen(); }
+  const PGSym& pgs() const { return _pgs; }
+  // number of closed shell orbitals in each irrep
+  const FDPar& clos() const { return _clos; }
+  // number of occupied orbitals in each irrep
+  const FDPar& occ() const { return _occ; }
+  
   
 private:
   void store_with_symmetry() const;

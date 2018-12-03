@@ -142,11 +142,11 @@ bool Finput::analyzeline()
   
   const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
   if ( orbcoefs_input != "" ) {
-    Odump odump(orbcoefs_input,dump.norb());
-    Occupation occguess = odump.guess_occupation(dump.nclosed(),dump.nopen());
+    Odump odump(dump.pgs(),orbcoefs_input);
+    Occupation occguess = odump.guess_occupation(dump.clos(),dump.occ());
     xout << "Guessed occupation: " << occguess << std::endl;
     xout << "Guessed spin occupation: ";
-    std::vector<int> socc = occguess.spinocc(dump.nclosed());
+    std::vector<int> socc = occguess.spinocc();
     _foreach_cauto ( std::vector<int>, iso, socc ) {
       xout << *iso << "  ";
     }
@@ -163,8 +163,8 @@ bool Finput::analyzeline()
     }
     std::vector<int> occ_spin;
     apars2nums<int>(occ_spin,occ,std::dec);
-    Occupation occupation(occ_spin);
-    Odump odump(dump.norb(),occupation);
+    Occupation occupation(dump.pgs(), occ_spin);
+    Odump odump(dump.pgs(), occupation);
     odump.store(orboutputfile);
   }
   

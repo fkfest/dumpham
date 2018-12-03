@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     Hdump dump(inputfile);
     dump.store(outputfile);
     if ( orbdump ) {
-      Odump odump(dump.norb());
+      Odump odump(dump.pgs());
       odump.store(orboutputfile);
     }
   } else {
