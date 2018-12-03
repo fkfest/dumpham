@@ -56,30 +56,37 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   }
   
 #ifdef _DEBUG
+  assert( dynamic_cast<Integ4*>(_twoel[aaaa].get()) );
+  assert( dynamic_cast<Integ2*>(_oneel[aa].get()) );
+  if ( _uhf ) {
+    assert( dynamic_cast<Integ2*>(_oneel[bb].get()) );
+    assert( dynamic_cast<Integ4*>(_twoel[bbbb].get()) );
+    assert( dynamic_cast<Integ4ab*>(_twoel[aabb].get()) );
+  }
 //   check_addressing_integrals();
 #endif
   _escal = 0.0;
   
   FCIdump::integralType type;
   _dump.rewind();
-  
+  // read integrals
   type = _dump.nextIntegral(i,j,k,l,value);
   do {
     switch(type){
       case FCIdump::I2aa:
-        readrec( static_cast<Integ4*> (_twoel[aaaa].get()),i,j,k,l,value,type);
+        readrec( static_cast<Integ4*>(_twoel[aaaa].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I2bb:
-        readrec( static_cast<Integ4*> (_twoel[bbbb].get()),i,j,k,l,value,type);
+        readrec( static_cast<Integ4*>(_twoel[bbbb].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I2ab:
-        readrec( static_cast<Integ4ab*> (_twoel[aabb].get()),i,j,k,l,value,type);
+        readrec( static_cast<Integ4ab*>(_twoel[aabb].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I1a:
-        readrec( static_cast<Integ2*> (_oneel[aa].get()),i,j,value,type);
+        readrec( static_cast<Integ2*>(_oneel[aa].get()),i,j,value,type);
         break;
       case FCIdump::I1b:
-        readrec( static_cast<Integ2*> (_oneel[bb].get()),i,j,value,type);
+        readrec( static_cast<Integ2*>(_oneel[bb].get()),i,j,value,type);
         break;
       case FCIdump::I0:
         _escal = value;
@@ -105,7 +112,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCId
   #endif
   FCIdump::integralType type;
   do {
-    pInt->value(i-1,j-1,k-1,l-1 REDUNWAR) = value;
+    pInt->set(i-1,j-1,k-1,l-1, value REDUNWAR);
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
   #undef REDUNWAR
@@ -122,7 +129,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   FCIdump::integralType type;
   int k,l;
   do {
-    pInt->value(i-1,j-1 REDUNWAR) = value;
+    pInt->set(i-1,j-1, value REDUNWAR);
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
   #undef REDUNWAR
@@ -157,45 +164,45 @@ void Hdump::store(std::string fcidump)
   }
 }
 
-void Hdump::store_with_symmetry()
+void Hdump::store_with_symmetry() const
 {
-  storerec_sym(static_cast<Integ4*> (_twoel[aaaa].get()));
+  storerec_sym(static_cast<Integ4*>(_twoel[aaaa].get()));
   if (_uhf) {
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_sym(static_cast<Integ4*> (_twoel[bbbb].get()));
+    storerec_sym(static_cast<Integ4*>(_twoel[bbbb].get()));
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_sym(static_cast<Integ4ab*> (_twoel[aabb].get()));
+    storerec_sym(static_cast<Integ4ab*>(_twoel[aabb].get()));
     _dump.writeIntegral(0,0,0,0,0.0);
   }
-  storerec_sym(static_cast<Integ2*> (_oneel[aa].get()));
+  storerec_sym(static_cast<Integ2*>(_oneel[aa].get()));
   if (_uhf) {
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_sym(static_cast<Integ2*> (_oneel[bb].get()));
+    storerec_sym(static_cast<Integ2*>(_oneel[bb].get()));
     _dump.writeIntegral(0,0,0,0,0.0);
   }
   _dump.writeIntegral(0,0,0,0,_escal); 
 }
 
-void Hdump::store_without_symmetry()
+void Hdump::store_without_symmetry() const
 {
-  storerec_nosym(static_cast<Integ4*> (_twoel[aaaa].get()));
+  storerec_nosym(static_cast<Integ4*>(_twoel[aaaa].get()));
   if (_uhf) {
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_nosym(static_cast<Integ4*> (_twoel[bbbb].get()));
+    storerec_nosym(static_cast<Integ4*>(_twoel[bbbb].get()));
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_nosym(static_cast<Integ4ab*> (_twoel[aabb].get()));
+    storerec_nosym(static_cast<Integ4ab*>(_twoel[aabb].get()));
     _dump.writeIntegral(0,0,0,0,0.0);
   }
-  storerec_nosym(static_cast<Integ2*> (_oneel[aa].get()));
+  storerec_nosym(static_cast<Integ2*>(_oneel[aa].get()));
   if (_uhf) {
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_nosym(static_cast<Integ2*> (_oneel[bb].get()));
+    storerec_nosym(static_cast<Integ2*>(_oneel[bb].get()));
     _dump.writeIntegral(0,0,0,0,0.0);
   }
   _dump.writeIntegral(0,0,0,0,_escal); 
 }
 
-void Hdump::storerec_sym(Integ4* pInt)
+void Hdump::storerec_sym(const Integ4* pInt) const
 {
   for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
     for ( uint i = 1; i <= _norb; ++i) {
@@ -207,7 +214,7 @@ void Hdump::storerec_sym(Integ4* pInt)
             uint ij = (i-1)*i/2 + j;
             uint kl = (k-1)*k/2 + l;
             if ( kl <= ij ){
-              _dump.writeIntegral(i,j,k,l,pInt->value(i-1,j-1,k-1,l-1));
+              _dump.writeIntegral(i,j,k,l,pInt->get(i-1,j-1,k-1,l-1));
             }
           }
         }
@@ -215,33 +222,33 @@ void Hdump::storerec_sym(Integ4* pInt)
     }
   }
 }
-void Hdump::storerec_sym(Integ4ab* pInt)
+void Hdump::storerec_sym(const Integ4ab* pInt) const
 {
   for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
     for ( uint i = 1; i <= _norb; ++i) {
       for ( uint j = 1; j <= i; ++j ) {
         if ( _pgs.totIrrep(i-1,j-1) != isym ) continue;
-        for ( uint k = 1; k <= i; ++k ) {
+        for ( uint k = 1; k <= _norb; ++k ) {
           for ( uint l = 1; l <= k; ++l ) {
             if ( _pgs.totIrrep(k-1,l-1) != isym ) continue;
-              _dump.writeIntegral(i,j,k,l,pInt->value(i-1,j-1,k-1,l-1));
+              _dump.writeIntegral(i,j,k,l,pInt->get(i-1,j-1,k-1,l-1));
           }
         }
       }
     }
   }
 }
-void Hdump::storerec_sym(Integ2* pInt)
+void Hdump::storerec_sym(const Integ2* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i) {
     for ( uint j = 1; j <= i; ++j ) {
         if ( _pgs.totIrrep(i-1,j-1) != 0 ) continue;
-        _dump.writeIntegral(i,j,0,0,pInt->value(i-1,j-1));
+        _dump.writeIntegral(i,j,0,0,pInt->get(i-1,j-1));
     }
   }
 }
 
-void Hdump::storerec_nosym(Integ4* pInt)
+void Hdump::storerec_nosym(const Integ4* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j )
@@ -250,24 +257,24 @@ void Hdump::storerec_nosym(Integ4* pInt)
           uint ij = (i-1)*i/2 + j;
           uint kl = (k-1)*k/2 + l;
           if ( kl <= ij ){
-            _dump.writeIntegral(i,j,k,l,pInt->value_pgs(i-1,j-1,k-1,l-1));
+            _dump.writeIntegral(i,j,k,l,pInt->get_with_pgs(i-1,j-1,k-1,l-1));
           }
         }
 }
-void Hdump::storerec_nosym(Integ4ab* pInt)
+void Hdump::storerec_nosym(const Integ4ab* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j )
       for ( uint k = 1; k <= _norb; ++k )
         for ( uint l = 1; l <= k; ++l ) {
-          _dump.writeIntegral(i,j,k,l,pInt->value_pgs(i-1,j-1,k-1,l-1));
+          _dump.writeIntegral(i,j,k,l,pInt->get_with_pgs(i-1,j-1,k-1,l-1));
         }
 }
-void Hdump::storerec_nosym(Integ2* pInt)
+void Hdump::storerec_nosym(const Integ2* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j ) {
-      _dump.writeIntegral(i,j,0,0,pInt->value_pgs(i-1,j-1));
+      _dump.writeIntegral(i,j,0,0,pInt->get_with_pgs(i-1,j-1));
     }
 }
 

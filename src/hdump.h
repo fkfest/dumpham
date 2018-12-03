@@ -37,19 +37,19 @@ public:
   uint nocc() const { return nclosed()+nopen(); }
   
 private:
-  void store_with_symmetry();
-  void store_without_symmetry();
+  void store_with_symmetry() const;
+  void store_without_symmetry() const;
   // on input: first value (i,j,k,l,value,type)
   template<typename T>
   void readrec(T * pInt, int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype );
   template<typename T>
   void readrec(T * pInt, int& i, int& j, double& value, FCIdump::integralType& curtype );
-  void storerec_sym(Integ4 * pInt);
-  void storerec_sym(Integ4ab * pInt);
-  void storerec_sym(Integ2 * pInt);
-  void storerec_nosym(Integ4 * pInt);
-  void storerec_nosym(Integ4ab * pInt);
-  void storerec_nosym(Integ2 * pInt);
+  void storerec_sym(const Integ4 * pInt) const;
+  void storerec_sym(const Integ4ab * pInt) const;
+  void storerec_sym(const Integ2 * pInt) const;
+  void storerec_nosym(const Integ4 * pInt) const;
+  void storerec_nosym(const Integ4ab * pInt) const;
+  void storerec_nosym(const Integ2 * pInt) const;
   void check_addressing_integrals() const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;

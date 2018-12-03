@@ -7,12 +7,14 @@
 #define REDUNWAR_ ,bool redunwar = false
 #define REDUNWAR__ ,bool redunwar
 #define REDUNWAR ,redunwar
+#define USERW (void)redunwar
 #define WARNRED2(p,q) if(redunwar) warning("Redundant entry in FCIDUMP: " << p << " " << q );
 #define WARNRED4(p,q,r,s) if(redunwar) warning("Redundant entry in FCIDUMP: " << p << " " << q << " " << r << " " << s );
 #else
 #define REDUNWAR_
 #define REDUNWAR__
 #define REDUNWAR
+#define USERW 
 #define WARNRED2(p,q)
 #define WARNRED4(p,q,r,s)
 #endif
@@ -27,7 +29,29 @@ class BaseTensors {
 public:
   BaseTensors(uint nidx = 0) : _nidx(nidx) {};
   BaseTensors(PGSym pgs, uint nidx = 0) : _pgs(pgs), _nidx(nidx) {};
-  virtual BlkIdx nelem() const { return _data.size(); };
+  BlkIdx nelem() const { return _data.size(); };
+  // set (pq) value
+  void set( uint p, uint q, double val REDUNWAR_) { _data[index(p,q REDUNWAR)] = val; }
+  // set (pq|rs) value
+  void set( uint p, uint q, uint r, uint s, double val REDUNWAR_) { _data[index(p,q,r,s REDUNWAR)] = val; }
+  // get (pq) value
+  double get( uint p, uint q REDUNWAR_) const { return _data[index(p,q REDUNWAR)]; }
+  // get (pq|rs) value
+  double get( uint p, uint q, uint r, uint s REDUNWAR_) const { return _data[index(p,q,r,s REDUNWAR)]; }
+  // return (pq) value with point-group symmetry handling
+  double get_with_pgs( uint p, uint q ) const {
+    if ( _pgs.totIrrep(p,q) == 0 ) return get(p,q);
+    else return 0.0;
+  }
+  // return (pq|rs) value with point-group symmetry handling
+  double get_with_pgs( uint p, uint q, uint r, uint s) const {
+    if ( _pgs.totIrrep(p,q,r,s) == 0 ) return get(p,q,r,s);
+    else return 0.0;
+  }
+  virtual BlkIdx index( uint p, uint q REDUNWAR_) const 
+          {error("Incompatible index call!","BaseTensors");(void)p;(void)q;USERW;return 0;};
+  virtual BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
+          { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;USERW;return 0;}
 protected:
   PGSym _pgs;
   // number of indices
@@ -47,14 +71,8 @@ class Integ2 : public BaseTensors {
 public:
   Integ2() : BaseTensors(2) {};
   Integ2(PGSym pgs);
-  // return reference to (pq) value
-  double & value( uint p, uint q REDUNWAR_) { return _data[index(p,q REDUNWAR)];}
-  // return (pq) value with point-group symmetry handling
-  double value_pgs( uint p, uint q ) {
-    if ( _pgs.totIrrep(p,q) == 0 ) return value(p,q);
-    else return 0.0;
-  }
-  inline BlkIdx index( uint p, uint q REDUNWAR_) const;
+  // index of p,q value
+  inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
 };
 
 /*! 
@@ -65,13 +83,7 @@ class Integ4 : public BaseTensors {
 public:
   Integ4() : BaseTensors(4) {};
   Integ4(PGSym pgs);
-  // return reference to (pq|rs) value
-  double & value( uint p, uint q, uint r, uint s REDUNWAR_) { return _data[index(p,q,r,s REDUNWAR)];};
-  // return (pq|rs) value with point-group symmetry handling
-  double value_pgs( uint p, uint q, uint r, uint s ) {
-    if ( _pgs.totIrrep(p,q,r,s) == 0 ) return value(p,q,r,s);
-    else return 0.0;
-  }
+  // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
 
@@ -84,13 +96,7 @@ class Integ4ab : public BaseTensors {
 public:
   Integ4ab() : BaseTensors(4) {};
   Integ4ab(PGSym pgs);
-  // return reference to (pq|rs) value
-  double & value( uint p, uint q, uint r, uint s REDUNWAR_) { return _data[index(p,q,r,s REDUNWAR)];};
-  // return (pq|rs) value with point-group symmetry handling
-  double value_pgs( uint p, uint q, uint r, uint s ) {
-    if ( _pgs.totIrrep(p,q,r,s) == 0 ) return value(p,q,r,s);
-    else return 0.0;
-  }
+  // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
 
@@ -194,6 +200,7 @@ BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
 #undef REDUNWAR_
 #undef REDUNWAR__
 #undef REDUNWAR
+#undef USERW
 #undef WARNRED2
 #undef WARNRED4
 

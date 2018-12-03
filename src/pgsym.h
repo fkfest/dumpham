@@ -37,7 +37,7 @@ public:
   // orbitals are 0 based
   Irrep totIrrep( uint orb1, uint orb2 ) const { return product(_irrep4orb[orb1],_irrep4orb[orb2]); };
 //   Irrep totIrrep( uint orb1, uint orb2, uint orb3 ) { return product(_irrep4orb[orb1], totIrrep(orb2,orb3)); };
-  Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); };
+  Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) const { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); };
   // product of two irreps
   Irrep product(Irrep i, Irrep j) const { return (i^j);};
   // return the original orbsym for fcidump
