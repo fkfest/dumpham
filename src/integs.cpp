@@ -1,9 +1,9 @@
 #include "integs.h"
 
-Integ2::Integ2(PGSym pgs): BaseTensors(pgs,2)
+Integ2::Integ2(const PGSym& pgs): BaseTensors(pgs,2)
 {
-  FDPar norb4ir = _pgs.norbs_in_irreps();
-  uint nIrreps = _pgs.nIrreps();
+  FDPar norb4ir = p_pgs->norbs_in_irreps();
+  uint nIrreps = p_pgs->nIrreps();
   _blocks.resize(nIrreps*nIrreps);
   Irrep ir = 0;
   BlkIdx nint = 0, norb = 0;
@@ -11,7 +11,7 @@ Integ2::Integ2(PGSym pgs): BaseTensors(pgs,2)
   _foreach_cauto(FDPar,ni,norb4ir) {
     // triangular symmetry
     BlkLen = *ni * (*ni + 1)/2;
-    assert(norb == BlkIdx(_pgs._firstorb4irrep[ir]));
+    assert(norb == BlkIdx(p_pgs->_firstorb4irrep[ir]));
     _blocks[ir+ir*nIrreps] = nint;
     ++ir;
     norb += *ni;
@@ -22,17 +22,17 @@ Integ2::Integ2(PGSym pgs): BaseTensors(pgs,2)
 
 
 
-Integ4::Integ4(PGSym pgs): BaseTensors(pgs,4)
+Integ4::Integ4(const PGSym& pgs): BaseTensors(pgs,4)
 {
-  FDPar norb4ir = _pgs.norbs_in_irreps();
-  uint nIrreps = _pgs.nIrreps();
+  FDPar norb4ir = p_pgs->norbs_in_irreps();
+  uint nIrreps = p_pgs->nIrreps();
   _blocks.resize(nIrreps*nIrreps*nIrreps*nIrreps);
   BlkIdx nint = 0;
-  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+  for ( Irrep isym = 0; isym < p_pgs->nIrreps(); ++isym ) {
     std::vector<BlkIdx> len_of2, i_indx, j_indx;
-    for ( Irrep iri = 0; iri < _pgs.nIrreps(); ++iri ) {
+    for ( Irrep iri = 0; iri < p_pgs->nIrreps(); ++iri ) {
       for ( Irrep irj = 0; irj <= iri; ++irj ) {
-        if ( _pgs.product(iri,irj) != isym ) continue;
+        if ( p_pgs->product(iri,irj) != isym ) continue;
         if ( iri == irj ) {
           len_of2.push_back(norb4ir[iri]*(norb4ir[iri] + 1)/2);
         } else {
@@ -63,17 +63,17 @@ Integ4::Integ4(PGSym pgs): BaseTensors(pgs,4)
   _data = DData(nint,0.0);
 }
 
-Integ4ab::Integ4ab(PGSym pgs): BaseTensors(pgs,4)
+Integ4ab::Integ4ab(const PGSym& pgs): BaseTensors(pgs,4)
 {
-  FDPar norb4ir = _pgs.norbs_in_irreps();
-  uint nIrreps = _pgs.nIrreps();
+  FDPar norb4ir = p_pgs->norbs_in_irreps();
+  uint nIrreps = p_pgs->nIrreps();
   _blocks.resize(nIrreps*nIrreps*nIrreps*nIrreps);
   BlkIdx nint = 0;
-  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+  for ( Irrep isym = 0; isym < p_pgs->nIrreps(); ++isym ) {
     std::vector<BlkIdx> len_of2, i_indx, j_indx;
-    for ( Irrep iri = 0; iri < _pgs.nIrreps(); ++iri ) {
+    for ( Irrep iri = 0; iri < p_pgs->nIrreps(); ++iri ) {
       for ( Irrep irj = 0; irj <= iri; ++irj ) {
-        if ( _pgs.product(iri,irj) != isym ) continue;
+        if ( p_pgs->product(iri,irj) != isym ) continue;
         if ( iri == irj ) {
           len_of2.push_back(norb4ir[iri]*(norb4ir[iri] + 1)/2);
         } else {

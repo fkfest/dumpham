@@ -28,7 +28,7 @@ typedef uint64_t BlkIdx;
 class BaseTensors {
 public:
   BaseTensors(uint nidx = 0) : _nidx(nidx) {};
-  BaseTensors(PGSym pgs, uint nidx = 0) : _pgs(pgs), _nidx(nidx) {};
+  BaseTensors(const PGSym& pgs, uint nidx = 0) : p_pgs(&pgs), _nidx(nidx) {};
   BlkIdx nelem() const { return _data.size(); };
   // set (pq) value
   void set( uint p, uint q, double val REDUNWAR_) { _data[index(p,q REDUNWAR)] = val; }
@@ -40,12 +40,12 @@ public:
   double get( uint p, uint q, uint r, uint s REDUNWAR_) const { return _data[index(p,q,r,s REDUNWAR)]; }
   // return (pq) value with point-group symmetry handling
   double get_with_pgs( uint p, uint q ) const {
-    if ( _pgs.totIrrep(p,q) == 0 ) return get(p,q);
+    if ( p_pgs->totIrrep(p,q) == 0 ) return get(p,q);
     else return 0.0;
   }
   // return (pq|rs) value with point-group symmetry handling
   double get_with_pgs( uint p, uint q, uint r, uint s) const {
-    if ( _pgs.totIrrep(p,q,r,s) == 0 ) return get(p,q,r,s);
+    if ( p_pgs->totIrrep(p,q,r,s) == 0 ) return get(p,q,r,s);
     else return 0.0;
   }
   virtual BlkIdx index( uint p, uint q REDUNWAR_) const 
@@ -53,7 +53,7 @@ public:
   virtual BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;USERW;return 0;}
 protected:
-  PGSym _pgs;
+  const PGSym * p_pgs;
   // number of indices
   uint _nidx;
   // pointers to data for each block (according to irreps)
@@ -70,7 +70,7 @@ protected:
 class Integ2 : public BaseTensors {
 public:
   Integ2() : BaseTensors(2) {};
-  Integ2(PGSym pgs);
+  Integ2(const PGSym& pgs);
   // index of p,q value
   inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
 };
@@ -82,7 +82,7 @@ public:
 class Integ4 : public BaseTensors {
 public:
   Integ4() : BaseTensors(4) {};
-  Integ4(PGSym pgs);
+  Integ4(const PGSym& pgs);
   // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
@@ -95,7 +95,7 @@ public:
 class Integ4ab : public BaseTensors {
 public:
   Integ4ab() : BaseTensors(4) {};
-  Integ4ab(PGSym pgs);
+  Integ4ab(const PGSym& pgs);
   // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
@@ -107,12 +107,12 @@ BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
     WARNRED2(p,q)
     std::swap(p,q);
   }
-  Irrep pir = _pgs.irrep(p),
-        qir = _pgs.irrep(q);
-  BlkIdx blk_idx = _blocks[pir+qir*_pgs.nIrreps()];
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q);
+  BlkIdx blk_idx = _blocks[pir+qir*p_pgs->nIrreps()];
   // indices relative to the block
-  uint pb = p - _pgs._firstorb4irrep[pir],
-       qb = q - _pgs._firstorb4irrep[qir];
+  uint pb = p - p_pgs->_firstorb4irrep[pir],
+       qb = q - p_pgs->_firstorb4irrep[qir];
   // triangular index
   return pb*(pb+1)/2+qb+blk_idx;
 }
@@ -132,27 +132,27 @@ inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const
     std::swap(p,r);
     std::swap(q,s);
   }
-  Irrep pir = _pgs.irrep(p),
-        qir = _pgs.irrep(q),
-        rir = _pgs.irrep(r),
-        sir = _pgs.irrep(s);
-  uint nIrreps = _pgs.nIrreps();
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q),
+        rir = p_pgs->irrep(r),
+        sir = p_pgs->irrep(s);
+  uint nIrreps = p_pgs->nIrreps();
   BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
   // indices relative to the block
-  BlkIdx pb = p - _pgs._firstorb4irrep[pir],
-         qb = q - _pgs._firstorb4irrep[qir],  
-         rb = r - _pgs._firstorb4irrep[rir],  
-         sb = s - _pgs._firstorb4irrep[sir];  
+  BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
+         qb = q - p_pgs->_firstorb4irrep[qir],  
+         rb = r - p_pgs->_firstorb4irrep[rir],  
+         sb = s - p_pgs->_firstorb4irrep[sir];  
   BlkIdx pqb, rsb, lenrs;
   if ( pir == qir ) {
     // triangular index
     pqb = pb*(pb+1)/2+qb,
     rsb = rb*(rb+1)/2+sb;
-    lenrs = _pgs._norb4irrep[rir]*(_pgs._norb4irrep[rir]+1)/2;
+    lenrs = p_pgs->_norb4irrep[rir]*(p_pgs->_norb4irrep[rir]+1)/2;
   } else {
-    pqb = pb*_pgs._norb4irrep[qir]+qb,
-    rsb = rb*_pgs._norb4irrep[sir]+sb;
-    lenrs = _pgs._norb4irrep[rir]*_pgs._norb4irrep[sir];
+    pqb = pb*p_pgs->_norb4irrep[qir]+qb,
+    rsb = rb*p_pgs->_norb4irrep[sir]+sb;
+    lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
   }
   if ( pir == rir ) {
     // triangular index
@@ -172,27 +172,27 @@ BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
     WARNRED4(p,q,r,s)
     std::swap(r,s);
   }
-  Irrep pir = _pgs.irrep(p),
-        qir = _pgs.irrep(q),
-        rir = _pgs.irrep(r),
-        sir = _pgs.irrep(s);
-  uint nIrreps = _pgs.nIrreps();
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q),
+        rir = p_pgs->irrep(r),
+        sir = p_pgs->irrep(s);
+  uint nIrreps = p_pgs->nIrreps();
   BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
   // indices relative to the block
-  BlkIdx pb = p - _pgs._firstorb4irrep[pir],
-         qb = q - _pgs._firstorb4irrep[qir],  
-         rb = r - _pgs._firstorb4irrep[rir],  
-         sb = s - _pgs._firstorb4irrep[sir];  
+  BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
+         qb = q - p_pgs->_firstorb4irrep[qir],  
+         rb = r - p_pgs->_firstorb4irrep[rir],  
+         sb = s - p_pgs->_firstorb4irrep[sir];  
   BlkIdx pqb, rsb, lenrs;
   if ( pir == qir ) {
     // triangular index
     pqb = pb*(pb+1)/2+qb,
     rsb = rb*(rb+1)/2+sb;
-    lenrs = _pgs._norb4irrep[rir]*(_pgs._norb4irrep[rir]+1)/2;
+    lenrs = p_pgs->_norb4irrep[rir]*(p_pgs->_norb4irrep[rir]+1)/2;
   } else {
-    pqb = pb*_pgs._norb4irrep[qir]+qb,
-    rsb = rb*_pgs._norb4irrep[sir]+sb;
-    lenrs = _pgs._norb4irrep[rir]*_pgs._norb4irrep[sir];
+    pqb = pb*p_pgs->_norb4irrep[qir]+qb,
+    rsb = rb*p_pgs->_norb4irrep[sir]+sb;
+    lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
   }
   return pqb*lenrs + rsb + blk_idx;
 }
