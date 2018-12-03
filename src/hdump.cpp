@@ -83,7 +83,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
         break;
       case FCIdump::I0:
         _escal = value;
-        [[fallthrough]];
+        type = _dump.nextIntegral(i,j,k,l,value);
+        break;
       case FCIdump::endOfRecord:
         type = _dump.nextIntegral(i,j,k,l,value);
         break;
