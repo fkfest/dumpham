@@ -18,6 +18,7 @@ int main(int argc, char **argv)
     exePath = exepath();
   bool fcidump = false;
   bool orbdump = false;
+  bool use_pgs = false;
   // handle options  
   while ( args.nextoption(opt) ) {
     ArgOpts opts;
@@ -32,6 +33,8 @@ int main(int argc, char **argv)
       fcidump = true;
     } else if ( opts.check(opt,ArgOpt("generate the corresponding orbital file","o","-orbs")) ) {
       orbdump = true;
+    } else if ( opts.check(opt,ArgOpt("generate files with point-group symmetry","s","-sym")) ) {
+      use_pgs = true;
     } else if ( opts.check(opt,ArgOpt("print this help","h","-help")) ) {
       opts.printhelp(xout,"dumpham [OPTIONS] <input-file> [<output-file>]",
                      "Dump various model Hamiltonians as FCIDUMP files");
@@ -69,7 +72,12 @@ int main(int argc, char **argv)
   if ( orbdump && Input::iPars["output"]["orbnamtolower"] > 0 )
     orboutputfile = lowercase(orboutputfile);
   if (fcidump) {
-    // de-symmetrize FCIDUMP
+    if ( use_pgs ) {
+      Input::iPars["ham"]["nosym"] = 0;
+    } else { 
+      // de-symmetrize FCIDUMP
+      Input::iPars["ham"]["nosym"] = 1;
+    }
     Hdump dump(inputfile);
     dump.store(outputfile);
     if ( orbdump ) {

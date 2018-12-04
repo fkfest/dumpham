@@ -14,7 +14,7 @@ Occupation::Occupation(const PGSym& pgs, const FDPar& nclos, const FDPar& nocc)
 {
   assert(nocc.size() >= p_pgs->nIrreps() && nclos.size() >= p_pgs->nIrreps());
   for ( uint ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
-    Occupation4Irrep o4ir(nocc[ir]);
+    Occupation4Irrep o4ir(p_pgs->_firstorb4irrep[ir], nocc[ir]);
     o4ir._nclos = nclos[ir];
     push_back(o4ir);
   }
@@ -84,19 +84,22 @@ Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
   assert( occs.size() == p_pgs->nIrreps() );
   for ( uint ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
     std::vector<bool> occupied(p_pgs->norbs(ir),false);
-    for ( uint imo = 0; imo < occs[ir].size(); ++imo ) {
-      iao = occs[ir][imo];
+    for ( uint imo4ir = 0; imo4ir < occs[ir].size(); ++imo4ir ) {
+      uint imo = imo4ir + p_pgs->_firstorb4irrep[ir];
+      iao = occs[ir][imo4ir];
       _orbs.set(iao,imo,1.0);
-      occupied[iao] = true;
+      assert( iao >= uint(p_pgs->_firstorb4irrep[ir]) && iao < uint(p_pgs->_firstorb4irrep[ir]+p_pgs->norbs(ir)));
+      occupied[iao-p_pgs->_firstorb4irrep[ir]] = true;
     }
-    uint imo = occs[ir].size(); 
-    for ( uint iao = 0; iao < p_pgs->norbs(ir); ++iao ) {
-      if (!occupied[iao]) {
+    uint imo = occs[ir].size()+p_pgs->_firstorb4irrep[ir]; 
+    for ( uint iao4ir = 0; iao4ir < p_pgs->norbs(ir); ++iao4ir ) {
+      if (!occupied[iao4ir]) {
+        iao = iao4ir + p_pgs->_firstorb4irrep[ir];
         _orbs.set(iao,imo,1.0);
         ++imo;
       }
     }
-    assert( imo == p_pgs->norbs(ir) );
+    assert( imo == p_pgs->norbs(ir) + p_pgs->_firstorb4irrep[ir] );
   }
 }
 Odump::Odump(const PGSym& pgs, std::string orbdump) : p_pgs(&pgs)
@@ -159,11 +162,8 @@ void Odump::store(std::string orbdump)
   if (nosym) {
     for ( uint i = 0; i < p_pgs->ntotorbs(); ++i ) {
       for ( uint j = 0; j < p_pgs->ntotorbs(); ++j ) {
-        if ( j > 0 && maxlen > 0 && j % maxlen == 0 ) outputStream << std::endl;
         double val = _orbs.get_with_pgs(i,j);
-        if ( !scientific && val <= 0.0 && val >= -1.e-20 ) val = 1.e-20;
-        if ( !scientific && val > -1.e-20 ) outputStream << " ";
-        outputStream << val << ", ";
+        printval(outputStream,val,j,maxlen,scientific);
       } 
       outputStream << std::endl;
     }
@@ -171,16 +171,20 @@ void Odump::store(std::string orbdump)
     for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
       for ( uint i = p_pgs->_firstorb4irrep[ir]; i < uint(p_pgs->_firstorb4irrep[ir] + p_pgs->_norb4irrep[ir]); ++i ) {
         for ( uint j = p_pgs->_firstorb4irrep[ir]; j < uint(p_pgs->_firstorb4irrep[ir] + p_pgs->_norb4irrep[ir]); ++j ) {
-          if ( j > 0 && maxlen > 0 && j % maxlen == 0 ) outputStream << std::endl;
           double val = _orbs.get(i,j);
-          if ( !scientific && val <= 0.0 && val >= -1.e-20 ) val = 1.e-20;
-          if ( !scientific && val > -1.e-20 ) outputStream << " ";
-          outputStream << val << ", ";
+          printval(outputStream,val,j-p_pgs->_firstorb4irrep[ir],maxlen,scientific);
         } 
         outputStream << std::endl;
       }
     }
   }
+}
+void Odump::printval(std::ofstream& outputStream, double val, uint j, uint maxlen, bool scientific)
+{
+  if ( j > 0 && maxlen > 0 && j % maxlen == 0 ) outputStream << std::endl;
+  if ( !scientific && val <= 0.0 && val >= -1.e-20 ) val = 1.e-20;
+  if ( !scientific && val > -1.e-20 ) outputStream << " ";
+  outputStream << val << ", ";
 }
 
 Occupation Odump::guess_occupation(const FDPar& nclos, const FDPar& nocc) const

@@ -17,14 +17,16 @@
 class Occupation4Irrep : public std::vector<int> {
 public:
   Occupation4Irrep() : std::vector<int>() {}
-  // occupy first norb orbitals
-  Occupation4Irrep(uint norb) { for (uint i = 0; i < norb; ++i ) push_back(i);}
+  // occupy first norb orbitals starting from startorb
+  Occupation4Irrep(uint startorb, uint norb) { for (uint i = startorb; i < startorb+norb; ++i ) push_back(i);}
   // add to a list of occupied spin orbitals
   void spinocc(std::vector<int>& socc) const;
   // number of closed shell orbitals in this symmetry
   uint _nclos;
 };
-
+/*! Occupation vectors, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals}
+ *  The orbital indices are zero based
+ */
 class Occupation : public std::vector<Occupation4Irrep> {
 public:
   Occupation() : std::vector<Occupation4Irrep>(), p_pgs(0) {}
@@ -43,7 +45,7 @@ private:
 std::ostream & operator << (std::ostream & o, Occupation const & occ);
 
 /*!
-    Orbitals dump without point-group symmetry
+    Orbitals dump with point-group symmetry
 */
 class Odump {
 public:  
@@ -59,6 +61,8 @@ public:
   // if nclos=nocc=empty- print all orbitals
   Occupation guess_occupation(const FDPar& nclos, const FDPar& nocc) const;
 private:
+  // print value
+  void printval(std::ofstream& outputStream, double val, uint j, uint maxlen, bool scientific);
   // Two-electron integrals
   Integ2ab _orbs;
   // point group symmetry
