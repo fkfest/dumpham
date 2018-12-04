@@ -1,5 +1,9 @@
 Dump various model Hamiltonians as FCIDUMP files.
 
+  *  print help:
+
+        dumpham -h
+
   *  rewrite FCIDUMP removing symmetry and adding all zero elements back:
   
         dumpham -d <FCIDUMP> [<FCIDUMP.NEW>]
