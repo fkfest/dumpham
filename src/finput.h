@@ -37,6 +37,8 @@ public:
 private:
   // initialyse default input-parameters 
   void InitInpars(std::string paramspath);
+  // handle orbdump
+  void handle_orbdump(const Hdump& dump);
   // variables
   std::string _input;
   bool _ham;

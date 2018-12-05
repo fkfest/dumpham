@@ -9,6 +9,10 @@
 #include <cmath>
 #include <assert.h>
 
+#ifndef NDEBUG
+#define _DEBUG
+#endif
+
 typedef long unsigned int lui;
 typedef unsigned int uint;
 typedef std::list< std::string > TParArray;
@@ -26,8 +30,9 @@ typedef double TFactor;
 #define _abs std::abs
 #define _todouble
 
-typedef std::vector<double> Integrals;
+typedef std::vector<double> IntegralsD;
 typedef std::vector<int> FDPar;
+typedef uint Irrep;
 
 namespace Numbers
 {

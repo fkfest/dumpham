@@ -80,6 +80,7 @@ public:
      */
   FCIdump(const std::vector<char> bytestream);
 
+  void close_outputfile() { if (outputStream.is_open()) outputStream.close();}
   /*!
      * \brief Obtain an integer namelist parameter from the FCIDUMP data.
      * \param key The name of the parameter

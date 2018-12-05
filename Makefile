@@ -30,7 +30,7 @@ out=FCIDUMP
 # files to be linked to working-directory
 FILIN=fcidumpcalc
 DIR = src
-OBJ0 = main.o FCIdump.o hdump.o odump.o finput.o inpline.o utilities.o globals.o density_mat.o
+OBJ0 = main.o FCIdump.o hdump.o odump.o integs.o finput.o inpline.o utilities.o globals.o density_mat.o
 OBJ = $(patsubst %,$(DIR)/%,$(OBJ0))
 SRC = $(OBJ:.o=.cpp)
 
@@ -70,9 +70,11 @@ src/main.o: src/inpline.h src/hdump.h src/FCIdump.h src/odump.h
 src/main.o: src/density_mat.h
 src/FCIdump.o: src/FCIdump.h
 src/hdump.o: src/hdump.h src/globals.h src/utilities.h src/FCIdump.h
+src/hdump.o: src/pgsym.h src/integs.h
 src/odump.o: src/odump.h src/globals.h src/utilities.h src/inpline.h
+src/integs.o: src/integs.h src/pgsym.h src/globals.h src/utilities.h
 src/finput.o: src/finput.h src/utilities.h src/globals.h src/inpline.h
-src/finput.o: src/hdump.h src/FCIdump.h src/odump.h src/density_mat.h
+src/finput.o: src/hdump.h src/FCIdump.h src/pgsym.h src/integs.h src/odump.h
 src/inpline.o: src/inpline.h src/utilities.h src/globals.h
 src/utilities.o: src/utilities.h src/globals.h
 src/globals.o: src/globals.h

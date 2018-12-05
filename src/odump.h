@@ -4,62 +4,69 @@
 #include <vector>
 #include <fstream>
 #include <iomanip>
+#include "pgsym.h"
+#include "integs.h"
 #include "globals.h"
 #include "utilities.h"
 #include "inpline.h"
 
 /*!
- *  Occupation vector, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals} 
+ *  Occupation vector for an irrep, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals} 
  *  The orbital indices are zero based!
  */
-class Occupation : public std::vector<int> {
+class Occupation4Irrep : public std::vector<int> {
 public:
-  Occupation() : std::vector<int>() {}
-  // occupy first norb orbitals
-  Occupation(uint norb) { for (uint i = 0; i < norb; ++i ) push_back(i);}
+  Occupation4Irrep() : std::vector<int>() {}
+  // occupy first norb orbitals starting from startorb
+  Occupation4Irrep(uint startorb, uint norb) { for (uint i = startorb; i < startorb+norb; ++i ) push_back(i);}
+  // add to a list of occupied spin orbitals
+  void spinocc(std::vector<int>& socc) const;
+  // number of closed shell orbitals in this symmetry
+  uint _nclos;
+};
+/*! Occupation vectors, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals}
+ *  The orbital indices are zero based
+ */
+class Occupation : public std::vector<Occupation4Irrep> {
+public:
+  Occupation() : std::vector<Occupation4Irrep>(), p_pgs(0) {}
+  Occupation(const PGSym& pgs) : std::vector<Occupation4Irrep>(pgs.nIrreps()), p_pgs(&pgs) {}
+  // occupy first nocc orbitals in each symmetry
+  Occupation(const PGSym& pgs, const FDPar& nclos, const FDPar& nocc);
   // occupation from a list of occupied spin orbitals
   // ibase - base for the indices in occs
-  Occupation(const std::vector<int>& occs, int ibase = 1);
+  Occupation(const PGSym& pgs, const std::vector<int>& occs, int ibase = 1);
   // return a list of occupied spin orbitals
-  std::vector<int> spinocc(uint nclos) const;
+  std::vector<int> spinocc() const;
+private:
+  const PGSym * p_pgs;
 };
 
 std::ostream & operator << (std::ostream & o, Occupation const & occ);
 
 /*!
-    Orbitals dump without point-group symmetry
+    Orbitals dump with point-group symmetry
 */
 class Odump {
 public:  
-  Odump() : _nbas(0),_norb(0) {}
-  // construct a unity matrix for norb orbitals
+  Odump() : p_pgs(0) {}
+  // construct a unity matrix for each symmetry block of orbitals
   // orbitals can be swapped according to the occupation vector
-  Odump(uint norb, const Occupation & occs = Occupation());
+  Odump(const PGSym& pgs, Occupation occs = Occupation());
   // construct from an orbdump file (comma-separated)
-  Odump(std::string orbdump, uint norb = 0);
-  // zero orbitals
-  void zero() { _orbs.assign(_nbas*_norb,0.0);}
-  // element (i,j) (i and j zero based)
-  double & operator()(const uint i, const uint j) {
-      assert(_orbs.size() == _nbas*_norb);
-      assert(i < _nbas && j < _norb);
-      return _orbs[i+j*_nbas];
-    }
-  const double & operator()(const uint i, const uint j) const {
-      assert(_orbs.size() == _nbas*_norb);
-      assert(i < _nbas && j < _norb);
-      return _orbs[i+j*_nbas];
-    }
+  Odump(const PGSym& pgs, std::string orbdump);
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
   // guess Basis-occupation vector from orbital coefficients
-  // if nclos=nopen=0 - print all orbitals
-  Occupation guess_occupation(uint nclos = 0, uint nopen = 0) const;
+  // if nclos=nocc=empty- print all orbitals
+  Occupation guess_occupation(const FDPar& nclos, const FDPar& nocc) const;
 private:
+  // print value
+  void printval(std::ofstream& outputStream, double val, uint j, uint maxlen, bool scientific);
   // Two-electron integrals
-  Integrals _orbs;
-  // number of basis and molecular orbitals
-  uint _nbas, _norb;
+  Integ2ab _orbs;
+  // point group symmetry
+  const PGSym * p_pgs;
 };
 
 
