@@ -34,6 +34,11 @@ typedef std::vector<double> IntegralsD;
 typedef std::vector<int> FDPar;
 typedef uint Irrep;
 
+enum Spin{
+  alpha = 0,
+  beta = 1
+};
+
 namespace Numbers
 {
   // "zero"

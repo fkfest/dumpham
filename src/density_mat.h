@@ -20,7 +20,7 @@ public:
   bool nextdm(std::ifstream& inFile, int& i,int& j, int& k, int& l, double& S);
   int onei(int a, int b, int c, int d, int& sign) const;
   int oneid(int a, int c) const;
-  std::string f_aaaa, f_abba, f_abab, f_bbbb, f_baab, f_baba;
+  void read_2rdm(std::string filename, Spin sa, Spin sb, Spin sc, Spin sd);
   void store_rdm() const;
 private:
   std::vector<double> _RDM2, _RDM1;
