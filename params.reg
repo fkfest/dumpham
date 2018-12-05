@@ -30,3 +30,5 @@ set="syntax",type=a,name="newoperator",value={"\newoperator","\newop"}
 set="syntax",type=a,name="comment",value={"%"}
 set="syntax",type=a,name="input",value={"\input","\file"},desc="specifies FCIDUMP input"
 
+%DM
+set="dm",type=s,name="in",value="",desc="density matrix"

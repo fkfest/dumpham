@@ -114,6 +114,7 @@ bool Finput::analyzeline()
 {
 //   xout << "analyzeline " << _input << std::endl;
   const TParArray& occ = Input::aPars["orbs"]["occ"];
+  std::string  dmfile = Input::sPars["dm"]["in"];
   // TODO: move somewhere else!
   // TODO: the input file should be in the \input command!
   lui
@@ -137,6 +138,10 @@ bool Finput::analyzeline()
   
   Hdump dump(inputfile);
   dump.store(outputfile);
+  
+  if ( dmfile != "" ) {
+    DMdump dmdump(dmfile,dump.norb(),dump.nelec());
+  }
   
   const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
   if ( orbcoefs_input != "" ) {

@@ -11,6 +11,7 @@
 #include "inpline.h"
 #include "hdump.h"
 #include "odump.h"
+#include "density_mat.h"
 
 /*!
     Input analyzer 
