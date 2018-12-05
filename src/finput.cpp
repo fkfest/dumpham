@@ -113,7 +113,6 @@ std::string Finput::input() const
 bool Finput::analyzeline()
 {
 //   xout << "analyzeline " << _input << std::endl;
-  const TParArray& occ = Input::aPars["orbs"]["occ"];
   // TODO: move somewhere else!
   // TODO: the input file should be in the \input command!
   lui
@@ -128,18 +127,23 @@ bool Finput::analyzeline()
   if ( outputfile == "" ) {
     outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
   }
-  std::string orboutputfile = Input::sPars["orbs"]["out"];
-  bool orbdump = ( orboutputfile != "" );
   if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
     outputfile = uppercase(outputfile);
-  if ( orbdump && Input::iPars["output"]["orbnamtolower"] > 0 )
-    orboutputfile = lowercase(orboutputfile);
   
   Hdump dump(inputfile);
   dump.store(outputfile);
 //   Input::iPars["ham"]["nosym"] = 0;
 //   dump.store(outputfile+"sym");
-  
+  handle_orbdump(dump);
+  return true;
+}
+
+void Finput::handle_orbdump(const Hdump& dump)
+{
+  std::string orboutputfile = Input::sPars["orbs"]["out"];
+  bool orbdump = ( orboutputfile != "" );
+  if ( orbdump && Input::iPars["output"]["orbnamtolower"] > 0 )
+    orboutputfile = lowercase(orboutputfile);
   const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
   if ( orbcoefs_input != "" ) {
     Odump odump(dump.pgs(),orbcoefs_input);
@@ -155,6 +159,7 @@ bool Finput::analyzeline()
       odump.store(orboutputfile);
     }
   } else if ( orbdump ) {
+    const TParArray& occ = Input::aPars["orbs"]["occ"];
     if ( occ.size() > 0 ) {
       xout << "Occupation: ";
       _foreach_cauto(TParArray,iocc,occ)
@@ -167,9 +172,6 @@ bool Finput::analyzeline()
     Odump odump(dump.pgs(), occupation);
     odump.store(orboutputfile);
   }
-  
-  
-  return true;
 }
 
 std::ostream& operator<<(std::ostream& o, const Finput& inp)
