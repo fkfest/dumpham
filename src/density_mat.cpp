@@ -5,24 +5,22 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 {
  
   int i, j, k, l;
-  int a, b, c, d, ac, abcd;
+  uint a, b, c, d, ac, abcd;
   int sign;
-  int nelem;
-  int nelem_1d;
+  uint nelem;
+  uint nelem_1d;
   double S;
-  int nsorb;
-  nsorb = 2 * norb;
-  int maxid = nsorb -1;
+  _nsorb = 2 * norb;
+  int maxid = _nsorb -1;
   nelem = onei(maxid,maxid,maxid,maxid,sign)+1;
-  std::vector<double> RDM2(nelem,0);
+  _RDM2.resize(nelem,0);
   xout << "nelem " << nelem << std::endl;
   nelem_1d = oneid(maxid,maxid)+1;
   xout << "nelem_1d " << nelem_1d << std::endl; 
-  std::vector<double> RDM1(nelem_1d,0);
+  _RDM1.resize(nelem_1d,0);
   double Tr;
   int shell;
   shell = 0;
-  int test;
   std::vector<double> RDM2aaaa(nelem,0);
   std::vector<double> RDM2abba(nelem,0);
   std::vector<double> RDM2abab(nelem,0);
@@ -36,13 +34,14 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   f_abba.replace(f_abba.find(str),str.length(),"abba");
   f_abab = f_aaaa;
   f_abab.replace(f_abab.find(str),str.length(),"abab");
+  std::ifstream inFile;
   
   inFile.open(f_aaaa);
   if (!inFile){
     std::cout << "Unable to open file";
     exit(1);   // call system to stop
   }
-  while (nextdm(i,j,k,l,S)){
+  while (nextdm(inFile,i,j,k,l,S)){
   a = 2*(i-1);
   b = 2*(j-1);
   c = 2*(k-1);
@@ -50,9 +49,9 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   abcd = onei(a,b,c,d,sign);
   assert(abcd < nelem);
   RDM2aaaa[abcd] = S * sign;
-  if (std::abs(RDM2[abcd]) > 1.e-10) 
-    xout << RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
-  RDM2[abcd] = S * sign;
+  if (std::abs(_RDM2[abcd]) > 1.e-10) 
+    xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+  _RDM2[abcd] = S * sign;
   
   }
   
@@ -61,7 +60,7 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     std::cout << "Unable to open file";
     exit(1);   // call system to stop
   }
-  while (nextdm(i,j,k,l,S)){
+  while (nextdm(inFile,i,j,k,l,S)){
   a = 2*(i-1);
   b = 2*j-1;
   c = 2*(k-1);
@@ -69,9 +68,9 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   abcd = onei(a,b,c,d,sign);
   assert(abcd < nelem);
   RDM2abab[abcd] = S * sign;
-  if (std::abs(RDM2[abcd]) > 1.e-10) 
-    xout << RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
-  RDM2[abcd] = S * sign;
+  if (std::abs(_RDM2[abcd]) > 1.e-10) 
+    xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+  _RDM2[abcd] = S * sign;
   }
   
   inFile.open(f_abba);
@@ -79,7 +78,7 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     std::cout << "Unable to open file";
     exit(1);   // call system to stop
   }
-  while (nextdm(i,j,k,l,S)){
+  while (nextdm(inFile,i,j,k,l,S)){
   a = 2*(i-1);
   b = 2*j-1;
   c = 2*k-1;
@@ -87,9 +86,9 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   abcd = onei(a,b,c,d,sign);
   assert(abcd < nelem);
   RDM2abba[abcd] = S * sign;
-  if (std::abs(RDM2[abcd]) > 1.e-10) 
-    xout << RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
-  RDM2[abcd] = S * sign;
+  if (std::abs(_RDM2[abcd]) > 1.e-10) 
+    xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+  _RDM2[abcd] = S * sign;
   }
   
  
@@ -113,7 +112,7 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     std::cout << "Unable to open file";
     exit(1);   // call system to stop
   }
-  while (nextdm(i,j,k,l,S)){
+  while (nextdm(inFile,i,j,k,l,S)){
   a = 2*i-1;
   b = 2*j-1;
   c = 2*k-1;
@@ -121,9 +120,9 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   abcd = onei(a,b,c,d,sign);
   assert(abcd < nelem);
   RDM2bbbb[abcd] = S * sign;
-  if (std::abs(RDM2[abcd]) > 1.e-10) 
-    xout << RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
-  RDM2[abcd] = S * sign;
+  if (std::abs(_RDM2[abcd]) > 1.e-10) 
+    xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+  _RDM2[abcd] = S * sign;
   }
   
   inFile.open(f_baba);
@@ -131,7 +130,7 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     std::cout << "Unable to open file";
     exit(1);   // call system to stop
   }
-  while (nextdm(i,j,k,l,S)){
+  while (nextdm(inFile,i,j,k,l,S)){
   a = 2*i-1;
   b = 2*(j-1);
   c = 2*k-1;
@@ -139,9 +138,9 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   abcd = onei(a,b,c,d,sign);
   assert(abcd < nelem);
   RDM2baba[abcd] = S * sign;
-  if (std::abs(RDM2[abcd]) > 1.e-10) 
-    xout << RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
-  RDM2[abcd] = S * sign;
+  if (std::abs(_RDM2[abcd]) > 1.e-10) 
+    xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+  _RDM2[abcd] = S * sign;
   }
   
   inFile.open(f_baab);
@@ -149,7 +148,7 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     std::cout << "Unable to open file";
     exit(1);   // call system to stop
   }
-  while (nextdm(i,j,k,l,S)){
+  while (nextdm(inFile,i,j,k,l,S)){
   a = 2*i-1;
   b = 2*(j-1);
   c = 2*(k-1);
@@ -157,31 +156,18 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   abcd = onei(a,b,c,d,sign);
   assert(abcd < nelem);
   RDM2baab[abcd] = S * sign;
-  if (std::abs(RDM2[abcd]) > 1.e-10) 
-    xout << RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
-  RDM2[abcd] = S * sign;
+  if (std::abs(_RDM2[abcd]) > 1.e-10) 
+    xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+  _RDM2[abcd] = S * sign;
   }
 
-  //write RDM2 to a file
-  outFile.open("2RDM.txt");
-  for(a=0; a<=nsorb-1; a++){
-    for(b=0; b<=nsorb-1; b++){
-      for(c=0; c<=nsorb-1; c++){
-	for(d=0; d<=nsorb-1; d++){
-	abcd = onei(a,b,c,d,sign);
-	outFile << std::setw(15) << sign*RDM2[abcd] << std::setw(4) << a << std::setw(4) << b << std::setw(4) << c << std::setw(4) << d << std::endl;
-	}
-      }
-    }
-  }
-  outFile.close();
   
 //   //write RDM2aaaa to a file
 //   outFile.open("2RDMaaaa.txt");
-//   for(a=0; a<=nsorb-1; a++){
-//     for(b=0; b<=nsorb-1; b++){
-//       for(c=0; c<=nsorb-1; c++){
-// 	for(d=0; d<=nsorb-1; d++){
+//   for(a=0; a<=_nsorb-1; a++){
+//     for(b=0; b<=_nsorb-1; b++){
+//       for(c=0; c<=_nsorb-1; c++){
+// 	for(d=0; d<=_nsorb-1; d++){
 // 	abcd = onei(a,b,c,d,sign);
 // 	outFile << sign*RDM2aaaa[abcd] << std::endl;
 // 	}
@@ -192,10 +178,10 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 //   
 //   //write RDM2abba to a file
 //   outFile.open("2RDMabba.txt");
-//   for(a=0; a<=nsorb-1; a++){
-//     for(b=0; b<=nsorb-1; b++){
-//       for(c=0; c<=nsorb-1; c++){
-// 	for(d=0; d<=nsorb-1; d++){
+//   for(a=0; a<=_nsorb-1; a++){
+//     for(b=0; b<=_nsorb-1; b++){
+//       for(c=0; c<=_nsorb-1; c++){
+// 	for(d=0; d<=_nsorb-1; d++){
 // 	abcd = onei(a,b,c,d,sign);
 // 	outFile << sign*RDM2abba[abcd] << std::endl;
 // 	}
@@ -206,10 +192,10 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 //   
 //   //write RDM2abab to a file
 //   outFile.open("2RDMabab.txt");
-//   for(a=0; a<=nsorb-1; a++){
-//     for(b=0; b<=nsorb-1; b++){
-//       for(c=0; c<=nsorb-1; c++){
-// 	for(d=0; d<=nsorb-1; d++){
+//   for(a=0; a<=_nsorb-1; a++){
+//     for(b=0; b<=_nsorb-1; b++){
+//       for(c=0; c<=_nsorb-1; c++){
+// 	for(d=0; d<=_nsorb-1; d++){
 // 	abcd = onei(a,b,c,d,sign);
 // 	outFile << sign*RDM2abab[abcd] << std::endl;
 // 	}
@@ -221,10 +207,10 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 //   
 //    //write RDM2bbbb to a file
 //   outFile.open("2RDMbbbb.txt");
-//   for(a=0; a<=nsorb-1; a++){
-//     for(b=0; b<=nsorb-1; b++){
-//       for(c=0; c<=nsorb-1; c++){
-// 	for(d=0; d<=nsorb-1; d++){
+//   for(a=0; a<=_nsorb-1; a++){
+//     for(b=0; b<=_nsorb-1; b++){
+//       for(c=0; c<=_nsorb-1; c++){
+// 	for(d=0; d<=_nsorb-1; d++){
 // 	abcd = onei(a,b,c,d,sign);
 // 	outFile << sign*RDM2bbbb[abcd] << std::endl;
 // 	}
@@ -236,10 +222,10 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 //   
 //      //write RDM2baab to a file
 //   outFile.open("2RDMbaab.txt");
-//   for(a=0; a<=nsorb-1; a++){
-//     for(b=0; b<=nsorb-1; b++){
-//       for(c=0; c<=nsorb-1; c++){
-// 	for(d=0; d<=nsorb-1; d++){
+//   for(a=0; a<=_nsorb-1; a++){
+//     for(b=0; b<=_nsorb-1; b++){
+//       for(c=0; c<=_nsorb-1; c++){
+// 	for(d=0; d<=_nsorb-1; d++){
 // 	abcd = onei(a,b,c,d,sign);
 // 	outFile << sign*RDM2baab[abcd] << std::endl;
 // 	}
@@ -251,10 +237,10 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 //   
 //     //write RDM2baba to a file
 //   outFile.open("2RDMbaba.txt");
-//   for(a=0; a<=nsorb-1; a++){
-//     for(b=0; b<=nsorb-1; b++){
-//       for(c=0; c<=nsorb-1; c++){
-// 	for(d=0; d<=nsorb-1; d++){
+//   for(a=0; a<=_nsorb-1; a++){
+//     for(b=0; b<=_nsorb-1; b++){
+//       for(c=0; c<=_nsorb-1; c++){
+// 	for(d=0; d<=_nsorb-1; d++){
 // 	abcd = onei(a,b,c,d,sign);
 // 	outFile << sign*RDM2baba[abcd] << std::endl;
 // 	}
@@ -265,11 +251,11 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 //   outFile.close(); 
   //Construct RDM1 for testing
   int sign1;
-  int abdc;
-  for(a=0; a<nsorb; a++){
-    for(c=0; c<nsorb; c++){
+  uint abdc;
+  for(a=0; a<_nsorb; a++){
+    for(c=0; c<_nsorb; c++){
       ac = oneid(a,c);
-      for(b=0; b<nsorb; b++){
+      for(b=0; b<_nsorb; b++){
 	d=b;
 	abdc = onei(a,b,d,c,sign1);
  	abcd = onei(a,b,c,d,sign);
@@ -277,47 +263,70 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 	assert(abcd < nelem);
 	assert(abdc < nelem);
 	assert(ac < nelem_1d);
-	RDM1[ac] = RDM1[ac] + sign*RDM2[abcd]-sign1*RDM2[abdc];
+	_RDM1[ac] = _RDM1[ac] + sign*_RDM2[abcd]-sign1*_RDM2[abdc];
       }
-      RDM1[ac] = RDM1[ac] / (2*(nelec-1));
+      _RDM1[ac] = _RDM1[ac] / (2*(nelec-1));
     }
   }
 
+
+
+//calculate trace of 1RDM 
+Tr = 0.0;
+for(a=0;a<_nsorb;a++){
+ c=a;
+ ac = oneid(a,c);
+ Tr = Tr + _RDM1[ac];
+}
+//std::cout << typeid(Tr).name() << '\n';
+std::cout << std::setprecision(16) << std::fixed << Tr << std::endl; 
+
+  store_rdm();
+ 
+}
+
+void DMdump::store_rdm() const
+{
+  std::ofstream outFile;
+  int sign;
+  uint abcd,ac;
+  //write RDM2 to a file
+  outFile.open("2RDM.txt");
+  for(uint a=0; a<=_nsorb-1; a++){
+    for(uint b=0; b<=_nsorb-1; b++){
+      for(uint c=0; c<=_nsorb-1; c++){
+        for(uint d=0; d<=_nsorb-1; d++){
+          abcd = onei(a,b,c,d,sign);
+          outFile << std::setw(15) << sign*_RDM2[abcd] << std::setw(4) << a << std::setw(4) << b << std::setw(4) << c << std::setw(4) << d << std::endl;
+        }
+      }
+    }
+  }
+  outFile.close();
 //    write RDM1 to a file
   outFile.open("1RDM_xx.txt");
-  for(a=0; a<=nsorb-1; a++){
-      outFile << " " << std::endl;
-      for(c=0; c <=nsorb-1; c++){
-	ac = oneid(a,c);
-	outFile << std::setw(15) << std::left << std::fixed << RDM1[ac];
-      }
+  for(uint a=0; a<=_nsorb-1; a++){
+    outFile << " " << std::endl;
+    for(uint c=0; c <=_nsorb-1; c++){
+      ac = oneid(a,c);
+      outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac];
+    }
   }
   outFile.close(); 
 
 //    write RDM1 to a file
   outFile.open("1RDM.txt");
-  for(a=0; a<=nsorb-1; a++){
-      for(c=0; c <=nsorb-1; c++){
-	ac = oneid(a,c);
-	outFile << std::setw(15) << std::left << std::fixed << RDM1[ac] << std::setw(4) << a << std::setw(4) << c << std::endl;
-      }
+  for(uint a=0; a<=_nsorb-1; a++){
+    for(uint c=0; c <=_nsorb-1; c++){
+      ac = oneid(a,c);
+      outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac] << std::setw(4) << a << std::setw(4) << c << std::endl;
+    }
   }
   outFile.close(); 
 
+}
 
-//calculate trace of 1RDM 
-Tr = 0.0;
-for(a=0;a<nsorb;a++){
- c=a;
- ac = oneid(a,c);
- Tr = Tr + RDM1[ac];
-}
-//std::cout << typeid(Tr).name() << '\n';
-std::cout << std::setprecision(16) << std::fixed << Tr << std::endl; 
- 
-}
- 
-bool DMdump::nextdm(int& i, int& j, int& k, int& l, double& S)
+bool DMdump::nextdm(std::ifstream& inFile, int& i, int& j, int& k, int& l, double& S)
  {
   if(inFile >> i >> j >> k >> l >> S){
    return true;
@@ -328,7 +337,7 @@ bool DMdump::nextdm(int& i, int& j, int& k, int& l, double& S)
   }
  }
  
-int DMdump::onei(int a, int b, int c, int d, int& sign)
+int DMdump::onei(int a, int b, int c, int d, int& sign) const
 /* function to obtain one unique index out of four spin-orbital indices.
 Density matrix D^{a b}_{c d} = <a^+ b^+ d c>
 */
@@ -358,7 +367,7 @@ Density matrix D^{a b}_{c d} = <a^+ b^+ d c>
   return abcd;
 }
 
-int DMdump::oneid(int a, int c)
+int DMdump::oneid(int a, int c) const
 {
   int ac;
   if(a>c){

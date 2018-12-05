@@ -113,6 +113,7 @@ public:
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
 
+
 // inline functions
 BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
 {

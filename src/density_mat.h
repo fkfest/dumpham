@@ -17,13 +17,14 @@ public:
      */
   DMdump(const std::string filename, uint norb, uint nelec);
 
-  bool nextdm(int& i,int& j, int& k, int& l, double& S);
-  int onei(int a, int b, int c, int d, int& sign);
-  int oneid(int a, int c);
-  mutable std::ifstream inFile;
-  mutable std::ofstream outFile;
+  bool nextdm(std::ifstream& inFile, int& i,int& j, int& k, int& l, double& S);
+  int onei(int a, int b, int c, int d, int& sign) const;
+  int oneid(int a, int c) const;
   std::string f_aaaa, f_abba, f_abab, f_bbbb, f_baab, f_baba;
-  
+  void store_rdm() const;
+private:
+  std::vector<double> _RDM2, _RDM1;
+  uint _nsorb;
 };
 
 
