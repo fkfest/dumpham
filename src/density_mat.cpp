@@ -4,7 +4,6 @@
 DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 {
  
-  uint a, b, c, d, ac, abcd;
   int sign;
   uint nelem;
   uint nelem_1d;
@@ -48,33 +47,26 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   read_2rdm(f_baba,beta,alpha,beta,alpha);
   read_2rdm(f_baab,beta,alpha,alpha,beta);
     
+  uint ac, abcd;
   //Construct RDM1
-  int sign1;
-  uint abdc;
-  for(a=0; a<_nsorb; a++){
-    for(c=0; c<_nsorb; c++){
+  for(uint a = 0; a < _nsorb; a++){
+    for(uint c = 0; c <= a; c++){
       ac = oneid(a,c);
-      for(b=0; b<_nsorb; b++){
-        d=b;
-        abdc = onei(a,b,d,c,sign1);
-        abcd = onei(a,b,c,d,sign);
+      assert(ac < nelem_1d);
+      for(uint b = 0; b < _nsorb; b++){
+        abcd = onei(a,b,c,b,sign);
         //std::cout << ac << std::endl;
         assert(abcd < nelem);
-        assert(abdc < nelem);
-        assert(ac < nelem_1d);
-        _RDM1[ac] = _RDM1[ac] + sign*_RDM2[abcd]-sign1*_RDM2[abdc];
+        _RDM1[ac] = _RDM1[ac] + sign*_RDM2[abcd];
       }
-      _RDM1[ac] = _RDM1[ac] / (2*(nelec-1));
+      _RDM1[ac] = _RDM1[ac] / (nelec-1);
     }
   }
 
-
-
   //calculate trace of 1RDM 
   Tr = 0.0;
-  for(a=0;a<_nsorb;a++){
-    c=a;
-    ac = oneid(a,c);
+  for(uint a = 0; a < _nsorb; a++){
+    ac = oneid(a,a);
     Tr = Tr + _RDM1[ac];
   }
   //std::cout << typeid(Tr).name() << '\n';
@@ -102,8 +94,10 @@ void DMdump::read_2rdm(std::string filename, Spin sa, Spin sb, Spin sc, Spin sd)
     d = 2*(l-1)+sd;
     abcd = onei(a,b,c,d,sign);
     assert(abcd < _RDM2.size());
-    if (std::abs(_RDM2[abcd]) > 1.e-10) 
+#ifdef _DEBUG
+    if (std::abs(_RDM2[abcd]) > 1.e-10 && std::abs(_RDM2[abcd]-S * sign) > 1.e-10) 
       xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
+#endif
     _RDM2[abcd] = S * sign;
   }
 }
@@ -111,21 +105,22 @@ void DMdump::read_2rdm(std::string filename, Spin sa, Spin sb, Spin sc, Spin sd)
 void DMdump::store_rdm() const
 {
   std::ofstream outFile;
-  int sign;
-  uint abcd,ac;
-  //write RDM2 to a file
-  outFile.open("2RDM.txt");
-  for(uint a=0; a<=_nsorb-1; a++){
-    for(uint b=0; b<=_nsorb-1; b++){
-      for(uint c=0; c<=_nsorb-1; c++){
-        for(uint d=0; d<=_nsorb-1; d++){
-          abcd = onei(a,b,c,d,sign);
-          outFile << std::setw(15) << sign*_RDM2[abcd] << std::setw(4) << a << std::setw(4) << b << std::setw(4) << c << std::setw(4) << d << std::endl;
-        }
-      }
-    }
-  }
-  outFile.close();
+  uint ac;
+//   int sign;
+//   uint abcd;
+//   //write RDM2 to a file
+//   outFile.open("2RDM.txt");
+//   for(uint a=0; a<=_nsorb-1; a++){
+//     for(uint b=0; b<=_nsorb-1; b++){
+//       for(uint c=0; c<=_nsorb-1; c++){
+//         for(uint d=0; d<=_nsorb-1; d++){
+//           abcd = onei(a,b,c,d,sign);
+//           outFile << std::setw(15) << sign*_RDM2[abcd] << std::setw(4) << a << std::setw(4) << b << std::setw(4) << c << std::setw(4) << d << std::endl;
+//         }
+//       }
+//     }
+//   }
+//   outFile.close();
 //    write RDM1 to a file
   outFile.open("1RDM_xx.txt");
   for(uint a=0; a<=_nsorb-1; a++){
@@ -175,7 +170,7 @@ Density matrix D^{a b}_{c d} = <a^+ b^+ d c>
   sign = -sign;
   }
   if(c>d){
-  cd = c * (c+1)/2 + d;   
+  cd = c * (c+1)/2 + d; 
   }
   else{
   cd = d * (d+1)/2 + c;
