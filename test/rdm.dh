@@ -2,7 +2,7 @@ output,fcinamtoupper=0,orbnamtolower=0
 
 ham,out="rdm.FCIDUMP"
 
-dm,in="TwoRDM_aaaa.1"
+dm,in="TwoRDM_aaaa.1",out1rdm="rdm.1rdm"
 
 \bham
 N2.FCIDUMP

@@ -32,4 +32,7 @@ set="syntax",type=a,name="comment",value={"%"}
 set="syntax",type=a,name="input",value={"\input","\file"},desc="specifies FCIDUMP input"
 
 %DM
-set="dm",type=s,name="in",value="",desc="density matrix"
+set="dm",type=s,name="in",value="",desc="density matrix for alpha-alpha-alpha-alpha spins in form <xxx>aaaa<yy>"
+set="dm",type=s,name="out1rdm",value="",desc="one-particle density matrix output (in spin orbitals)" 
+set="dm",type=s,name="out2rdm",value="",desc="two-particle density matrix output (in spin orbitals)" 
+set="dm",type=s,name="out1rdmmat",value="",desc="one-particle density matrix output (in spin orbitals) in matrix form" 

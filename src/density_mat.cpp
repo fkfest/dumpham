@@ -106,42 +106,65 @@ void DMdump::store_rdm() const
 {
   std::ofstream outFile;
   uint ac;
-//   int sign;
-//   uint abcd;
-//   //write RDM2 to a file
-//   outFile.open("2RDM.txt");
-//   for(uint a=0; a<=_nsorb-1; a++){
-//     for(uint b=0; b<=_nsorb-1; b++){
-//       for(uint c=0; c<=_nsorb-1; c++){
-//         for(uint d=0; d<=_nsorb-1; d++){
-//           abcd = onei(a,b,c,d,sign);
-//           outFile << std::setw(15) << sign*_RDM2[abcd] << std::setw(4) << a << std::setw(4) << b << std::setw(4) << c << std::setw(4) << d << std::endl;
-//         }
-//       }
-//     }
-//   }
-//   outFile.close();
-//    write RDM1 to a file
-  outFile.open("1RDM_xx.txt");
-  for(uint a=0; a<=_nsorb-1; a++){
-    outFile << " " << std::endl;
-    for(uint c=0; c <=_nsorb-1; c++){
-      ac = oneid(a,c);
-      outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac];
+  std::string out1rdm = Input::sPars["dm"]["out1rdm"];
+  std::string out2rdm = Input::sPars["dm"]["out2rdm"];
+  std::string out1rdmmat = Input::sPars["dm"]["out1rdmmat"];
+  if ( out2rdm != "" ) {
+    //write RDM2 to a file
+    outFile.open(out2rdm.c_str());
+    if ( (outFile.rdstate() & std::ifstream::failbit ) != 0 ) {
+      outFile.close();
+      error("DMdump::store_rdm failed to open "+ out2rdm);
     }
-  }
-  outFile.close(); 
-
-//    write RDM1 to a file
-  outFile.open("1RDM.txt");
-  for(uint a=0; a<=_nsorb-1; a++){
-    for(uint c=0; c <=_nsorb-1; c++){
-      ac = oneid(a,c);
-      outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac] << std::setw(4) << a << std::setw(4) << c << std::endl;
+    int sign;
+    uint abcd;
+    for(uint a=0; a<=_nsorb-1; a++){
+      for(uint b=0; b<=_nsorb-1; b++){
+        for(uint c=0; c<=_nsorb-1; c++){
+          for(uint d=0; d<=_nsorb-1; d++){
+            abcd = onei(a,b,c,d,sign);
+            outFile << std::setw(15) << sign*_RDM2[abcd] 
+                    << std::setw(4) << a << std::setw(4) << b << std::setw(4) 
+                    << c << std::setw(4) << d << std::endl;
+          }
+        }
+      }
     }
+    outFile.close();
   }
-  outFile.close(); 
+  if ( out1rdmmat != "" ) {
+    // write RDM1 as a matrix to a file
+    outFile.open(out1rdmmat.c_str());
+    if ( (outFile.rdstate() & std::ifstream::failbit ) != 0 ) {
+      outFile.close();
+      error("DMdump::store_rdm failed to open "+ out1rdmmat);
+    }
+    for(uint a=0; a<=_nsorb-1; a++){
+      outFile << " " << std::endl;
+      for(uint c=0; c <=_nsorb-1; c++){
+        ac = oneid(a,c);
+        outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac];
+      }
+    }
+    outFile.close(); 
+  }
 
+  if ( out1rdm != "" ) {
+    // write RDM1 to a file
+    outFile.open(out1rdm.c_str());
+    if ( (outFile.rdstate() & std::ifstream::failbit ) != 0 ) {
+      outFile.close();
+      error("DMdump::store_rdm failed to open "+ out1rdm);
+    }
+    for(uint a=0; a<=_nsorb-1; a++){
+      for(uint c=0; c <=_nsorb-1; c++){
+        ac = oneid(a,c);
+        outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac] 
+                << std::setw(4) << a << std::setw(4) << c << std::endl;
+      }
+    }
+    outFile.close(); 
+  }
 }
 
 bool DMdump::nextdm(std::ifstream& inFile, int& i, int& j, int& k, int& l, double& S)
