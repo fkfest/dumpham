@@ -45,7 +45,7 @@ private:
 std::ostream & operator << (std::ostream & o, Occupation const & occ);
 
 /*!
-    Orbitals dump with point-group symmetry
+    Orbitals dump with point-group symmetry, C(AO,MO)
 */
 class Odump {
 public:  
@@ -54,10 +54,27 @@ public:
   // orbitals can be swapped according to the occupation vector
   Odump(const PGSym& pgs, Occupation occs = Occupation());
   // construct from an orbdump file (comma-separated)
-  Odump(const PGSym& pgs, std::string orbdump);
+  Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump);
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
-  // guess Basis-occupation vector from orbital coefficients
+  // return orbital index without core. orb_with_core has to be a valence orbital!
+  uint rmcore( uint orb_with_core ) const 
+        { assert( _ncoreaccu.size() == p_pgs->nIrreps() );
+          uint ncor = _ncoreaccu[p_pgs->irrep(orb_with_core)];
+          assert( ncor <= orb_with_core );
+          return orb_with_core - ncor; }
+  // is the input orbital core?
+  bool is_core(uint imo) const 
+        { assert( _ncore.size() == p_pgs->nIrreps() );
+          Irrep ir = p_pgs->irrep(imo);
+          return ( int(imo) < p_pgs->_firstorb4irrep[ir]+_ncore[ir] );}
+  // return value c(iao,imo). imo runs over all orbitals including core. 
+  // the point group symmetry has to be taken care outside
+  double get(uint iao, uint imo) const { return _orbs.get(iao,imo); }
+  // return value c(iao,imo). imo runs over all orbitals including core. 
+  // resolves the point group symmetry
+  double get_with_pgs(uint iao, uint imo) const { return _orbs.get_with_pgs(iao,imo); }
+  // guess Basis-occupation vector from orbital coefficients (without core orbitals!)
   // if nclos=nocc=empty- print all orbitals
   Occupation guess_occupation(const FDPar& nclos, const FDPar& nocc) const;
 private:
@@ -67,6 +84,8 @@ private:
   Integ2ab _orbs;
   // point group symmetry
   const PGSym * p_pgs;
+  // number of core orbitals in each symmetry (have to be accounted in p_pgs)
+  FDPar _ncore, _ncoreaccu;
 };
 
 

@@ -30,16 +30,21 @@ public:
   uint nelec() const { return _nelec; }
   uint ms2() const { return _ms2; }
   // number of closed-shell orbitals
-  uint nclosed() const;
+  uint nclostot() const;
   // number of open-shell orbitals
-  uint nopen() const { return _ms2; }
+  uint nopentot() const { return _ms2; }
   // number of occupied orbitals
-  uint nocc() const { return nclosed()+nopen(); }
+  uint nocctot() const { return nclostot()+nopentot(); }
+  // point group symmetry
   const PGSym& pgs() const { return _pgs; }
+  // point group symmetry with core orbitals
+  const PGSym& pgs_wcore() const { return _pgs_wcore; }
   // number of closed shell orbitals in each irrep
-  const FDPar& clos() const { return _clos; }
+  const FDPar& nclos() const { return _clos; }
   // number of occupied orbitals in each irrep
-  const FDPar& occ() const { return _occ; }
+  const FDPar& nocc() const { return _occ; }
+  // number of core orbitals in each symmetry (are not count in nclos or nocc!)
+  const FDPar& ncore() const { return _core; }
   
   
 private:
@@ -68,8 +73,8 @@ private:
   uint _nelec;
   uint _ms2;
   // point group symmetry
-  PGSym _pgs;
-  FDPar _occ, _clos;
+  PGSym _pgs, _pgs_wcore;
+  FDPar _occ, _clos, _core;
   // dump file in uhf orbitals
   bool _uhf;
   // doesn't have the bra-ket symmetry

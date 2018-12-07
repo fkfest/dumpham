@@ -13,24 +13,34 @@ public:
   typedef std::vector<Irrep> IrrepVec;
   PGSym() : _nIrreps(0){};
   // construct from orbsym string
-  PGSym(const FDPar& orbsym) {
+  // if listoforbs: orbsym is a list of orbitals, otherwise it's number of orbitals in each symmetry
+  PGSym(const FDPar& orbsym, bool listoforbs = true) {
     if ( orbsym.size() == 0 ) 
       error("No orbital symmetries given!");
-    _nIrreps = orbsym.back();
-    _norb4irrep.resize(_nIrreps,0);
-    _firstorb4irrep.resize(_nIrreps,0);
-    uint orb = 0;
-    _foreach_cauto(FDPar,os,orbsym) {
-      if ( *os < 1 ) 
-        error("Orbital symmetry below 1!");
-      _irrep4orb.push_back(*os-1);
-      ++_norb4irrep[*os-1];
-      ++orb;
-      if ( _firstorb4irrep[*os-1] == 0 ) _firstorb4irrep[*os-1] = orb;
+    if ( listoforbs ) {
+      _nIrreps = orbsym.back();
+      _norb4irrep.resize(_nIrreps,0);
+      _firstorb4irrep.resize(_nIrreps,0);
+      uint orb = 0;
+      _foreach_cauto(FDPar,os,orbsym) {
+        if ( *os < 1 ) 
+          error("Orbital symmetry below 1!");
+        _irrep4orb.push_back(*os-1);
+        ++_norb4irrep[*os-1];
+        ++orb;
+        if ( _firstorb4irrep[*os-1] == 0 ) _firstorb4irrep[*os-1] = orb;
+      }
+      // make _firstorb4irrep zero based
+      _foreach_auto(FDPar,fo,_firstorb4irrep)
+        --(*fo);
+    } else {
+      _nIrreps = orbsym.size();
+      _norb4irrep = orbsym;
+      for ( Irrep ir = 0; ir < _nIrreps; ++ir ){
+        _firstorb4irrep.push_back(_irrep4orb.size());
+        for ( int imo = 0; imo < _norb4irrep[ir]; ++imo ) _irrep4orb.push_back(ir);
+      }
     }
-    // make _firstorb4irrep zero based
-    _foreach_auto(FDPar,fo,_firstorb4irrep)
-      --(*fo);
   };
   // irrep of orbital orb. Orbitals are 0 based
   Irrep irrep( uint orb ) const { return _irrep4orb[orb]; }

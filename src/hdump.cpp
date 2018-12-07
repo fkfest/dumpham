@@ -28,6 +28,18 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   _foreach_cauto(FDPar,s,CLOSED)
     xout << *s << ","; 
   xout<<std::endl;
+  FDPar CORE = _dump.parameter("CORE");
+  const TParArray& core = Input::aPars["orbs"]["core"];
+  if ( core.size() > 0 ) {
+    CORE.clear();
+    apars2nums<int>(CORE,core,std::dec);
+  }
+  if ( CORE.size() > 1 || CORE[0] > 0 ) {
+    xout << "CORE=";
+    _foreach_cauto(FDPar,s,CORE)
+      xout << *s << ","; 
+    xout<<std::endl;
+  }
   FDPar ST = _dump.parameter("ST");
   
   int i,j,k,l;
@@ -40,10 +52,24 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   _nelec = NELEC[0];
   _ms2 = MS2[0];
   _pgs = PGSym(ORBSYM);
-  if ( OCC.size() > 1 )
+ 
+  if ( core.size() > 0 || CORE.size() > 1 || CORE[0] > 0 ) {
+    _core = CORE;
+    FDPar norb4irs(_pgs.norbs_in_irreps());
+    _core.resize(norb4irs.size(),0);
+    for ( Irrep ir = 0; ir < norb4irs.size(); ++ir )
+      norb4irs[ir] += _core[ir];
+    _pgs_wcore = PGSym(norb4irs,false);
+  }
+  
+  if ( OCC.size() > 1 ) {
     _occ = OCC;
-  if ( CLOSED.size() > 1 )
+    _occ.resize(_pgs.nIrreps(),0);
+  }
+  if ( CLOSED.size() > 1 ) {
     _clos = CLOSED;
+    _occ.resize(_pgs.nIrreps(),0);
+  }
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
   
@@ -279,7 +305,7 @@ void Hdump::storerec_nosym(const Integ2* pInt) const
 }
 
 
-uint Hdump::nclosed() const
+uint Hdump::nclostot() const
 {
   uint nclos = (_nelec - _ms2)/2;
   if ( nclos*2 + _ms2 != _nelec ) {

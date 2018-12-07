@@ -8,6 +8,7 @@ set="output",type=i,name="level",value=0,desc="output level"
 
 %HAMILTONIAN
 set="ham",type=s,name="out",value="",desc="fcidump file output"
+set="ham",type=i,name="store",value=1,desc="store fcidump to a file"
 set="ham",type=i,name="nosym",value=1,desc="ouput fcidump without point-group symmetry"
 set="ham",type=i,name="redunwarning",value=1,desc="warning for redundant entries in fcidump input"
 
@@ -15,8 +16,10 @@ set="ham",type=i,name="redunwarning",value=1,desc="warning for redundant entries
 set="orbs",type=s,name="out",value="",desc="orbdump file"
 set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
 set="orbs",type=s,name="in",value="",desc="orbdump file"
+set="orbs",type=a,name="core",value={},desc="number of core orbitals in each symmetry"
 set="orbs",type=f,name="occuwarning",value=0.5,desc="small occupation warning"
 set="orbs",type=i,name="occusort",value=1,desc="sort closed- and open-shell orbitals in the occupation vector"
+set="orbs",type=i,name="guessoccu",value=0,desc="guess occupation from orbdump file from input"
 set="orbs",type=a,name="del",value={},desc="delete specified orbitals from dump files"
 
 %SYNTAX

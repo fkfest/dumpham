@@ -78,6 +78,8 @@ std::ostream& operator<<(std::ostream& o, const Occupation& occ)
 Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
 {
   _orbs = Integ2ab(pgs);
+  _ncore.resize(p_pgs->nIrreps(),0);
+  _ncoreaccu.resize(p_pgs->nIrreps(),0);
   if ( occs.empty() ) occs.resize(p_pgs->nIrreps());
   uint iao;
   xout << "Spatial orbital occupation: " << occs << std::endl;
@@ -102,9 +104,16 @@ Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
     assert( imo == p_pgs->norbs(ir) + p_pgs->_firstorb4irrep[ir] );
   }
 }
-Odump::Odump(const PGSym& pgs, std::string orbdump) : p_pgs(&pgs)
+Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(&pgs)
 {
+  
   _orbs = Integ2ab(pgs);
+  _ncore = ncore;
+  assert( _ncore.size() == p_pgs->nIrreps() );
+  _ncoreaccu.push_back(_ncore[0]);
+  for ( Irrep ir = 1; ir < _ncore.size(); ++ir )
+    _ncoreaccu.push_back(_ncoreaccu[ir-1]+_ncore[ir]);
+//   xout << "orbs nelem: " << _orbs.nelem() << std::endl;
   std::ifstream oin;
   oin.open(orbdump.c_str());
   if ( !oin.is_open() ) {
@@ -128,17 +137,6 @@ Odump::Odump(const PGSym& pgs, std::string orbdump) : p_pgs(&pgs)
   }
   if ( idx != _orbs.nelem() )
     error("Number of orbital coefficients not consistens with the number of orbitals");
-  // transpose to get the AO index fastest
-  for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
-    for ( uint j = p_pgs->_firstorb4irrep[ir]; j < uint(p_pgs->_firstorb4irrep[ir] + p_pgs->_norb4irrep[ir]); ++j ) {
-      for ( uint i = p_pgs->_firstorb4irrep[ir]; i < j; ++i ) {
-        double tmp = _orbs.get(i,j);
-        _orbs.set(i,j,_orbs.get(j,i));
-        _orbs.set(j,i,tmp);
-      }
-    }
-  }
-  
 }
 
 void Odump::store(std::string orbdump)
@@ -196,9 +194,11 @@ Occupation Odump::guess_occupation(const FDPar& nclos, const FDPar& nocc) const
   if ( n_occ.empty()) {
     n_occ = p_pgs->norbs_in_irreps();
   }
+  xout << n_occ.size() << " " << p_pgs->nIrreps() << " " << _ncore.size() << std::endl;
   assert( n_occ.size() == p_pgs->nIrreps());
+  assert( _ncore.size() == n_occ.size() );
   for ( Irrep ir = 0; ir < n_occ.size(); ++ir ) {
-    for ( uint j = 0; j < uint(n_occ[ir]); ++j ) {
+    for ( uint j = uint(_ncore[ir]); j < uint(_ncore[ir]+n_occ[ir]); ++j ) {
       uint iao = 0;
       double maxcoef = 0.0;
       for ( uint i = 0; i < p_pgs->norbs(ir); ++i ) {
@@ -208,7 +208,7 @@ Occupation Odump::guess_occupation(const FDPar& nclos, const FDPar& nocc) const
           maxcoef = val;
         }
       }
-      occ[ir].push_back(iao);
+      occ[ir].push_back(iao-_ncore[ir]);
       if ( maxcoef < throcc ) {
         warning("Small max occupation for the basis function "+num2str(iao+1,std::dec)+": "+num2str(maxcoef,std::dec));
       }
