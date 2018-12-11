@@ -128,11 +128,15 @@ bool Finput::analyzeline()
   if ( outputfile == "" ) {
     outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
   }
+  if ( Input::iPars["ham"]["store"] <= 0 ) {
+    outputfile.clear();
+  }
   if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
     outputfile = uppercase(outputfile);
   
   Hdump dump(inputfile);
-  dump.store(outputfile);
+  if ( outputfile != "" )
+    dump.store(outputfile);
   if ( dmfile != "" ) {
     DMdump dmdump(dmfile,dump.norb(),dump.nelec());
     Fock_matrices fock(dump, dmdump);
@@ -151,15 +155,20 @@ void Finput::handle_orbdump(const Hdump& dump)
     orboutputfile = lowercase(orboutputfile);
   const std::string& orbcoefs_input = Input::sPars["orbs"]["in"];
   if ( orbcoefs_input != "" ) {
-    Odump odump(dump.pgs(),orbcoefs_input);
-    Occupation occguess = odump.guess_occupation(dump.clos(),dump.occ());
-    xout << "Guessed occupation: " << occguess << std::endl;
-    xout << "Guessed spin occupation: ";
-    std::vector<int> socc = occguess.spinocc();
-    _foreach_cauto ( std::vector<int>, iso, socc ) {
-      xout << *iso << "  ";
+    if ( dump.pgs_wcore().nIrreps() == 0 ) {
+      error("Please provide number of core orbitals in each symmetry to read orbital coeffs","Finput::handle_orbdump");
     }
-    xout << std::endl;
+    Odump odump(dump.pgs_wcore(),dump.ncore(),orbcoefs_input);
+    if ( Input::iPars["orbs"]["guessoccu"] > 0 ) {
+      Occupation occguess = odump.guess_occupation(dump.nclos(),dump.nocc());
+      xout << "Guessed occupation: " << occguess << std::endl;
+      xout << "Guessed spin occupation: ";
+      std::vector<int> socc = occguess.spinocc();
+      _foreach_cauto ( std::vector<int>, iso, socc ) {
+        xout << *iso << "  ";
+      }
+      xout << std::endl;
+    }
     if ( orbdump ) {
       odump.store(orboutputfile);
     }
