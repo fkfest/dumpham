@@ -172,7 +172,7 @@ void Finput::handle_orbdump(const Hdump& dump)
       odump.store(orboutputfile);
     }
   } else if ( orbdump ) {
-    const TParArray& occ = Input::aPars["orbs"]["occ"];
+    const TParArray& occ = Input::aPars["orbs"]["occvec"];
     if ( occ.size() > 0 ) {
       xout << "Occupation: ";
       _foreach_cauto(TParArray,iocc,occ)

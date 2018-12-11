@@ -62,6 +62,8 @@ private:
   void storerec_nosym(const Integ4ab * pInt) const;
   void storerec_nosym(const Integ2 * pInt) const;
   void check_addressing_integrals() const;
+  // check input file for the number of orbitals in each symmetry
+  void check_input_norbs(FDPar& orb, const std::string& kind ) const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
   // One-electron integrals (one set for cs rhf, otherwise alpha and beta)
