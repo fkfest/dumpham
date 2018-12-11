@@ -163,7 +163,7 @@ void Finput::handle_orbdump(const Hdump& dump)
       Occupation occguess = odump.guess_occupation(dump.nclos(),dump.nocc());
       xout << "Guessed occupation: " << occguess << std::endl;
       xout << "Guessed spin occupation: ";
-      std::vector<int> socc = occguess.spinocc();
+      std::vector<int> socc = occguess.spinocc(1);
       _foreach_cauto ( std::vector<int>, iso, socc ) {
         xout << *iso << "  ";
       }
@@ -173,7 +173,7 @@ void Finput::handle_orbdump(const Hdump& dump)
       odump.store(orboutputfile);
     }
   } else if ( orbdump ) {
-    const TParArray& occ = Input::aPars["orbs"]["occ"];
+    const TParArray& occ = Input::aPars["orbs"]["occvec"];
     if ( occ.size() > 0 ) {
       xout << "Occupation: ";
       _foreach_cauto(TParArray,iocc,occ)

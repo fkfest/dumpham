@@ -14,9 +14,11 @@ set="ham",type=i,name="redunwarning",value=1,desc="warning for redundant entries
 
 %ORBITALS
 set="orbs",type=s,name="out",value="",desc="orbdump file"
-set="orbs",type=a,name="occ",value={},desc="list of occupied orbitals"
+set="orbs",type=a,name="occvec",value={},desc="list of occupied orbitals"
 set="orbs",type=s,name="in",value="",desc="orbdump file"
 set="orbs",type=a,name="core",value={},desc="number of core orbitals in each symmetry"
+set="orbs",type=a,name="occ",value={},desc="number of occupied orbitals in each symmetry"
+set="orbs",type=a,name="closed",value={},desc="number of closed shell orbitals in each symmetry"
 set="orbs",type=f,name="occuwarning",value=0.5,desc="small occupation warning"
 set="orbs",type=i,name="occusort",value=1,desc="sort closed- and open-shell orbitals in the occupation vector"
 set="orbs",type=i,name="guessoccu",value=0,desc="guess occupation from orbdump file from input"

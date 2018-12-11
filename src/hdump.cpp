@@ -19,27 +19,12 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
     xout << *s << ","; 
   xout<<std::endl;
   FDPar OCC = _dump.parameter("OCC");
-  xout << "OCC=";
-  _foreach_cauto(FDPar,s,OCC)
-    xout << *s << ","; 
-  xout<<std::endl;
+  check_input_norbs(OCC,"occ");
   FDPar CLOSED = _dump.parameter("CLOSED");
-  xout << "CLOSED=";
-  _foreach_cauto(FDPar,s,CLOSED)
-    xout << *s << ","; 
-  xout<<std::endl;
+  check_input_norbs(CLOSED,"closed");
   FDPar CORE = _dump.parameter("CORE");
-  const TParArray& core = Input::aPars["orbs"]["core"];
-  if ( core.size() > 0 ) {
-    CORE.clear();
-    apars2nums<int>(CORE,core,std::dec);
-  }
-  if ( CORE.size() > 1 || CORE[0] > 0 ) {
-    xout << "CORE=";
-    _foreach_cauto(FDPar,s,CORE)
-      xout << *s << ","; 
-    xout<<std::endl;
-  }
+  check_input_norbs(CLOSED,"core");
+  
   FDPar ST = _dump.parameter("ST");
   
   int i,j,k,l;
@@ -53,7 +38,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   _ms2 = MS2[0];
   _pgs = PGSym(ORBSYM);
  
-  if ( core.size() > 0 || CORE.size() > 1 || CORE[0] > 0 ) {
+  assert( CORE.size() > 0 && OCC.size() > 0 && CLOSED.size() > 0 );
+  if ( CORE.size() > 1 || CORE[0] > 0 ) {
     _core = CORE;
     FDPar norb4irs(_pgs.norbs_in_irreps());
     _core.resize(norb4irs.size(),0);
@@ -61,12 +47,11 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
       norb4irs[ir] += _core[ir];
     _pgs_wcore = PGSym(norb4irs,false);
   }
-  
-  if ( OCC.size() > 1 ) {
+  if ( OCC.size() > 1 || OCC[0] > 0 ) {
     _occ = OCC;
     _occ.resize(_pgs.nIrreps(),0);
   }
-  if ( CLOSED.size() > 1 ) {
+  if ( CLOSED.size() > 1 || CLOSED[0] > 0 ) {
     _clos = CLOSED;
     _occ.resize(_pgs.nIrreps(),0);
   }
@@ -159,6 +144,21 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
   #undef REDUNWAR
+}
+
+void Hdump::check_input_norbs(FDPar& orb, const std::string& kind) const
+{
+  const TParArray& inporb = Input::aPars["orbs"][kind];
+  if ( inporb.size() > 0 ) {
+    orb.clear();
+    apars2nums<int>(orb,inporb,std::dec);
+  }
+  if ( orb.size() > 1 || orb[0] > 0 ) {
+    xout << kind << "=";
+    _foreach_cauto(FDPar,s,orb)
+      xout << *s << ","; 
+    xout<<std::endl;
+  }
 }
 
 void Hdump::store(std::string fcidump)
@@ -378,3 +378,4 @@ uint Hdump::spin(uint p) const {
   else
    return beta;
 }
+
