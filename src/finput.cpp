@@ -162,7 +162,7 @@ void Finput::handle_orbdump(const Hdump& dump)
       Occupation occguess = odump.guess_occupation(dump.nclos(),dump.nocc());
       xout << "Guessed occupation: " << occguess << std::endl;
       xout << "Guessed spin occupation: ";
-      std::vector<int> socc = occguess.spinocc();
+      std::vector<int> socc = occguess.spinocc(1);
       _foreach_cauto ( std::vector<int>, iso, socc ) {
         xout << *iso << "  ";
       }

@@ -20,7 +20,7 @@ public:
   // occupy first norb orbitals starting from startorb
   Occupation4Irrep(uint startorb, uint norb) { for (uint i = startorb; i < startorb+norb; ++i ) push_back(i);}
   // add to a list of occupied spin orbitals
-  void spinocc(std::vector<int>& socc) const;
+  void spinocc(std::vector<int>& socc, int ibase = 0) const;
   // number of closed shell orbitals in this symmetry
   uint _nclos;
 };
@@ -37,7 +37,7 @@ public:
   // ibase - base for the indices in occs
   Occupation(const PGSym& pgs, const std::vector<int>& occs, int ibase = 1);
   // return a list of occupied spin orbitals
-  std::vector<int> spinocc() const;
+  std::vector<int> spinocc(int ibase = 0) const;
 private:
   const PGSym * p_pgs;
 };

@@ -1,11 +1,11 @@
 #include "odump.h"
 
-void Occupation4Irrep::spinocc(std::vector<int>& socc) const
+void Occupation4Irrep::spinocc(std::vector<int>& socc, int ibase) const
 {
   for ( uint imo = 0; imo < this->size(); ++imo ){
-    socc.push_back((*this)[imo]*2+1);
+    socc.push_back((*this)[imo]*2+ibase);
     if ( imo < _nclos )
-      socc.push_back((*this)[imo]*2+2);
+      socc.push_back((*this)[imo]*2+1+ibase);
   }
 }
 
@@ -55,11 +55,11 @@ Occupation::Occupation(const PGSym& pgs, const std::vector< int >& occs, int iba
   }
 }
 
-std::vector<int> Occupation::spinocc() const
+std::vector<int> Occupation::spinocc(int ibase) const
 {
   std::vector<int> socc;
   _foreach_cauto(Occupation, oc, *this)
-    oc->spinocc(socc);
+    oc->spinocc(socc,ibase);
   std::sort(socc.begin(),socc.end());
   return socc;
 }
