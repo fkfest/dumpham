@@ -322,8 +322,33 @@ void Hdump::check_addressing_integrals() const
       }
     }
   }
-  
-  xout << "n1el: " << _oneel[aa]->nelem() << std::endl;
-  xout << "n2el: " << _twoel[aaaa]->nelem() << std::endl;
+   xout << "n1el: " << _oneel[aa]->nelem() << std::endl;
+   xout << "n2el: " << _twoel[aaaa]->nelem() << std::endl;
 }
 
+double Hdump::oneel(uint p, uint q) const {
+   uint i = p/2;
+   uint j = q/2;
+   if(spin(p)!=spin(q))
+     return 0;
+   if(!_uhf || spin(p) == alpha)
+     return static_cast<Integ2*>(_oneel[aa].get())->get_with_pgs(i,j);
+}
+
+double Hdump::twoel(uint p, uint q, uint r, uint s) const {
+  uint i = p/2;
+  uint j = q/2;
+  uint k = r/2;
+  uint l = s/2;
+  
+  if(spin(p)!=spin(q) || spin(r)!=spin(s))
+    return 0;
+  if(!_uhf || spin(p) == alpha)
+    return static_cast<Integ4*>(_twoel[aaaa].get())->get_with_pgs(i,j,k,l);
+}
+uint Hdump::spin(uint p) const {
+  if(p%2 == 0)
+   return alpha;
+  else
+   return beta;
+}

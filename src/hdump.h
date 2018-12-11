@@ -41,6 +41,10 @@ public:
   // number of occupied orbitals in each irrep
   const FDPar& occ() const { return _occ; }
   
+  double oneel(uint p, uint q) const; 
+  double twoel(uint p, uint q, uint r, uint s) const; 
+  double escal() const {return _escal;}
+  uint spin(uint p) const;
   
 private:
   void store_with_symmetry() const;

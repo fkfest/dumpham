@@ -12,6 +12,7 @@
 #include "hdump.h"
 #include "odump.h"
 #include "density_mat.h"
+#include "fock_mat.h"
 
 /*!
     Input analyzer 

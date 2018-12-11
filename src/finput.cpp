@@ -135,6 +135,7 @@ bool Finput::analyzeline()
   dump.store(outputfile);
   if ( dmfile != "" ) {
     DMdump dmdump(dmfile,dump.norb(),dump.nelec());
+    Fock_matrices fock(dump, dmdump);
   }
 //   Input::iPars["ham"]["nosym"] = 0;
 //   dump.store(outputfile+"sym");
