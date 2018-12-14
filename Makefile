@@ -1,9 +1,11 @@
 CC = g++ 
 PROFILE =
+LAPACK = -lblas -llapack   
+#LAPACK = 
 #PROFILE = -pg
 #PROFILE = -g
 CFLAGS := -c -Wall -Wextra -pedantic -std=gnu++11 -Ofast $(PROFILE)
-LDFLAGS = $(PROFILE)
+LDFLAGS = $(PROFILE) $(LAPACK)
 #comment out to deactivate debug and asserts
 #CFLAGS := $(CFLAGS) -D NDEBUG
 #use rational numbers from boost
@@ -81,5 +83,7 @@ src/inpline.o: src/inpline.h src/utilities.h src/globals.h
 src/utilities.o: src/utilities.h src/globals.h
 src/globals.o: src/globals.h
 src/density_mat.o: src/density_mat.h src/globals.h src/utilities.h
+src/density_mat.o: src/odump.h src/pgsym.h src/integs.h src/inpline.h
 src/fock_mat.o: src/fock_mat.h src/integs.h src/pgsym.h src/globals.h
-src/fock_mat.o: src/utilities.h src/density_mat.h src/hdump.h src/FCIdump.h
+src/fock_mat.o: src/utilities.h src/density_mat.h src/odump.h src/inpline.h
+src/fock_mat.o: src/hdump.h src/FCIdump.h
