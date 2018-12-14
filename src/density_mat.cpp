@@ -1,12 +1,60 @@
 #include "density_mat.h"
 
-DMdump::DMdump(uint norb, uint nelec)
+DMdump::DMdump(uint norb, const Occupation& occ)
 {
-//build HF-1RDM
-uint nelem1d;
-nelem1d = oneid(nelec,nelec);
-_HFRDM1.resize(nelem1d,0);  
+  std::vector<int> spinocc = occ.spinocc();
+  uint nelec = spinocc.size();
+  _nsorb = 2 * norb;
+  int sign;
+  uint maxid = _nsorb - 1;
+  uint nelem1d = oneid(maxid,maxid)+1;
+  _RDM1.resize(nelem1d,0);
+  uint nelem2d = onei(maxid,maxid,maxid,maxid,sign)+1;
+  _RDM2.resize(nelem2d,0);
+  for(uint i = 0; i < nelec; i++)  
+    xout << spinocc[i] << " " ;
+  xout << std::endl;
+//HF-RDM1
+  for(uint i = 0; i < nelec; i++)
+  {
+    uint indx = oneid(spinocc[i],spinocc[i]);
+    _RDM1[indx] = 1.0;
+  }
+//HF-RDM2
+  for(uint p = 0; p < _nsorb; p++){
+    for(uint q = 0; q < _nsorb; q++){
+      for(uint r = 0; r < _nsorb; r++){
+	uint qr = oneid(q,r);
+	uint pr = oneid(p,r);
+	for(uint s = 0; s < _nsorb; s++){
+	  uint qs = oneid(q,s);
+	  uint ps = oneid(p,s);
+	  uint pqrs = onei(p,q,r,s,sign);
+	  _RDM2[pqrs] = _RDM1[pr] * _RDM1[qs] - _RDM1[ps]*_RDM1[qr];
+	}
+      }
+    }
+  }
 
+// Construct RDM1 from constructed HFRDM2 
+//       uint ac, abcd;
+//       _RDM1.clear();
+//       _RDM1.resize(nelem1d,0);
+
+//   for(uint a = 0; a < _nsorb; a++){
+//     for(uint c = 0; c <= a; c++){
+//       ac = oneid(a,c);
+//       assert(ac < nelem1d);
+//       for(uint b = 0; b < _nsorb; b++){
+//         abcd = onei(a,b,c,b,sign);
+//         //std::cout << ac << std::endl;
+//         assert(abcd < nelem2d);
+//         _RDM1[ac] = _RDM1[ac] + sign*_RDM2[abcd];
+//       }
+//       _RDM1[ac] = _RDM1[ac] / (nelec-1);
+//     }
+//   }
+  store_rdm();
 }
 
 DMdump::DMdump(const std::string filename, uint norb, uint nelec)
