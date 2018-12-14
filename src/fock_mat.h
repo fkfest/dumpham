@@ -9,6 +9,7 @@ public:
  Fock_matrices() {};
  Fock_matrices(const Hdump& hdump, const DMdump& dmdump);
  int oneif(int p, int t) const;
+ void diagonalize(const DMdump& dmdump);
  
 private:
   uint _nsorb;

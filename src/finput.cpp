@@ -138,11 +138,12 @@ bool Finput::analyzeline()
   if ( outputfile != "" )
     dump.store(outputfile);
   if ( dmfile != "" ) {
-//     DMdump dmdump(dmfile,dump.norb(),dump.nelec());
-    Occupation hfocc(dump.pgs(),dump.nclos(),dump.nocc());
-    DMdump hfdm(dump.norb(),hfocc);
-//     Fock_matrices fock(dump, dmdump);
-    Fock_matrices fock(dump, hfdm); 
+    DMdump dmdump(dmfile,dump.norb(),dump.nelec());
+//     Occupation hfocc(dump.pgs(),dump.nclos(),dump.nocc());
+//     DMdump hfdm(dump.norb(),hfocc);
+    Fock_matrices fock(dump, dmdump);
+//     Fock_matrices fock(dump, hfdm); 
+    fock.diagonalize(dmdump);
     
   }
 //   Input::iPars["ham"]["nosym"] = 0;

@@ -1,13 +1,5 @@
 #include "density_mat.h"
 
-DMdump::DMdump(uint norb, uint nelec)
-{
-//build HF-1RDM
-uint nelem1d;
-nelem1d = oneid(nelec,nelec);
-_HFRDM1.resize(nelem1d,0);  
-
-}
 
 DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 {

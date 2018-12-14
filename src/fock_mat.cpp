@@ -46,10 +46,11 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
   }
   
   xout << "Trace:" << Tr+hdump.escal() << std::endl;
+}
 
-  
+void Fock_matrices::diagonalize(const DMdump& dmdump)
+{
 //Calculate eigenvalues using LAPACK DGGEV for generalized eigenvalue problem
-  uint nmax = 52;
   std::vector<double> eigReal;
   eigReal.resize(_nsorb,1);
   std::vector<double> eigImag;
@@ -57,13 +58,19 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
   std::vector<double> beta;
   beta.resize(_nsorb,0);
   std::vector<double> v;
-  v.resize(_nsorb*nmax,0);
+  v.resize(_nsorb*_nsorb,0);
   int lwork=-1;
   double workdummy;
   int info = 0;
-  double zero = 0;
   char Nchar = 'N';
   char Vchar = 'V';
+  
+  std::vector<double> RDM1(_nsorb*_nsorb);
+  for ( uint i = 0; i < _nsorb; ++i ){
+    for ( uint j = 0; j < _nsorb; ++j ){
+      RDM1[oneif(i,j)] = dmdump.value(i,j);
+    }
+  }
 //   //write the vectors in matrices
 //   std::vector<std::vector<double> > FM;
 //   FM.resize(_nsorb);
@@ -76,21 +83,35 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
 //    }
 //   }
   // calculate eigenvalues using the DGEEV subroutine
-  dggev_(&Nchar, &Vchar, &_nsorb, _FMAT.data(), &_nsorb, dmdump._RDM1.data(), &_nsorb, eigReal.data(), eigImag.data(), beta.data(), &zero, &nmax, v.data(), &nmax, &workdummy, &lwork, &info);
+  dggev_(&Nchar, &Vchar, &_nsorb, _FMAT.data(), &_nsorb, RDM1.data(), &_nsorb, 
+         eigReal.data(), eigImag.data(), beta.data(), 0, &_nsorb, v.data(), &_nsorb, &workdummy, &lwork, &info);
   lwork = int(workdummy) + 64;
   std::vector<double> work;
   work.resize(lwork,0);
   xout << "lwork:" << lwork << " " << "workdummy:" << workdummy << std::endl;
-  dggev_(&Nchar, &Vchar, &_nsorb, _FMAT.data(), &_nsorb, dmdump._RDM1.data(), &_nsorb, eigReal.data(), eigImag.data(), beta.data(), &zero, &nmax, v.data(), &nmax, work.data(), &lwork, &info);
+  dggev_(&Nchar, &Vchar, &_nsorb, _FMAT.data(), &_nsorb, RDM1.data(), &_nsorb, 
+         eigReal.data(), eigImag.data(), beta.data(), 0, &_nsorb, v.data(), &_nsorb, work.data(), &lwork, &info);
   // check for errors
   if (info!=0){
     xout << "Error: dggev returned error code " << info << std::endl;
     exit(1);
   }
+  std::vector< std::pair<double,uint> > eigvalreal;
 //   output eigenvalues to stdout
   xout << "--- Eigenvalues ---" << std::endl;
   for (uint i=0;i<_nsorb;i++){
-    xout << i+1 << " " <<"( " << eigReal[i] << " , " << eigImag[i] << " )\n";
+    double den = beta[i];
+    if (std::abs(den) < Numbers::small) {
+      xout << "Small denominator for value: ";
+      den = 1.0;
+    }
+    xout << i+1 << " " <<"( " << eigReal[i]/den << " , " << eigImag[i]/den << " )\n";
+    eigvalreal.push_back(std::make_pair(eigReal[i]/den,i)); 
+  }
+  std::sort(eigvalreal.begin(),eigvalreal.end());
+  xout << "Sorted eigenvalues:" << std::endl;
+  for (uint i=0;i<_nsorb;i++){
+    xout << eigvalreal[i].first << " " << eigvalreal[i].second << std::endl;
   }
 }
 
