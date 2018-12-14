@@ -16,7 +16,7 @@ public:
   /*!
      * \brief Construct an empty FCIdump object
      */
-  
+  DMdump() : _nsorb(0) {};
   //DMdump for Hartree-Fock RDMs
   DMdump(uint norb, const Occupation& occ);
   //Dmdump for RDMs from fciqmc

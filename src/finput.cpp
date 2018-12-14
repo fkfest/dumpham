@@ -114,6 +114,7 @@ bool Finput::analyzeline()
 {
 //   xout << "analyzeline " << _input << std::endl;
   std::string  dmfile = Input::sPars["dm"]["in"];
+  std::string  fmfile = Input::sPars["fm"]["outmat"];
   // TODO: move somewhere else!
   // TODO: the input file should be in the \input command!
   lui
@@ -137,14 +138,24 @@ bool Finput::analyzeline()
   Hdump dump(inputfile);
   if ( outputfile != "" )
     dump.store(outputfile);
+  DMdump dmdump;
   if ( dmfile != "" ) {
-    DMdump dmdump(dmfile,dump.norb(),dump.nelec());
-//     Occupation hfocc(dump.pgs(),dump.nclos(),dump.nocc());
-//     DMdump hfdm(dump.norb(),hfocc);
+    // read density matrices
+    dmdump = DMdump(dmfile,dump.norb(),dump.nelec());
+  } else if ( fmfile != "" ) {
+    // Build one-determinant density matrices
+    Occupation hfocc(dump.pgs(),dump.nclos(),dump.nocc());
+    dmdump = DMdump(dump.norb(),hfocc);
+  }
+  if ( fmfile != "" ) {
+    // Fock matrix
+    xout << "Calculate Fock matrix" << std::endl;
     Fock_matrices fock(dump, dmdump);
-//     Fock_matrices fock(dump, hfdm); 
+    xout << "Fock calculated " << std::endl;
+    fock.store(fmfile);
+    xout << "Fock stored " << std::endl;
     fock.diagonalize(dmdump);
-    
+    xout << "Fock diagonlized " << std::endl;
   }
 //   Input::iPars["ham"]["nosym"] = 0;
 //   dump.store(outputfile+"sym");

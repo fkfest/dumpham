@@ -11,25 +11,41 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
   uint maxid = _nsorb-1;
   uint nelem = oneif(maxid,maxid)+1;
   _FMAT.resize(nelem,0);
-  std::ofstream outFile;
+  std::vector<double> fmat2(nelem,0);
 
   for(uint p = 0; p < _nsorb; p++){
     for(uint t = 0; t < _nsorb; t++){
       uint pt = oneif(p,t);
       for(uint q = 0; q < _nsorb; q++){
-	_FMAT[pt] += hdump.oneel(t,q) * dmdump.value(p,q);
-	for(uint r = 0; r < _nsorb; r++){
-	  for(uint s = 0; s < _nsorb; s++){
-	    // 1.0 when printing FMAT; 0.5 when calculating trace 
-	    _FMAT[pt] += hdump.twoel(t,r,q,s) * dmdump.value(p,q,r,s);
-// 	    _FMAT[pt] += 0.5*(hdump.twoel(t,r,q,s) * dmdump.value(p,q,r,s));
-	  }
-	}
+        _FMAT[pt] += hdump.oneel(t,q) * dmdump.value(p,q);
+        for(uint r = 0; r < _nsorb; r++){
+          for(uint s = 0; s < _nsorb; s++){
+            fmat2[pt] += hdump.twoel(t,r,q,s) * dmdump.value(p,q,r,s);
+          }
+        }
       }
     }
   }
-
-  outFile.open("Fmat.dat");
+  // add two electron parts to fock
+  for(uint pt = 0; pt < _FMAT.size(); pt++){
+    _FMAT[pt] += fmat2[pt]; 
+  }
+  // energy from the density matrices
+  double Tr = 0.0;
+  for(uint p = 0; p < _nsorb; p++){
+    uint pt = oneif(p,p);
+    Tr = Tr + _FMAT[pt]-0.5*fmat2[pt];
+  }
+  xout << "Energy:" << Tr+hdump.escal() << std::endl;
+}
+void Fock_matrices::store(const std::string& filename) const
+{
+  std::ofstream outFile;
+  outFile.open(filename.c_str());
+  if ( (outFile.rdstate() & std::ifstream::failbit ) != 0 ) {
+      outFile.close();
+      error("Fock_matrices::store failed to open "+ filename);
+    }
   for(uint p = 0; p < _nsorb; p++){
    outFile << " " << std::endl;
    for(uint t = 0; t < _nsorb; t++){  
@@ -38,16 +54,8 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
    }
   }
   outFile.close();
-  
-  double Tr = 0.0;
-  for(uint p = 0; p < _nsorb; p++){
-    uint pt = oneif(p,p);
-    Tr = Tr + _FMAT[pt];
-  }
-  
-  xout << "Trace:" << Tr+hdump.escal() << std::endl;
 }
-
+#ifdef _LAPACK
 void Fock_matrices::diagonalize(const DMdump& dmdump)
 {
 //Calculate eigenvalues using LAPACK DGGEV for generalized eigenvalue problem
@@ -114,10 +122,9 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
     xout << eigvalreal[i].first << " " << eigvalreal[i].second << std::endl;
   }
 }
-
-int Fock_matrices::oneif(int p, int t) const
+#else
+void Fock_matrices::diagonalize(const DMdump& dmdump)
 {
-  int pt;
-  pt = p + t*_nsorb;
-return pt;
+  error("Cannot diagonalize: Compiled without LAPACK","Fock_matrices::diagonalize");
 }
+#endif

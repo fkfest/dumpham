@@ -46,10 +46,10 @@ public:
   // number of core orbitals in each symmetry (are not count in nclos or nocc!)
   const FDPar& ncore() const { return _core; }
   
-  double oneel(uint p, uint q) const; 
-  double twoel(uint p, uint q, uint r, uint s) const; 
+  inline double oneel(uint p, uint q) const; 
+  inline double twoel(uint p, uint q, uint r, uint s) const; 
   double escal() const {return _escal;}
-  uint spin(uint p) const;
+  Spin spin(uint p) const { return Spin(p%2); }
   
 private:
   void store_with_symmetry() const;
@@ -86,6 +86,26 @@ private:
   // doesn't have the bra-ket symmetry
   bool _simtra;
 };
+
+inline double Hdump::oneel(uint p, uint q) const {
+  Spin sp = spin(p), sq = spin(q);
+  if( sp != sq) return 0;
+  uint i = p/2, j = q/2;
+  if(!_uhf || sp == alpha)
+     return static_cast<Integ2*>(_oneel[aa].get())->get_with_pgs(i,j);
+  return static_cast<Integ2*>(_oneel[bb].get())->get_with_pgs(i,j);
+}
+
+inline double Hdump::twoel(uint p, uint q, uint r, uint s) const {
+  Spin sp = spin(p), sq = spin(q), sr = spin(r), ss = spin(s);
+  if(sp != sq || sr != ss) return 0;
+  uint i = p/2, j = q/2, k = r/2, l = s/2;
+  if(!_uhf || ( sp == alpha && sr == alpha )) 
+    return static_cast<Integ4*>(_twoel[aaaa].get())->get_with_pgs(i,j,k,l);
+  if( sp == alpha ) 
+    return static_cast<Integ4*>(_twoel[aabb].get())->get_with_pgs(i,j,k,l);
+  return static_cast<Integ4*>(_twoel[bbbb].get())->get_with_pgs(i,j,k,l);
+}
 
 
 #endif

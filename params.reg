@@ -41,3 +41,6 @@ set="dm",type=s,name="in",value="",desc="density matrix for alpha-alpha-alpha-al
 set="dm",type=s,name="out1rdm",value="",desc="one-particle density matrix output (in spin orbitals)" 
 set="dm",type=s,name="out2rdm",value="",desc="two-particle density matrix output (in spin orbitals)" 
 set="dm",type=s,name="out1rdmmat",value="",desc="one-particle density matrix output (in spin orbitals) in matrix form" 
+
+%FM
+set="fm",type=s,name="outmat",value="",desc="fock matrix from density matrices in spin orbitals in matrix form"

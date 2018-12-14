@@ -1,7 +1,7 @@
 CC = g++ 
 PROFILE =
-LAPACK = -lblas -llapack   
-#LAPACK = 
+LAPACK = -lblas -llapack
+#LAPACK =
 #PROFILE = -pg
 #PROFILE = -g
 CFLAGS := -c -Wall -Wextra -pedantic -std=gnu++11 -Ofast $(PROFILE)
@@ -10,6 +10,10 @@ LDFLAGS = $(PROFILE) $(LAPACK)
 #CFLAGS := $(CFLAGS) -D NDEBUG
 #use rational numbers from boost
 #CFLAGS := $(CFLAGS) -D _RATIONAL
+#use lapack
+ifdef LAPACK
+  CFLAGS := $(CFLAGS) -D _LAPACK
+endif
 INCLUDES=
 # program name
 MAIN = dumpham
