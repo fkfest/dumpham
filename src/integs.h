@@ -50,9 +50,9 @@ public:
     if ( p_pgs->totIrrep(p,q,r,s) == 0 ) return get(p,q,r,s);
     else return 0.0;
   }
-  virtual BlkIdx index( uint p, uint q REDUNWAR_) const 
+  virtual inline BlkIdx index( uint p, uint q REDUNWAR_) const 
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;USERW;return 0;};
-  virtual BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
+  virtual inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;USERW;return 0;}
 protected:
   const PGSym * p_pgs;
@@ -115,7 +115,7 @@ public:
 
 
 // inline functions
-BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
+inline BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
 {
   if ( p < q ) {
     WARNRED2(p,q)
@@ -131,7 +131,7 @@ BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
   return pb*(pb+1)/2+qb+blk_idx;
 }
 
-BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
+inline BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
 {
   USERW;
   Irrep pir = p_pgs->irrep(p),
@@ -188,7 +188,7 @@ inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const
   }
 }
 
-BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
 {
   if ( p < q ) {
     WARNRED4(p,q,r,s)
