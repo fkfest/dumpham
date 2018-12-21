@@ -5,7 +5,7 @@ LAPACK = -lblas -llapack
 #PROFILE = -pg
 #PROFILE = -g
 CFLAGS := -c -Wall -Wextra -pedantic -std=gnu++11 -Ofast $(PROFILE)
-LDFLAGS = $(PROFILE) $(LAPACK)
+LDFLAGS = $(PROFILE)
 #comment out to deactivate debug and asserts
 #CFLAGS := $(CFLAGS) -D NDEBUG
 #use rational numbers from boost
@@ -14,7 +14,7 @@ LDFLAGS = $(PROFILE) $(LAPACK)
 ifdef LAPACK
   CFLAGS := $(CFLAGS) -D _LAPACK
 endif
-INCLUDES=
+INCLUDES=$(LAPACK)
 # program name
 MAIN = dumpham
 # OS type
