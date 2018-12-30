@@ -18,9 +18,20 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
       uint pt = oneif(p,t);
       for(uint q = 0; q < _nsorb; q++){
         _FMAT[pt] += hdump.oneel(t,q) * dmdump.value(p,q);
-        for(uint r = 0; r < _nsorb; r++){
-          for(uint s = 0; s < _nsorb; s++){
-            fmat2[pt] += hdump.twoel(t,r,q,s) * dmdump.value(p,q,r,s);
+      }
+    }
+  }
+  std::vector<double> dm_qrs(_nsorb);
+  for(uint q = 0; q < _nsorb; q++){
+    for(uint r = 0; r < _nsorb; r++){
+      for(uint s = 0; s < _nsorb; s++){
+        for(uint t = 0; t < _nsorb; t++){
+          dm_qrs[t] = dmdump.value(t,q,r,s);
+        }
+        for(uint p = 0; p < _nsorb; p++){
+          double twoel_prqs = hdump.twoel(p,r,q,s); 
+          for(uint t = 0; t < _nsorb; t++){
+            fmat2[oneif(t,p)] += twoel_prqs * dm_qrs[t];
           }
         }
       }
