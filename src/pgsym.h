@@ -19,6 +19,14 @@ public:
       error("No orbital symmetries given!");
     if ( listoforbs ) {
       _nIrreps = orbsym.back();
+      // number of irreps can be only 1,2,4, or 8
+      // if it's not, it means that the last irreps don't have any orbitals!
+      if ( _nIrreps > 4 )
+        _nIrreps = 8;
+      else if ( _nIrreps > 2 )
+        _nIrreps = 4;
+      else if ( _nIrreps < 1 )
+        error("Orbital symmetry below 1!");
       _norb4irrep.resize(_nIrreps,0);
       _firstorb4irrep.resize(_nIrreps,0);
       uint orb = 0;
@@ -50,7 +58,7 @@ public:
   Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) const 
                 { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); }
   // product of two irreps
-  Irrep product(Irrep i, Irrep j) const { return (i^j);}
+  Irrep product(Irrep i, Irrep j) const { assert((i^j)<_nIrreps); return (i^j);}
   // return the original orbsym for fcidump
   FDPar orbsym() const { FDPar osym; _foreach_cauto(IrrepVec,ir,_irrep4orb) osym.push_back(*ir+1); return osym;  }
   // number of orbitals in each irrep
