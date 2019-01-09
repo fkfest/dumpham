@@ -23,7 +23,7 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   FDPar CLOSED = _dump.parameter("CLOSED");
   check_input_norbs(CLOSED,"closed");
   FDPar CORE = _dump.parameter("CORE");
-  check_input_norbs(CLOSED,"core");
+  check_input_norbs(CORE,"core");
   
   FDPar ST = _dump.parameter("ST");
   
