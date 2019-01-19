@@ -233,9 +233,10 @@ void Odump::transform(const Integ2ab& trmat, bool frozcore)
          lenmo_trmat = trmat.pgs()->_norb4irrep[ir];
     uint icor = 0;
     if (frozcore) icor = _ncore[ir];
+    std::vector<double> coefs(lenmo_trmat);
     for ( uint iao = 0; iao < lenao; ++iao ) {
-      std::vector<double> coefs(lenmo_trmat,0.0);
       for ( uint imo = 0; imo < lenmo_trmat; ++imo ) {
+        coefs[imo] = 0.0;
         for ( uint kmo = 0; kmo < lenmo_trmat; ++kmo ) {
           coefs[imo] += _orbs.get(iao,kmo+icor,ir) * trmat.get(kmo,imo,ir);
         }

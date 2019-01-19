@@ -114,10 +114,10 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
     for ( uint i4ir = 0; i4ir < norb4ir; ++i4ir ) {
       for ( uint j4ir = 0; j4ir < norb4ir; ++j4ir ) {
         if ( calc_ektorb ) {
-          ekttrma.set(i4ir+ioff4ir,j4ir+ioff4ir,eigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]);
+          ekttrma.set(i4ir+ioff4ir,j4ir+ioff4ir,eigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]+eigvec[oneif4ir(2*i4ir+1,2*j4ir,2*norb4ir)]);
         }
         if ( calc_dysorb ) {
-          dystrma.set(i4ir+ioff4ir,j4ir+ioff4ir,seigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]);
+          dystrma.set(i4ir+ioff4ir,j4ir+ioff4ir,seigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]+seigvec[oneif4ir(2*i4ir+1,2*j4ir,2*norb4ir)]);
         }
       }
     }
@@ -207,10 +207,10 @@ void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vec
     eigvalues[i] = eigvalreal[i].first;
     uint ivec = eigvalreal[i].second;
     std::copy(v.begin()+ivec*nsorb4ir,v.begin()+(ivec+1)*nsorb4ir,eigvectors.begin()+i*nsorb4ir);
-    for ( uint ii = 0; ii < nsorb4ir; ++ii ) {
-      xout << eigvectors[i*nsorb4ir+ii];
-    }
-    xout << std::endl;
+//    for ( uint ii = 0; ii < nsorb4ir; ++ii ) {
+//      xout << eigvectors[i*nsorb4ir+ii] << " ";
+//    }
+//    xout << std::endl;
   }
   seigvec.resize(nsorb4ir*nsorb4ir);
   double One = 1.0, Zero = 0.0;
