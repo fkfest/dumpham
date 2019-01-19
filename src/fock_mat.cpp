@@ -2,50 +2,63 @@
 //SUBROUTINE DGGEV( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHAR, ALPHAI, BETA, VL, LDVL, VR, LDVR, WORK, LWORK, INFO)
   extern "C" {
   extern void dggev_(char*, char*, uint*, double*, uint*, const double*, uint*, double*, double*, double*, double*, uint*, double*, uint*, double*, int*, int*);
+  extern void dgemm_(char*, char*, int*, int*, int*, double*, double*, int*, double*, int*, double*, double*, int*);
   }
 
 //construct fock matrix
 Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
 {
   _nsorb = hdump.norb() * 2; 
-  uint maxid = _nsorb-1;
-  uint nelem = oneif(maxid,maxid)+1;
-  _FMAT.resize(nelem,0);
-  std::vector<double> fmat2(nelem,0);
+  p_pgs = &(hdump.pgs());
+  p_dump = &hdump;
+  _FMAT.resize(p_pgs->nIrreps());
+  // energy from the density matrices
+  double Tr = 0.0;
+  for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+    uint nsorb4ir = p_pgs->norbs(ir) * 2;
+    uint ioff4ir = p_pgs->_firstorb4irrep[ir] * 2;
+    uint maxid = nsorb4ir-1;
+    uint nelem = oneif4ir(maxid,maxid,nsorb4ir)+1;
+    std::vector<double> & fmat = _FMAT[ir];
+    fmat.resize(nelem,0);
+    std::vector<double> fmat2(nelem,0);
 
-  for(uint p = 0; p < _nsorb; p++){
-    for(uint t = 0; t < _nsorb; t++){
-      uint pt = oneif(p,t);
-      for(uint q = 0; q < _nsorb; q++){
-        _FMAT[pt] += hdump.oneel(t,q) * dmdump.value(p,q);
+    for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
+      uint p = p4ir+ioff4ir;
+      for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+        uint t = t4ir+ioff4ir;
+        uint pt = oneif4ir(p4ir,t4ir,nsorb4ir);
+        for(uint q = 0; q < _nsorb; q++){
+          fmat[pt] += hdump.oneel(t,q) * dmdump.value(p,q);
+        }
       }
     }
-  }
-  std::vector<double> dm_qrs(_nsorb);
-  for(uint q = 0; q < _nsorb; q++){
-    for(uint r = 0; r < _nsorb; r++){
-      for(uint s = 0; s < _nsorb; s++){
-        for(uint t = 0; t < _nsorb; t++){
-          dm_qrs[t] = dmdump.value(t,q,r,s);
-        }
-        for(uint p = 0; p < _nsorb; p++){
-          double twoel_prqs = hdump.twoel(p,r,q,s); 
-          for(uint t = 0; t < _nsorb; t++){
-            fmat2[oneif(t,p)] += twoel_prqs * dm_qrs[t];
+    std::vector<double> dm_qrs(nsorb4ir);
+    for(uint q = 0; q < _nsorb; q++){
+      for(uint r = 0; r < _nsorb; r++){
+        for(uint s = 0; s < _nsorb; s++){
+          for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+            uint t = t4ir+ioff4ir;
+            dm_qrs[t4ir] = dmdump.value(t,q,r,s);
+          }
+          for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
+            uint p = p4ir+ioff4ir;
+            double twoel_prqs = hdump.twoel(p,r,q,s); 
+            for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+              fmat2[oneif4ir(t4ir,p4ir,nsorb4ir)] += twoel_prqs * dm_qrs[t4ir];
+            }
           }
         }
       }
     }
-  }
-  // add two electron parts to fock
-  for(uint pt = 0; pt < _FMAT.size(); pt++){
-    _FMAT[pt] += fmat2[pt]; 
-  }
-  // energy from the density matrices
-  double Tr = 0.0;
-  for(uint p = 0; p < _nsorb; p++){
-    uint pt = oneif(p,p);
-    Tr = Tr + _FMAT[pt]-0.5*fmat2[pt];
+    // add two electron parts to fock
+    for(uint pt = 0; pt < fmat.size(); pt++){
+      fmat[pt] += fmat2[pt]; 
+    }
+    for(uint p = 0; p < nsorb4ir; p++){
+      uint pt = oneif4ir(p,p,nsorb4ir);
+      Tr = Tr + fmat[pt]-0.5*fmat2[pt];
+    }
   }
   xout << "Energy:" << Tr+hdump.escal() << std::endl;
 }
@@ -56,38 +69,93 @@ void Fock_matrices::store(const std::string& filename) const
   if ( (outFile.rdstate() & std::ifstream::failbit ) != 0 ) {
       outFile.close();
       error("Fock_matrices::store failed to open "+ filename);
-    }
+  }
+  
   for(uint p = 0; p < _nsorb; p++){
-   outFile << " " << std::endl;
-   for(uint t = 0; t < _nsorb; t++){  
-    uint pt = oneif(p,t);
-    outFile << std::setw(15) << std::left << std::fixed << _FMAT[pt];
-   }
+    Irrep pir = p_pgs->irrep(p/2); 
+    uint ns4ir = p_pgs->norbs(pir) * 2;
+    outFile << " " << std::endl;
+    for(uint t = 0; t < _nsorb; t++){
+      Irrep tir = p_pgs->irrep(t/2);
+      double val = 0;
+      if ( pir == tir ) {
+        uint p4ir = p - 2 * p_pgs->_firstorb4irrep[pir];
+        uint t4ir = t - 2 * p_pgs->_firstorb4irrep[tir];
+        uint pt = oneif4ir(p4ir,t4ir,ns4ir);
+        val =  _FMAT[pir][pt];
+      }
+      outFile << std::setw(15) << std::left << std::fixed << val;
+    }
   }
   outFile.close();
 }
-#ifdef _LAPACK
+
 void Fock_matrices::diagonalize(const DMdump& dmdump)
 {
+  std::string ektorb = Input::sPars["orbs"]["ektorb"];
+  std::string dysorb = Input::sPars["orbs"]["dysorb"];
+  std::string orbsin = Input::sPars["orbs"]["in"];
+  bool
+    calc_ektorb = !ektorb.empty(),
+    calc_dysorb = !dysorb.empty();
+  Integ2ab ekttrma, dystrma;
+  if ( calc_ektorb || calc_dysorb ) {
+    if ( orbsin.empty() ) {
+      error("Provide original orbitals in order to calculate EKT or Dyson orbs");
+    }
+    if ( calc_ektorb ) ekttrma = Integ2ab(*p_pgs);
+    if ( calc_dysorb ) dystrma = Integ2ab(*p_pgs);
+  }
+  for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+    std::vector<double> eigval,eigvec,seigvec;
+    diagonalize4irrep(eigval,eigvec,seigvec,dmdump,ir);
+    uint norb4ir = p_pgs->norbs(ir),
+         ioff4ir = p_pgs->_firstorb4irrep[ir];
+    for ( uint i4ir = 0; i4ir < norb4ir; ++i4ir ) {
+      for ( uint j4ir = 0; j4ir < norb4ir; ++j4ir ) {
+        if ( calc_ektorb ) {
+          ekttrma.set(i4ir+ioff4ir,j4ir+ioff4ir,eigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]);
+        }
+        if ( calc_dysorb ) {
+          dystrma.set(i4ir+ioff4ir,j4ir+ioff4ir,seigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]);
+        }
+      }
+    }
+  }
+  if ( calc_ektorb ) {
+    Odump odump(p_dump->pgs_wcore(),p_dump->ncore(),orbsin);
+    odump.transform(ekttrma);
+    odump.store(ektorb);
+  }
+  if ( calc_dysorb ) {
+    Odump odump(p_dump->pgs_wcore(),p_dump->ncore(),orbsin);
+    odump.transform(dystrma);
+    odump.store(dysorb);
+  }
+}
+#ifdef _LAPACK
+void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vector< double >& eigvectors, 
+                                      std::vector<double>& seigvec, const DMdump& dmdump, Irrep ir)
+{
 //Calculate eigenvalues using LAPACK DGGEV for generalized eigenvalue problem
-  std::vector<double> eigReal;
-  eigReal.resize(_nsorb,1);
-  std::vector<double> eigImag;
-  eigImag.resize(_nsorb,1);
-  std::vector<double> beta;
-  beta.resize(_nsorb,0);
-  std::vector<double> v;
-  v.resize(_nsorb*_nsorb,0);
+  uint nsorb4ir = p_pgs->norbs(ir) * 2;
+  uint ioff4ir = p_pgs->_firstorb4irrep[ir] * 2;
+  std::vector<double> eigReal(nsorb4ir,1);
+  std::vector<double> eigImag(nsorb4ir,1);
+  std::vector<double> beta(nsorb4ir,0);
+  std::vector<double> v(nsorb4ir*nsorb4ir,0);
   int lwork=-1;
   double workdummy;
   int info = 0;
   char Nchar = 'N';
   char Vchar = 'V';
   
-  std::vector<double> RDM1(_nsorb*_nsorb);
-  for ( uint i = 0; i < _nsorb; ++i ){
-    for ( uint j = 0; j < _nsorb; ++j ){
-      RDM1[oneif(i,j)] = dmdump.value(i,j);
+  std::vector<double> RDM1(nsorb4ir*nsorb4ir);
+  for ( uint i4ir = 0; i4ir < nsorb4ir; ++i4ir ){
+    uint i = i4ir + ioff4ir;
+    for ( uint j4ir = 0; j4ir < nsorb4ir; ++j4ir ){
+    uint j = j4ir + ioff4ir;
+      RDM1[oneif4ir(i4ir,j4ir,nsorb4ir)] = dmdump.value(i,j);
     }
   }
 //   //write the vectors in matrices
@@ -102,14 +170,14 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
 //    }
 //   }
   // calculate eigenvalues using the DGEEV subroutine
-  dggev_(&Nchar, &Vchar, &_nsorb, _FMAT.data(), &_nsorb, RDM1.data(), &_nsorb, 
-         eigReal.data(), eigImag.data(), beta.data(), 0, &_nsorb, v.data(), &_nsorb, &workdummy, &lwork, &info);
+  dggev_(&Nchar, &Vchar, &nsorb4ir, _FMAT[ir].data(), &nsorb4ir, RDM1.data(), &nsorb4ir, 
+         eigReal.data(), eigImag.data(), beta.data(), 0, &nsorb4ir, v.data(), &nsorb4ir, &workdummy, &lwork, &info);
   lwork = int(workdummy) + 64;
   std::vector<double> work;
   work.resize(lwork,0);
   xout << "lwork:" << lwork << " " << "workdummy:" << workdummy << std::endl;
-  dggev_(&Nchar, &Vchar, &_nsorb, _FMAT.data(), &_nsorb, RDM1.data(), &_nsorb, 
-         eigReal.data(), eigImag.data(), beta.data(), 0, &_nsorb, v.data(), &_nsorb, work.data(), &lwork, &info);
+  dggev_(&Nchar, &Vchar, &nsorb4ir, _FMAT[ir].data(), &nsorb4ir, RDM1.data(), &nsorb4ir, 
+         eigReal.data(), eigImag.data(), beta.data(), 0, &nsorb4ir, v.data(), &nsorb4ir, work.data(), &lwork, &info);
   // check for errors
   if (info!=0){
     xout << "Error: dggev returned error code " << info << std::endl;
@@ -117,25 +185,42 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
   }
   std::vector< std::pair<double,uint> > eigvalreal;
 //   output eigenvalues to stdout
-  xout << "--- Eigenvalues ---" << std::endl;
-  for (uint i=0;i<_nsorb;i++){
+  xout << "--- Eigenvalues in symmetry " << ir << " ---" << std::endl;
+  for (uint i = 0; i < nsorb4ir; i++){
     double den = beta[i];
     if (std::abs(den) < Numbers::small) {
       xout << "Small denominator for value: ";
       den = 1.0;
     }
     xout << i+1 << " " <<"( " << eigReal[i]/den << " , " << eigImag[i]/den << " )\n";
-    eigvalreal.push_back(std::make_pair(eigReal[i]/den,i)); 
+    eigvalreal.push_back(std::make_pair(-eigReal[i]/den,i)); 
   }
   std::sort(eigvalreal.begin(),eigvalreal.end());
   xout << "Sorted eigenvalues:" << std::endl;
-  for (uint i=0;i<_nsorb;i++){
+  for (uint i = 0; i < nsorb4ir; i++){
     xout << eigvalreal[i].first << " " << eigvalreal[i].second << std::endl;
   }
+  // return in sorted order
+  eigvalues.resize(nsorb4ir);
+  eigvectors.resize(nsorb4ir*nsorb4ir);
+  for (uint i = 0; i < nsorb4ir; i++){
+    eigvalues[i] = eigvalreal[i].first;
+    uint ivec = eigvalreal[i].second;
+    std::copy(v.begin()+ivec*nsorb4ir,v.begin()+(ivec+1)*nsorb4ir,eigvectors.begin()+i*nsorb4ir);
+    for ( uint ii = 0; ii < nsorb4ir; ++ii ) {
+      xout << eigvectors[i*nsorb4ir+ii];
+    }
+    xout << std::endl;
+  }
+  seigvec.resize(nsorb4ir*nsorb4ir);
+  double One = 1.0, Zero = 0.0;
+  int len = nsorb4ir;
+  dgemm_(&Nchar,&Nchar,&len,&len,&len,&One,RDM1.data(),&len,eigvectors.data(),&len,&Zero,seigvec.data(),&len);
 }
 #else
-void Fock_matrices::diagonalize(const DMdump& dmdump)
+void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vector< double >& eigvectors, 
+                                      const DMdump& dmdump, Irrep ir)
 {
-  error("Cannot diagonalize: Compiled without LAPACK","Fock_matrices::diagonalize");
+  error("Cannot diagonalize: Compiled without LAPACK","Fock_matrices::diagonalize4irrep");
 }
 #endif

@@ -77,6 +77,9 @@ public:
   // guess Basis-occupation vector from orbital coefficients (without core orbitals!)
   // if nclos=nocc=empty- print all orbitals
   Occupation guess_occupation(const FDPar& nclos, const FDPar& nocc) const;
+  // transform as c_{\mu p} X_{pq}
+  // if frozcore true - trmat doesn't contain core orbitals
+  void transform(const Integ2ab& trmat, bool frozcore = true);
 private:
   // print value
   void printval(std::ofstream& outputStream, double val, uint j, uint maxlen, bool scientific);

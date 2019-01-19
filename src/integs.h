@@ -38,6 +38,8 @@ public:
   void set( uint p, uint q, uint r, uint s, double val REDUNWAR_) { _data[index(p,q,r,s REDUNWAR)] = val; }
   // get (pq) value
   double get( uint p, uint q REDUNWAR_) const { return _data[index(p,q REDUNWAR)]; }
+  // get (pq) value with p,q: indices in irrep ir
+  double get( uint p, uint q, Irrep ir REDUNWAR_) const { return _data[index(p,q,ir REDUNWAR)]; }
   // get (pq|rs) value
   double get( uint p, uint q, uint r, uint s REDUNWAR_) const { return _data[index(p,q,r,s REDUNWAR)]; }
   // return (pq) value with point-group symmetry handling
@@ -52,8 +54,11 @@ public:
   }
   virtual inline BlkIdx index( uint p, uint q REDUNWAR_) const 
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;USERW;return 0;};
+  virtual inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const 
+          {error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)ir;USERW;return 0;};
   virtual inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;USERW;return 0;}
+  const PGSym * pgs() const {return p_pgs;}
 protected:
   const PGSym * p_pgs;
   // number of indices
@@ -75,6 +80,8 @@ public:
   Integ2(const PGSym& pgs);
   // index of p,q value
   inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
+  // index of p,q value with p,q indices in irrep ir
+  inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
 };
 
 /*! 
@@ -86,6 +93,8 @@ public:
   Integ2ab(const PGSym& pgs);
   // index of p,q value
   inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
+  // index of p,q value with p,q indices in irrep ir
+  inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
 };
 
 /*! 
@@ -130,6 +139,15 @@ inline BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
   // triangular index
   return pb*(pb+1)/2+qb+blk_idx;
 }
+inline BlkIdx Integ2::index(uint p, uint q, Irrep ir REDUNWAR__) const
+{
+  if ( p < q ) {
+    WARNRED2(p,q)
+    std::swap(p,q);
+  }
+  // triangular index
+  return p*(p+1)/2+q+_blocks[ir+ir*p_pgs->nIrreps()];
+}
 
 inline BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
 {
@@ -141,6 +159,15 @@ inline BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
   uint pb = p - p_pgs->_firstorb4irrep[pir],
        qb = q - p_pgs->_firstorb4irrep[qir];
   return pb*p_pgs->_norb4irrep[qir]+qb+blk_idx;
+}
+inline BlkIdx Integ2ab::index(uint p, uint q, Irrep ir REDUNWAR__) const
+{
+  if ( p < q ) {
+    WARNRED2(p,q)
+    std::swap(p,q);
+  }
+  // triangular index
+  return p*p_pgs->_norb4irrep[ir]+q+_blocks[ir+ir*p_pgs->nIrreps()];
 }
 
 inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const

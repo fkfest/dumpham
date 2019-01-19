@@ -116,7 +116,7 @@ Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(
 //   xout << "orbs nelem: " << _orbs.nelem() << std::endl;
   std::ifstream oin;
   oin.open(orbdump.c_str());
-  if ( !oin.is_open() ) {
+  if ( !oin.good() ) {
     error("Error opening "+ orbdump);
   }
   std::string line;
@@ -221,4 +221,28 @@ Occupation Odump::guess_occupation(const FDPar& nclos, const FDPar& nocc) const
     }
   }
   return occ;
+}
+
+void Odump::transform(const Integ2ab& trmat, bool frozcore)
+{
+  assert( trmat.pgs()->nIrreps() == p_pgs->nIrreps() );
+  for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+    uint firstao = p_pgs->_firstorb4irrep[ir],
+         lenao = p_pgs->_norb4irrep[ir];
+    uint firstmo_orbs = p_pgs->_firstorb4irrep[ir],
+         lenmo_trmat = trmat.pgs()->_norb4irrep[ir];
+    uint icor = 0;
+    if (frozcore) icor = _ncore[ir];
+    for ( uint iao = 0; iao < lenao; ++iao ) {
+      std::vector<double> coefs(lenmo_trmat,0.0);
+      for ( uint imo = 0; imo < lenmo_trmat; ++imo ) {
+        for ( uint kmo = 0; kmo < lenmo_trmat; ++kmo ) {
+          coefs[imo] += _orbs.get(iao,kmo+icor,ir) * trmat.get(kmo,imo,ir);
+        }
+      }
+      for ( uint imo = 0; imo < lenmo_trmat; ++imo ) {
+        _orbs.set(firstao+iao,imo+icor+firstmo_orbs,coefs[imo]);
+      }
+    }
+  }
 }

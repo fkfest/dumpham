@@ -45,8 +45,9 @@ public:
   const FDPar& nocc() const { return _occ; }
   // number of core orbitals in each symmetry (are not count in nclos or nocc!)
   const FDPar& ncore() const { return _core; }
-  
+  // in spin orbitals
   inline double oneel(uint p, uint q) const; 
+  // in spin orbitals
   inline double twoel(uint p, uint q, uint r, uint s) const; 
   double escal() const {return _escal;}
   Spin spin(uint p) const { return Spin(p%2); }
