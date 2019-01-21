@@ -18,6 +18,8 @@ private:
   // diagonalize fock as FC=DCe. The eigenvalues/vectors will be sorted
   void diagonalize4irrep(std::vector<double>& eigvalues, std::vector<double>& eigvectors, std::vector<double>& seigvec,
                          const DMdump& dmdump, Irrep ir);
+  // return spin summed value from matrix mat for spatial orbitals i and j and norb spatial orbitals
+  inline double spinsummedvalue(const std::vector<double> & mat, uint i, uint j, uint norb) const;
   uint _nsorb;
   // point group symmetry (in spatial orbitals!)
   const PGSym * p_pgs;
@@ -26,3 +28,9 @@ private:
   // fock matrix for each symmetry
   std::vector< std::vector<double> >_FMAT;
 };
+
+inline double Fock_matrices::spinsummedvalue(const std::vector< double >& mat, uint i, uint j, uint norb) const
+{
+  return mat[oneif4ir(2*i,2*j,2*norb)]+mat[oneif4ir(2*i+1,2*j,2*norb)]+
+         mat[oneif4ir(2*i,2*j+1,2*norb)]+mat[oneif4ir(2*i+1,2*j+1,2*norb)];
+}

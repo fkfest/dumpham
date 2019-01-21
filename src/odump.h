@@ -55,6 +55,8 @@ public:
   Odump(const PGSym& pgs, Occupation occs = Occupation());
   // construct from an orbdump file (comma-separated)
   Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump);
+  // construct from an Integ2ab file. Can be with or without core orbitals (will be filled with zeros)
+  Odump(const PGSym& pgs, const FDPar& ncore, const Integ2ab& orbs);
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
   // return orbital index without core. orb_with_core has to be a valence orbital!

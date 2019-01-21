@@ -116,7 +116,7 @@ Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(
 //   xout << "orbs nelem: " << _orbs.nelem() << std::endl;
   std::ifstream oin;
   oin.open(orbdump.c_str());
-  if ( !oin.good() ) {
+  if ( !oin.is_open() ) {
     error("Error opening "+ orbdump);
   }
   std::string line;
@@ -137,6 +137,30 @@ Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(
   }
   if ( idx != _orbs.nelem() )
     error("Number of orbital coefficients not consistens with the number of orbitals");
+}
+Odump::Odump(const PGSym& pgs, const FDPar& ncore, const Integ2ab& orbs) : p_pgs(&pgs)
+{
+  _ncore = ncore;
+  assert( _ncore.size() == p_pgs->nIrreps() );
+  _ncoreaccu.push_back(_ncore[0]);
+  for ( Irrep ir = 1; ir < _ncore.size(); ++ir )
+    _ncoreaccu.push_back(_ncoreaccu[ir-1]+_ncore[ir]);
+  if ( orbs.pgs() != p_pgs ){
+    assert( orbs.pgs()->nIrreps() == p_pgs->nIrreps() );
+    _orbs = Integ2ab(pgs);
+    for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ){
+      uint norb4ir_in = orbs.pgs()->norbs(ir);
+      uint ioff4ir_in = orbs.pgs()->_firstorb4irrep[ir];
+      uint ioff4ir = p_pgs->_firstorb4irrep[ir]+_ncore[ir];
+      for ( uint i = 0; i < norb4ir_in; ++i ){
+        for ( uint j = 0; j < norb4ir_in; ++j ){
+          _orbs.set(i+ioff4ir,j+ioff4ir,orbs.get(i+ioff4ir_in,j+ioff4ir_in));
+        }
+      }
+    }
+  } else {
+    _orbs = orbs;
+  }
 }
 
 void Odump::store(std::string orbdump)

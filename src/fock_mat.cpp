@@ -1,4 +1,5 @@
 #include "fock_mat.h"
+#include <numeric>
 //SUBROUTINE DGGEV( JOBVL, JOBVR, N, A, LDA, B, LDB, ALPHAR, ALPHAI, BETA, VL, LDVL, VR, LDVR, WORK, LWORK, INFO)
   extern "C" {
   extern void dggev_(char*, char*, uint*, double*, uint*, const double*, uint*, double*, double*, double*, double*, uint*, double*, uint*, double*, int*, int*);
@@ -94,11 +95,13 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
 {
   std::string ektorb = Input::sPars["orbs"]["ektorb"];
   std::string dysorb = Input::sPars["orbs"]["dysorb"];
+  std::string ips = Input::sPars["fm"]["ips"];
   std::string orbsin = Input::sPars["orbs"]["in"];
   bool
     calc_ektorb = !ektorb.empty(),
-    calc_dysorb = !dysorb.empty();
-  Integ2ab ekttrma, dystrma;
+    calc_dysorb = !dysorb.empty(),
+    store_ips = !ips.empty();
+  Integ2ab ekttrma, dystrma, ipsmat;
   if ( calc_ektorb || calc_dysorb ) {
     if ( orbsin.empty() ) {
       error("Provide original orbitals in order to calculate EKT or Dyson orbs");
@@ -106,6 +109,7 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
     if ( calc_ektorb ) ekttrma = Integ2ab(*p_pgs);
     if ( calc_dysorb ) dystrma = Integ2ab(*p_pgs);
   }
+  if ( store_ips ) ipsmat = Integ2ab(*p_pgs);
   for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
     std::vector<double> eigval,eigvec,seigvec;
     diagonalize4irrep(eigval,eigvec,seigvec,dmdump,ir);
@@ -114,11 +118,14 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
     for ( uint i4ir = 0; i4ir < norb4ir; ++i4ir ) {
       for ( uint j4ir = 0; j4ir < norb4ir; ++j4ir ) {
         if ( calc_ektorb ) {
-          ekttrma.set(i4ir+ioff4ir,j4ir+ioff4ir,eigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]+eigvec[oneif4ir(2*i4ir+1,2*j4ir,2*norb4ir)]);
+          ekttrma.set(i4ir+ioff4ir,j4ir+ioff4ir,spinsummedvalue(eigvec,i4ir,j4ir,norb4ir));
         }
         if ( calc_dysorb ) {
-          dystrma.set(i4ir+ioff4ir,j4ir+ioff4ir,seigvec[oneif4ir(2*i4ir,2*j4ir,2*norb4ir)]+seigvec[oneif4ir(2*i4ir+1,2*j4ir,2*norb4ir)]);
+          dystrma.set(i4ir+ioff4ir,j4ir+ioff4ir,spinsummedvalue(seigvec,i4ir,j4ir,norb4ir));
         }
+      }
+      if ( store_ips ) {
+        ipsmat.set(i4ir+ioff4ir,i4ir+ioff4ir,eigval[2*i4ir]);
       }
     }
   }
@@ -132,7 +139,41 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
     odump.transform(dystrma);
     odump.store(dysorb);
   }
+  if ( store_ips ) {
+    Odump ipdump(p_dump->pgs_wcore(),p_dump->ncore(),ipsmat);
+    ipdump.store(ips);
+  }
 }
+
+// make the largest coeff of the vector positive
+static void make_largest_positive(double * pBeg, uint nElem) {
+  double maxelem = 0.0;
+  bool change_sign = false;
+  for ( double * pVec = pBeg; pVec != pBeg + nElem; ++pVec ) {
+    if ( maxelem < std::abs(*pVec) ) {
+      maxelem = std::abs(*pVec);
+      change_sign = ( *pVec < 0.0);
+    }
+  }
+  if ( change_sign ) {
+    for ( double * pVec = pBeg; pVec != pBeg + nElem; ++pVec ) {
+      *pVec = - *pVec;
+    }
+  }
+}
+static bool normalize(double * pBeg, uint nElem) {
+  double norm = 0.0;
+  for ( double * pVec = pBeg; pVec != pBeg+nElem; ++pVec ) {
+    norm += *pVec * *pVec;
+  }
+  if (norm < Numbers::verysmall) return false;
+  norm = 1.0/sqrt(norm);
+  for ( double * pVec = pBeg; pVec != pBeg+nElem; ++pVec ) {
+    *pVec *= norm;
+  }
+  return true;
+}
+
 #ifdef _LAPACK
 void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vector< double >& eigvectors, 
                                       std::vector<double>& seigvec, const DMdump& dmdump, Irrep ir)
@@ -154,7 +195,7 @@ void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vec
   for ( uint i4ir = 0; i4ir < nsorb4ir; ++i4ir ){
     uint i = i4ir + ioff4ir;
     for ( uint j4ir = 0; j4ir < nsorb4ir; ++j4ir ){
-    uint j = j4ir + ioff4ir;
+      uint j = j4ir + ioff4ir;
       RDM1[oneif4ir(i4ir,j4ir,nsorb4ir)] = dmdump.value(i,j);
     }
   }
@@ -175,7 +216,7 @@ void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vec
   lwork = int(workdummy) + 64;
   std::vector<double> work;
   work.resize(lwork,0);
-  xout << "lwork:" << lwork << " " << "workdummy:" << workdummy << std::endl;
+//   xout << "lwork:" << lwork << " " << "workdummy:" << workdummy << std::endl;
   dggev_(&Nchar, &Vchar, &nsorb4ir, _FMAT[ir].data(), &nsorb4ir, RDM1.data(), &nsorb4ir, 
          eigReal.data(), eigImag.data(), beta.data(), 0, &nsorb4ir, v.data(), &nsorb4ir, work.data(), &lwork, &info);
   // check for errors
@@ -207,15 +248,27 @@ void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vec
     eigvalues[i] = eigvalreal[i].first;
     uint ivec = eigvalreal[i].second;
     std::copy(v.begin()+ivec*nsorb4ir,v.begin()+(ivec+1)*nsorb4ir,eigvectors.begin()+i*nsorb4ir);
-//    for ( uint ii = 0; ii < nsorb4ir; ++ii ) {
-//      xout << eigvectors[i*nsorb4ir+ii] << " ";
-//    }
-//    xout << std::endl;
+    make_largest_positive(&(eigvectors[i*nsorb4ir]),nsorb4ir);
   }
   seigvec.resize(nsorb4ir*nsorb4ir);
+  char Tchar = 'T';
   double One = 1.0, Zero = 0.0;
   int len = nsorb4ir;
-  dgemm_(&Nchar,&Nchar,&len,&len,&len,&One,RDM1.data(),&len,eigvectors.data(),&len,&Zero,seigvec.data(),&len);
+  // restore RDM back
+  for ( uint i4ir = 0; i4ir < nsorb4ir; ++i4ir ){
+    uint i = i4ir + ioff4ir;
+    for ( uint j4ir = 0; j4ir < nsorb4ir; ++j4ir ){
+      uint j = j4ir + ioff4ir;
+      RDM1[oneif4ir(i4ir,j4ir,nsorb4ir)] = dmdump.value(i,j);
+    }
+  }
+  dgemm_(&Tchar,&Nchar,&len,&len,&len,&One,RDM1.data(),&len,eigvectors.data(),&len,&Zero,seigvec.data(),&len);
+  // norm
+  for (uint i = 0; i < nsorb4ir; i++){
+    if (!normalize(&(seigvec[nsorb4ir*i]),nsorb4ir)){
+      warning("Small norm of Dyson transform vector number " << i);
+    }
+  }
 }
 #else
 void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vector< double >& eigvectors, 

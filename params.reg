@@ -46,3 +46,4 @@ set="dm",type=s,name="out1rdmmat",value="",desc="one-particle density matrix out
 
 %FM
 set="fm",type=s,name="outmat",value="",desc="fock matrix from density matrices in spin orbitals in matrix form"
+set="fm",type=s,name="ips",value="",desc="eigenvalues of the generalized fock matrix (EKT-IPs) as a diagonal matrix"
