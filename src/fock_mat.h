@@ -4,6 +4,8 @@
 #include "hdump.h"
 #include <iomanip>
 
+using namespace HamDump;
+
 // Fock matrix in spin orbitals
 class Fock_matrices{
 public:

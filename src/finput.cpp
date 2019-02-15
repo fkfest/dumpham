@@ -136,6 +136,7 @@ bool Finput::analyzeline()
     outputfile = uppercase(outputfile);
   
   Hdump dump(inputfile);
+  dump.read_dump();
   if ( outputfile != "" )
     dump.store(outputfile);
   DMdump dmdump;
@@ -180,8 +181,8 @@ void Finput::handle_orbdump(const Hdump& dump)
       xout << "Guessed occupation: " << occguess << std::endl;
       xout << "Guessed spin occupation: ";
       std::vector<int> socc = occguess.spinocc(1);
-      _foreach_cauto ( std::vector<int>, iso, socc ) {
-        xout << *iso << "  ";
+      for ( const auto& iso: socc ) {
+        xout << iso << "  ";
       }
       xout << std::endl;
     }
@@ -192,8 +193,8 @@ void Finput::handle_orbdump(const Hdump& dump)
     const TParArray& occ = Input::aPars["orbs"]["occvec"];
     if ( occ.size() > 0 ) {
       xout << "Occupation: ";
-      _foreach_cauto(TParArray,iocc,occ)
-        xout << *iocc << ",";
+      for ( const auto& iocc: occ )
+        xout << iocc << ",";
       xout << std::endl;
     }
     std::vector<int> occ_spin;

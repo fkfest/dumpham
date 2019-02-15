@@ -1,5 +1,7 @@
 #include "hdump.h"
 
+namespace HamDump {
+  
 Hdump::Hdump(std::string fcidump) : _dump(fcidump)
 {
   xout << "\n Process file "<< fcidump <<std::endl;
@@ -15,8 +17,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   xout << "IUHF=" << IUHF[0] << std::endl;
   FDPar ORBSYM = _dump.parameter("ORBSYM");
   xout << "ORBSYM="; 
-  _foreach_cauto(FDPar,s,ORBSYM)
-    xout << *s << ","; 
+  for ( const auto& s: ORBSYM)
+    xout << s << ","; 
   xout<<std::endl;
   FDPar OCC = _dump.parameter("OCC");
   check_input_norbs(OCC,"occ");
@@ -27,8 +29,6 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   
   FDPar ST = _dump.parameter("ST");
   
-  int i,j,k,l;
-  double value;
   int nn = NORB[0];
   if ( nn < 0 ) {
     error("NORB < 0 in FCIDUMP!");
@@ -37,6 +37,7 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   _nelec = NELEC[0];
   _ms2 = MS2[0];
   _pgs = PGSym(ORBSYM);
+  _escal = 0.0;
  
   assert( CORE.size() > 0 && OCC.size() > 0 && CLOSED.size() > 0 );
   if ( CORE.size() > 1 || CORE[0] > 0 ) {
@@ -57,7 +58,9 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   }
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
-  
+}
+void Hdump::read_dump()
+{
   _oneel.emplace_back(new Integ2(_pgs));
   _twoel.emplace_back(new Integ4(_pgs));
   if ( _uhf ) {
@@ -76,7 +79,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   }
 //   check_addressing_integrals();
 #endif
-  _escal = 0.0;
+  int i,j,k,l;
+  double value;
   
   FCIdump::integralType type;
   _dump.rewind();
@@ -155,8 +159,8 @@ void Hdump::check_input_norbs(FDPar& orb, const std::string& kind) const
   }
   if ( orb.size() > 1 || orb[0] > 0 ) {
     xout << kind << "=";
-    _foreach_cauto(FDPar,s,orb)
-      xout << *s << ","; 
+    for ( const auto& s: orb)
+      xout << s << ","; 
     xout<<std::endl;
   }
 }
@@ -169,8 +173,8 @@ void Hdump::store(std::string fcidump)
     //remove the point-group symmetry
     ORBSYM_SAV = _dump.parameter("ORBSYM");
     ORBSYM.resize(ORBSYM_SAV.size());
-    _foreach_auto(FDPar,s,ORBSYM)
-      *s = 1;
+    for ( auto& s: ORBSYM)
+      s = 1;
     _dump.modifyParameter("ORBSYM",ORBSYM);
   }
   if (_dump.write(fcidump,FCIdump::FileFormatted,false))
@@ -352,3 +356,4 @@ void Hdump::check_addressing_integrals() const
    xout << "n2el: " << _twoel[aaaa]->nelem() << std::endl;
 }
 
+} //namespace HamDump

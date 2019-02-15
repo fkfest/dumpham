@@ -28,8 +28,8 @@ Occupation::Occupation(const PGSym& pgs, const std::vector< int >& occs, int iba
   std::vector< std::vector<int> > singly(p_pgs->nIrreps());
   // For 1-based: spatial obital index = int( (spin orbital index + 1) / 2 )
   int iorb0 = -1;
-  _foreach_cauto( std::vector< int >, iocc, occs ){
-    int iorb1 = int((*iocc-ibase)/2);
+  for ( const auto& iocc: occs ){
+    int iorb1 = int((iocc-ibase)/2);
     if ( iorb0 == iorb1 ) {
       // doubly occupied
       (*this)[p_pgs->irrep(iorb0)].push_back(iorb0);
@@ -49,8 +49,8 @@ Occupation::Occupation(const PGSym& pgs, const std::vector< int >& occs, int iba
   for ( uint ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
     (*this)[ir]._nclos = (*this)[ir].size();
     // add singly occupied orbitals
-    _foreach_cauto( std::vector< int >, iocc, singly[ir] ){
-      (*this)[ir].push_back(*iocc);
+    for ( const auto& iocc: singly[ir] ){
+      (*this)[ir].push_back(iocc);
     }
   }
 }
@@ -58,8 +58,8 @@ Occupation::Occupation(const PGSym& pgs, const std::vector< int >& occs, int iba
 std::vector<int> Occupation::spinocc(int ibase) const
 {
   std::vector<int> socc;
-  _foreach_cauto(Occupation, oc, *this)
-    oc->spinocc(socc,ibase);
+  for ( const auto& oc: *this)
+    oc.spinocc(socc,ibase);
   std::sort(socc.begin(),socc.end());
   return socc;
 }
@@ -67,9 +67,9 @@ std::vector<int> Occupation::spinocc(int ibase) const
 
 std::ostream& operator<<(std::ostream& o, const Occupation& occ)
 {
-  _foreach_cauto(Occupation,iocc,occ){
-    _foreach_cauto(Occupation4Irrep, ioir, *iocc)
-      o << *ioir << ",";
+  for ( const auto& iocc: occ ){
+    for ( const auto& ioir: iocc )
+      o << ioir << ",";
   }
   return o;
 }
@@ -126,13 +126,13 @@ Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(
     if ( line.empty() || line[0] == '#' || 
          line.compare("BEGIN_DATA,") == 0 || line.compare("END_DATA,") == 0  ) continue;
     TParArray coefs_line = IL::parray(line);
-    _foreach_cauto(TParArray,ic,coefs_line){
+    for ( const auto& ic: coefs_line ){
       double val;
-      if ( str2num<double>(val,*ic,std::dec) ) {
+      if ( str2num<double>(val,ic,std::dec) ) {
         _orbs.set(idx,val);
         ++idx;
       } else
-        error("Not a number: "+*ic);
+        error("Not a number: "+ic);
     }
   }
   if ( idx != _orbs.nelem() )

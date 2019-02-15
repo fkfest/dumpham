@@ -3,18 +3,17 @@
 
 #include <iostream>
 #include <sstream>
-#include <vector>
 #include <map>
 #include <list>
 #include <cmath>
 #include <assert.h>
+#include "hdtypes.h"
 
 #ifndef NDEBUG
 #define _DEBUG
 #endif
 
 typedef long unsigned int lui;
-typedef unsigned int uint;
 typedef std::list< std::string > TParArray;
 typedef std::map< std::string, std::string > TsPar;
 typedef std::map< std::string, int > TiPar;
@@ -26,18 +25,6 @@ typedef std::map< std::string, TiPar > TiParSet;
 typedef std::map< std::string, TfPar > TfParSet;
 typedef std::map< std::string, TaPar > TaParSet;
 
-typedef double TFactor;
-#define _abs std::abs
-#define _todouble
-
-typedef std::vector<double> IntegralsD;
-typedef std::vector<int> FDPar;
-typedef uint Irrep;
-
-enum Spin{
-  alpha = 0,
-  beta = 1
-};
 
 namespace Numbers
 {
@@ -90,12 +77,6 @@ namespace Input
 #define _xout2(x) _xout(2,x)
 // output unless Input::verbose is below 3
 #define _xout3(x) _xout(3,x)
-
-#define _foreach(It,Array) for ( (It) = (Array).begin(); (It) != (Array).end(); ++(It) )
-#define _foreach_auto(Type,It,Array) for ( Type::iterator (It) = (Array).begin(); (It) != (Array).end(); ++(It) )
-#define _foreach_rauto(Type,It,Array) for ( Type::reverse_iterator (It) = (Array).rbegin(); (It) != (Array).rend(); ++(It) )
-#define _foreach_cauto(Type,It,Array) for ( Type::const_iterator (It) = (Array).begin(); (It) != (Array).end(); ++(It) )
-#define _foreach_crauto(Type,It,Array) for ( Type::const_reverse_iterator (It) = (Array).rbegin(); (It) != (Array).rend(); ++(It) )
 
 // print timing
 #define _CPUtiming(what,start,end) xout << std::fixed << std::setprecision(2) << "CPU time " << what << 1000.0*(end-start)/CLOCKS_PER_SEC << " ms\n";

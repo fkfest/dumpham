@@ -10,6 +10,8 @@
 #include "utilities.h"
 #include "inpline.h"
 
+using namespace HamDump;
+
 /*!
  *  Occupation vector for an irrep, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals} 
  *  The orbital indices are zero based!

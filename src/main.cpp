@@ -10,6 +10,8 @@
 #include "hdump.h"
 #include "odump.h"
 
+using namespace HamDump;
+
 int main(int argc, char **argv)
 {
   ArgPars args(argc,argv);
@@ -79,6 +81,7 @@ int main(int argc, char **argv)
       Input::iPars["ham"]["nosym"] = 1;
     }
     Hdump dump(inputfile);
+    dump.read_dump();
     dump.store(outputfile);
     if ( orbdump ) {
       Odump odump(dump.pgs());

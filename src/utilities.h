@@ -74,12 +74,12 @@ inline
 void apars2nums(std::vector<T>& t, const TParArray& s,
              std::ios_base& (*f)(std::ios_base&))
 {
-  _foreach_cauto(TParArray,is,s){
+  for ( const auto& is: s){
     T x;
-    if ( str2num<T>(x,*is,f) )
+    if ( str2num<T>(x,is,f) )
       t.push_back(x);
     else
-      error("Not a number: "+*is);
+      error("Not a number: "+is);
   }
 }
 

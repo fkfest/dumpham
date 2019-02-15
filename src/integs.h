@@ -3,6 +3,7 @@
 #include <vector>
 #include "pgsym.h"
 
+namespace HamDump {
 #ifdef _DEBUG
 #define REDUNWAR_ ,bool redunwar = false
 #define REDUNWAR__ ,bool redunwar
@@ -256,6 +257,6 @@ inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
 #undef USERW
 #undef WARNRED2
 #undef WARNRED4
-
+} // namespace HamDump
 #endif
 

@@ -3,13 +3,22 @@
 #include <string>
 #include <vector>
 #include <memory>
+
+#ifdef MOLPRO
+#include "hdtypes.h"
+#include "global/FCIdump.h"
+#else
 #include "globals.h"
 #include "utilities.h"
 #include "FCIdump.h"
+#endif
+
 #include "pgsym.h"
 #include "integs.h"
+
+namespace HamDump {
 /*!
-    Hamiltonian dump without point-group symmetry
+    Hamiltonian dump with point-group symmetry
 */
 class Hdump {
 public:  
@@ -25,6 +34,7 @@ public:
     bbbb = 1,
     aabb = 2
   };
+  void read_dump();
   void store(std::string fcidump);
   uint norb() const { return _norb; }
   uint nelec() const { return _nelec; }
@@ -108,5 +118,6 @@ inline double Hdump::twoel(uint p, uint q, uint r, uint s) const {
   return static_cast<Integ4*>(_twoel[bbbb].get())->get_with_pgs(i,j,k,l);
 }
 
+} //namespace HamDump
 
 #endif

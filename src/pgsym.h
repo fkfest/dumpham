@@ -2,9 +2,14 @@
 #define PGSym_H
 #include <string>
 #include <vector>
+#ifdef MOLPRO
+#include "hdtypes.h"
+#else
 #include "globals.h"
 #include "utilities.h"
+#endif
 
+namespace HamDump {
 /*!
  *  Point group symmetry, Irrep is 0 based. 
 */
@@ -30,17 +35,17 @@ public:
       _norb4irrep.resize(_nIrreps,0);
       _firstorb4irrep.resize(_nIrreps,0);
       uint orb = 0;
-      _foreach_cauto(FDPar,os,orbsym) {
-        if ( *os < 1 ) 
+      for ( const auto& os: orbsym ) {
+        if ( os < 1 ) 
           error("Orbital symmetry below 1!");
-        _irrep4orb.push_back(*os-1);
-        ++_norb4irrep[*os-1];
+        _irrep4orb.push_back(os-1);
+        ++_norb4irrep[os-1];
         ++orb;
-        if ( _firstorb4irrep[*os-1] == 0 ) _firstorb4irrep[*os-1] = orb;
+        if ( _firstorb4irrep[os-1] == 0 ) _firstorb4irrep[os-1] = orb;
       }
       // make _firstorb4irrep zero based
-      _foreach_auto(FDPar,fo,_firstorb4irrep)
-        --(*fo);
+      for ( auto& fo: _firstorb4irrep )
+        --fo;
     } else {
       _nIrreps = orbsym.size();
       _norb4irrep = orbsym;
@@ -60,7 +65,7 @@ public:
   // product of two irreps
   Irrep product(Irrep i, Irrep j) const { assert((i^j)<_nIrreps); return (i^j);}
   // return the original orbsym for fcidump
-  FDPar orbsym() const { FDPar osym; _foreach_cauto(IrrepVec,ir,_irrep4orb) osym.push_back(*ir+1); return osym;  }
+  FDPar orbsym() const { FDPar osym; for (const auto& ir:_irrep4orb) osym.push_back(ir+1); return osym;  }
   // number of orbitals in each irrep
   FDPar norbs_in_irreps() const { return _norb4irrep; }
   // number of orbitals in irrep
@@ -78,4 +83,5 @@ public:
   FDPar _firstorb4irrep;
 };
 
+} //namespace HamDump
 #endif

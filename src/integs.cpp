@@ -1,5 +1,6 @@
 #include "integs.h"
 
+namespace HamDump {
 Integ2::Integ2(const PGSym& pgs): BaseTensors(pgs,2)
 {
   FDPar norb4ir = p_pgs->norbs_in_irreps();
@@ -8,9 +9,9 @@ Integ2::Integ2(const PGSym& pgs): BaseTensors(pgs,2)
   Irrep ir = 0;
   BlkIdx nint = 0;
   BlkIdx BlkLen;
-  _foreach_cauto(FDPar,ni,norb4ir) {
+  for ( const auto& ni: norb4ir) {
     // triangular symmetry
-    BlkLen = *ni * (*ni + 1)/2;
+    BlkLen = ni * (ni + 1)/2;
     _blocks[ir+ir*nIrreps] = nint;
     ++ir;
     nint += BlkLen;
@@ -26,8 +27,8 @@ Integ2ab::Integ2ab(const PGSym& pgs): BaseTensors(pgs,2)
   Irrep ir = 0;
   BlkIdx nint = 0;
   BlkIdx BlkLen;
-  _foreach_cauto(FDPar,ni,norb4ir) {
-    BlkLen = *ni * *ni;
+  for ( const auto& ni: norb4ir) {
+    BlkLen = ni * ni;
     _blocks[ir+ir*nIrreps] = nint;
     ++ir;
     nint += BlkLen;
@@ -113,4 +114,4 @@ Integ4ab::Integ4ab(const PGSym& pgs): BaseTensors(pgs,4)
   _data.resize(nint,0.0);
 }
 
-
+} //namespace HamDump
