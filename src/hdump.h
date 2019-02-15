@@ -6,6 +6,7 @@
 
 #ifdef MOLPRO
 #include "hdtypes.h"
+#include "hdcommon.h"
 #include "global/FCIdump.h"
 #else
 #include "globals.h"

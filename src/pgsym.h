@@ -4,6 +4,7 @@
 #include <vector>
 #ifdef MOLPRO
 #include "hdtypes.h"
+#include "hdcommon.h"
 #else
 #include "globals.h"
 #include "utilities.h"

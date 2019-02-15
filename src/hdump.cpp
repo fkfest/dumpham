@@ -149,14 +149,15 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   curtype = type;
   #undef REDUNWAR
 }
-
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind) const
 {
+#ifndef MOLPRO
   const TParArray& inporb = Input::aPars["orbs"][kind];
   if ( inporb.size() > 0 ) {
     orb.clear();
     apars2nums<int>(orb,inporb,std::dec);
   }
+#endif
   if ( orb.size() > 1 || orb[0] > 0 ) {
     xout << kind << "=";
     for ( const auto& s: orb)
@@ -164,7 +165,8 @@ void Hdump::check_input_norbs(FDPar& orb, const std::string& kind) const
     xout<<std::endl;
   }
 }
-
+#ifndef MOLPRO
+// fix to store hdump
 void Hdump::store(std::string fcidump)
 {
   bool nosym = Input::iPars["ham"]["nosym"];
@@ -193,7 +195,7 @@ void Hdump::store(std::string fcidump)
     _dump.modifyParameter("ORBSYM",ORBSYM_SAV);
   }
 }
-
+#endif
 void Hdump::store_with_symmetry() const
 {
   storerec_sym(static_cast<Integ4*>(_twoel[aaaa].get()));
