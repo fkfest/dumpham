@@ -2,6 +2,13 @@
 #define Integs_H
 #include <vector>
 #include "pgsym.h"
+#ifdef MOLPRO
+#include "hdtypes.h"
+#include "hdcommon.h"
+#else
+#include "globals.h"
+#include "utilities.h"
+#endif
 
 namespace HamDump {
 #ifdef _DEBUG

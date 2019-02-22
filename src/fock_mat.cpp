@@ -30,7 +30,7 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
         uint t = t4ir+ioff4ir;
         uint pt = oneif4ir(p4ir,t4ir,nsorb4ir);
         for(uint q = 0; q < _nsorb; q++){
-          fmat[pt] += hdump.oneel(t,q) * dmdump.value(p,q);
+          fmat[pt] += hdump.oneel_spi_pgs(t,q) * dmdump.value(p,q);
         }
       }
     }
@@ -44,7 +44,7 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
           }
           for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
             uint p = p4ir+ioff4ir;
-            double twoel_prqs = hdump.twoel(p,r,q,s); 
+            double twoel_prqs = hdump.twoel_spi_pgs(p,r,q,s); 
             for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
               fmat2[oneif4ir(t4ir,p4ir,nsorb4ir)] += twoel_prqs * dm_qrs[t4ir];
             }

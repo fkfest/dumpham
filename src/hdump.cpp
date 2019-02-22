@@ -36,6 +36,8 @@ Hdump::Hdump(std::string fcidump) : _dump(fcidump)
   _norb = nn;
   _nelec = NELEC[0];
   _ms2 = MS2[0];
+  _sym = ISYM[0];
+  if ( _sym > 0 ) --_sym; // make zero-based
   _pgs = PGSym(ORBSYM);
   _escal = 0.0;
  
