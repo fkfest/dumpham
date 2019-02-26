@@ -2,30 +2,32 @@
 
 namespace HamDump {
   
-Hdump::Hdump(std::string fcidump) : _dump(fcidump)
+Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
 {
-  xout << "\n Process file "<< fcidump <<std::endl;
+  if (verbose) xout << "\n Process file "<< fcidump <<std::endl;
   FDPar NELEC = _dump.parameter("NELEC");
-  xout << "NELEC=" << NELEC[0] << std::endl;
+  if (verbose) xout << "NELEC=" << NELEC[0] << std::endl;
   FDPar MS2 = _dump.parameter("MS2");
-  xout << "MS2=" << MS2[0] << std::endl;
+  if (verbose) xout << "MS2=" << MS2[0] << std::endl;
   FDPar NORB = _dump.parameter("NORB");
-  xout << "NORB=" << NORB[0] << std::endl;
+  if (verbose) xout << "NORB=" << NORB[0] << std::endl;
   FDPar ISYM = _dump.parameter("ISYM");
-  xout << "ISYM=" << ISYM[0] << std::endl;
+  if (verbose) xout << "ISYM=" << ISYM[0] << std::endl;
   FDPar IUHF = _dump.parameter("IUHF");
-  xout << "IUHF=" << IUHF[0] << std::endl;
+  if (verbose) xout << "IUHF=" << IUHF[0] << std::endl;
   FDPar ORBSYM = _dump.parameter("ORBSYM");
-  xout << "ORBSYM="; 
-  for ( const auto& s: ORBSYM)
-    xout << s << ","; 
-  xout<<std::endl;
+  if (verbose) {
+    xout << "ORBSYM="; 
+    for ( const auto& s: ORBSYM)
+      xout << s << ","; 
+    xout<<std::endl;
+  }
   FDPar OCC = _dump.parameter("OCC");
-  check_input_norbs(OCC,"occ");
+  check_input_norbs(OCC,"occ",verbose);
   FDPar CLOSED = _dump.parameter("CLOSED");
-  check_input_norbs(CLOSED,"closed");
+  check_input_norbs(CLOSED,"closed",verbose);
   FDPar CORE = _dump.parameter("CORE");
-  check_input_norbs(CORE,"core");
+  check_input_norbs(CORE,"core",verbose);
   
   FDPar ST = _dump.parameter("ST");
   
@@ -122,7 +124,11 @@ template<typename T>
 void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype)
 {
   #ifdef _DEBUG
+    #ifndef MOLPRO
     bool redunwarn = Input::iPars["ham"]["redunwarning"];
+    #else
+    bool redunwarn = true;
+    #endif
     #define REDUNWAR ,redunwarn
   #else
     #define REDUNWAR
@@ -138,7 +144,11 @@ template<typename T>
 void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralType& curtype)
 {
   #ifdef _DEBUG
+    #ifndef MOLPRO
     bool redunwarn = Input::iPars["ham"]["redunwarning"];
+    #else
+    bool redunwarn = true;
+    #endif
     #define REDUNWAR ,redunwarn
   #else
     #define REDUNWAR
@@ -151,7 +161,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   curtype = type;
   #undef REDUNWAR
 }
-void Hdump::check_input_norbs(FDPar& orb, const std::string& kind) const
+void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
 {
 #ifndef MOLPRO
   const TParArray& inporb = Input::aPars["orbs"][kind];
@@ -160,7 +170,7 @@ void Hdump::check_input_norbs(FDPar& orb, const std::string& kind) const
     apars2nums<int>(orb,inporb,std::dec);
   }
 #endif
-  if ( orb.size() > 1 || orb[0] > 0 ) {
+  if ( verbose && ( orb.size() > 1 || orb[0] > 0 ) ) {
     xout << kind << "=";
     for ( const auto& s: orb)
       xout << s << ","; 

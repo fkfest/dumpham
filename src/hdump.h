@@ -26,7 +26,7 @@ class Hdump {
 public:  
   Hdump():_escal(0),_norb(0),_nelec(0),_ms2(0){};
   // construct from FCIdump
-  Hdump(std::string fcidump);
+  Hdump(std::string fcidump, bool verbose = true);
   enum onetype {
     aa = 0,
     bb = 1
@@ -100,7 +100,7 @@ private:
   void storerec_nosym(const Integ2 * pInt) const;
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
-  void check_input_norbs(FDPar& orb, const std::string& kind ) const;
+  void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
   // One-electron integrals (one set for cs rhf, otherwise alpha and beta)

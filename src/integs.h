@@ -16,8 +16,8 @@ namespace HamDump {
 #define REDUNWAR__ ,bool redunwar
 #define REDUNWAR ,redunwar
 #define USERW (void)redunwar
-#define WARNRED2(p,q) if(redunwar) warning("Redundant entry in FCIDUMP: " << p << " " << q );
-#define WARNRED4(p,q,r,s) if(redunwar) warning("Redundant entry in FCIDUMP: " << p << " " << q << " " << r << " " << s );
+#define WARNRED2(p,q) if(redunwar) warning("Redundant entry in FCIDUMP: "+ std::to_string(p) + " " + std::to_string(q) );
+#define WARNRED4(p,q,r,s) if(redunwar) warning("Redundant entry in FCIDUMP: "+std::to_string(p)+" "+std::to_string(q)+" "+std::to_string(r)+" "+std::to_string(s) );
 #else
 #define REDUNWAR_
 #define REDUNWAR__
