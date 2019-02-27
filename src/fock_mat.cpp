@@ -145,6 +145,7 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
   }
 }
 
+#ifdef _LAPACK
 // make the largest coeff of the vector positive
 static void make_largest_positive(double * pBeg, uint nElem) {
   double maxelem = 0.0;
@@ -173,11 +174,12 @@ static bool normalize(double * pBeg, uint nElem) {
   }
   return true;
 }
+#endif
 
-#ifdef _LAPACK
 void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vector< double >& eigvectors, 
                                       std::vector<double>& seigvec, const DMdump& dmdump, Irrep ir)
 {
+#ifdef _LAPACK
 //Calculate eigenvalues using LAPACK DGGEV for generalized eigenvalue problem
   uint nsorb4ir = p_pgs->norbs(ir) * 2;
   uint ioff4ir = p_pgs->_firstorb4irrep[ir] * 2;
@@ -271,9 +273,7 @@ void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vec
   }
 }
 #else
-void Fock_matrices::diagonalize4irrep(std::vector< double >& eigvalues, std::vector< double >& eigvectors, 
-                                      const DMdump& dmdump, Irrep ir)
-{
+ (void) eigvalues; (void) eigvectors; (void) seigvec; (void) dmdump; (void) ir;
   error("Cannot diagonalize: Compiled without LAPACK","Fock_matrices::diagonalize4irrep");
 }
 #endif
