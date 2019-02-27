@@ -93,21 +93,37 @@ void Hdump::read_dump()
   do {
     switch(type){
       case FCIdump::I2aa:
+        xout << "I2aa" << std::endl;
         readrec( static_cast<Integ4*>(_twoel[aaaa].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I2bb:
+        xout << "I2bb" << std::endl;
         readrec( static_cast<Integ4*>(_twoel[bbbb].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I2ab:
+        xout << "I2ab" << std::endl;
         readrec( static_cast<Integ4ab*>(_twoel[aabb].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I1a:
+        xout << "I1a" << std::endl;
         readrec( static_cast<Integ2*>(_oneel[aa].get()),i,j,value,type);
         break;
       case FCIdump::I1b:
+        xout << "I1b" << std::endl;
         readrec( static_cast<Integ2*>(_oneel[bb].get()),i,j,value,type);
         break;
+#ifndef MOLPRO
+      case FCIdump::Iea:
+        xout << "Iea" << std::endl;
+        skiprec(i,j,k,l,value,type);
+        break;
+      case FCIdump::Ieb:
+        xout << "Ieb" << std::endl;
+        skiprec(i,j,k,l,value,type);
+        break;
+#endif
       case FCIdump::I0:
+        xout << "I0" << std::endl;
         _escal = value;
         type = _dump.nextIntegral(i,j,k,l,value);
         break;
@@ -161,6 +177,14 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   curtype = type;
   #undef REDUNWAR
 }
+void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype)
+{
+  FCIdump::integralType type;
+  do {
+  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
+  curtype = type;
+}
+
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
 {
 #ifndef MOLPRO

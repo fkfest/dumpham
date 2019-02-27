@@ -231,6 +231,8 @@ public:
     */
   typedef enum {
     I0, ///< scalar part of energy, ie nuclear repulsion plus any included core
+    Iea, ///< orbital energies, alpha spin (optional)
+    Ieb, ///< orbital energies, beta spin (optional)
     I1a, ///< 1-electron integrals, alpha spin
     I1b, ///< 1-electron integrals, beta spin
     I2aa, ///< 2-electron integrals, alpha-alpha spin

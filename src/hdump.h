@@ -92,6 +92,8 @@ private:
   void readrec(T * pInt, int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype );
   template<typename T>
   void readrec(T * pInt, int& i, int& j, double& value, FCIdump::integralType& curtype );
+  // simply skip the current record
+  void skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype );
   void storerec_sym(const Integ4 * pInt) const;
   void storerec_sym(const Integ4ab * pInt) const;
   void storerec_sym(const Integ2 * pInt) const;

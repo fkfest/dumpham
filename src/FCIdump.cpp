@@ -321,6 +321,10 @@ FCIdump::integralType FCIdump::nextIntegral(int &i, int &j, int &k, int &l, doub
       result = I0;
     }
   }
+  else if (j == 0 && (*currentState != FCIdump::Iea && *currentState != FCIdump::Ieb)) {
+//    xout << "special state switch to "<<*(currentState+1)<<std::endl;
+    result=(*currentState==FCIdump::I1a)?FCIdump::Iea:FCIdump::endOfRecord; ++currentState;
+  }
   else if (k == 0 && (*currentState != FCIdump::I1a && *currentState != FCIdump::I1b)) {
 //    xout << "special state switch to "<<*(currentState+1)<<std::endl;
     result=(*currentState==FCIdump::I2aa)?FCIdump::I1a:FCIdump::endOfRecord; ++currentState;
