@@ -112,16 +112,6 @@ void Hdump::read_dump()
         xout << "I1b" << std::endl;
         readrec( static_cast<Integ2*>(_oneel[bb].get()),i,j,value,type);
         break;
-#ifndef MOLPRO
-      case FCIdump::Iea:
-        xout << "Iea" << std::endl;
-        skiprec(i,j,k,l,value,type);
-        break;
-      case FCIdump::Ieb:
-        xout << "Ieb" << std::endl;
-        skiprec(i,j,k,l,value,type);
-        break;
-#endif
       case FCIdump::I0:
         xout << "I0" << std::endl;
         _escal = value;
