@@ -17,6 +17,7 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
   double Tr = 0.0;
   for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
     uint nsorb4ir = p_pgs->norbs(ir) * 2;
+    if (nsorb4ir == 0) continue;
     uint ioff4ir = p_pgs->_firstorb4irrep[ir] * 2;
     uint maxid = nsorb4ir-1;
     uint nelem = oneif4ir(maxid,maxid,nsorb4ir)+1;
@@ -56,6 +57,7 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
     for(uint pt = 0; pt < fmat.size(); pt++){
       fmat[pt] += fmat2[pt]; 
     }
+    xout << nsorb4ir << std::endl;
     for(uint p = 0; p < nsorb4ir; p++){
       uint pt = oneif4ir(p,p,nsorb4ir);
       Tr = Tr + fmat[pt]-0.5*fmat2[pt];
@@ -111,10 +113,11 @@ void Fock_matrices::diagonalize(const DMdump& dmdump)
   }
   if ( store_ips ) ipsmat = Integ2ab(*p_pgs);
   for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
-    std::vector<double> eigval,eigvec,seigvec;
-    diagonalize4irrep(eigval,eigvec,seigvec,dmdump,ir);
     uint norb4ir = p_pgs->norbs(ir),
          ioff4ir = p_pgs->_firstorb4irrep[ir];
+    if (norb4ir == 0) continue;
+    std::vector<double> eigval,eigvec,seigvec;
+    diagonalize4irrep(eigval,eigvec,seigvec,dmdump,ir);
     for ( uint i4ir = 0; i4ir < norb4ir; ++i4ir ) {
       for ( uint j4ir = 0; j4ir < norb4ir; ++j4ir ) {
         if ( calc_ektorb ) {
