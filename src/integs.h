@@ -105,6 +105,8 @@ public:
   inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
 };
 
+typedef Integ2ab Integ2st;
+
 /*! 
  * Class for (pq|rs) with permutational (triangular) and group symmetry
  * (pq|rs)=(qp|rs)=(pq|sr)=(qp|sr)=(rs|pq)=(sr|pq)=(rs|qp)=(sr|qp)
@@ -130,6 +132,31 @@ public:
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
 };
 
+/*! 
+ * Class for (pq|rs) with incomplete permutational (particle) and group symmetry
+ * (pq|rs)=(rs|pq)
+ * used for similarity transformed integrals
+ */
+class Integ4st : public BaseTensors {
+public:
+  Integ4st() : BaseTensors(4) {};
+  Integ4st(const PGSym& pgs);
+  // index of p,q,r,s value
+  inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+};
+
+/*! 
+ * Class for (pq|rs) with group symmetry
+ * (pq|rs) without permutational symmetry
+ * used for similarity transformed (aa|bb) integrals
+ */
+class Integ4stab : public BaseTensors {
+public:
+  Integ4stab() : BaseTensors(4) {};
+  Integ4stab(const PGSym& pgs);
+  // index of p,q,r,s value
+  inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+};
 
 // inline functions
 inline BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
@@ -255,6 +282,60 @@ inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
     rsb = rb*p_pgs->_norb4irrep[sir]+sb;
     lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
   }
+  return pqb*lenrs + rsb + blk_idx;
+}
+
+inline BlkIdx Integ4st::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+{
+  if ( p < r ){
+    WARNRED4(p,q,r,s)
+    std::swap(p,r);
+    std::swap(q,s);
+  } else if ( p == r && q < s) {
+    WARNRED4(p,q,r,s)
+    std::swap(q,s);
+  }
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q),
+        rir = p_pgs->irrep(r),
+        sir = p_pgs->irrep(s);
+  uint nIrreps = p_pgs->nIrreps();
+  BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
+  // indices relative to the block
+  BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
+         qb = q - p_pgs->_firstorb4irrep[qir],  
+         rb = r - p_pgs->_firstorb4irrep[rir],  
+         sb = s - p_pgs->_firstorb4irrep[sir];  
+  BlkIdx pqb, rsb, lenrs;
+  pqb = pb*p_pgs->_norb4irrep[qir]+qb,
+  rsb = rb*p_pgs->_norb4irrep[sir]+sb;
+  if ( pir == rir ) {
+    // triangular index
+    return pqb*(pqb+1)/2 + rsb + blk_idx;
+  } else {
+    lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
+    return pqb*lenrs + rsb + blk_idx;
+  }
+}
+
+inline BlkIdx Integ4stab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+{
+  USERW;
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q),
+        rir = p_pgs->irrep(r),
+        sir = p_pgs->irrep(s);
+  uint nIrreps = p_pgs->nIrreps();
+  BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
+  // indices relative to the block
+  BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
+         qb = q - p_pgs->_firstorb4irrep[qir],  
+         rb = r - p_pgs->_firstorb4irrep[rir],  
+         sb = s - p_pgs->_firstorb4irrep[sir];  
+  BlkIdx pqb, rsb, lenrs;
+  pqb = pb*p_pgs->_norb4irrep[qir]+qb,
+  rsb = rb*p_pgs->_norb4irrep[sir]+sb;
+  lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
   return pqb*lenrs + rsb + blk_idx;
 }
 

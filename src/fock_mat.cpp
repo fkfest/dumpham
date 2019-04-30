@@ -62,6 +62,23 @@ Fock_matrices::Fock_matrices(const Hdump& hdump, const DMdump& dmdump)
       uint pt = oneif4ir(p,p,nsorb4ir);
       Tr = Tr + fmat[pt]-0.5*fmat2[pt];
     }
+//    xout << " Fock " << ir << std::endl;
+//    for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
+//      for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+//        uint pt = oneif4ir(p4ir,t4ir,nsorb4ir);
+//        xout << fmat[pt] << " ";
+//      }
+//      xout << std::endl;
+//    }
+//    xout << " RDM1 " << ir << std::endl;
+//    for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
+//      uint p = p4ir+ioff4ir;
+//      for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+//          uint q = t4ir+ioff4ir;
+//          xout << dmdump.value(p,q) << " ";
+//      }
+//      xout << std::endl;
+//    }
   }
   xout << "Energy:" << Tr+hdump.escal() << std::endl;
 }

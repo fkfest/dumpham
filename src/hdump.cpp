@@ -1,7 +1,7 @@
 #include "hdump.h"
 
 namespace HamDump {
-  
+
 Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
 {
   if (verbose) xout << "\n Process file "<< fcidump <<std::endl;
@@ -63,26 +63,54 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
 }
-void Hdump::read_dump()
+
+void Hdump::alloc_ints()
 {
-  _oneel.emplace_back(new Integ2(_pgs));
-  _twoel.emplace_back(new Integ4(_pgs));
-  if ( _uhf ) {
-    _oneel.emplace_back(new Integ2(_pgs)); // h_bb
-    _twoel.emplace_back(new Integ4(_pgs)); // (bb|bb)
-    _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
+  if (_simtra) {
+    // similarity transformed integrals
+    _oneel.emplace_back(new Integ2st(_pgs));
+    _twoel.emplace_back(new Integ4st(_pgs));
+    if ( _uhf ) {
+      _oneel.emplace_back(new Integ2st(_pgs)); // h_bb
+      _twoel.emplace_back(new Integ4st(_pgs)); // (bb|bb)
+      _twoel.emplace_back(new Integ4stab(_pgs)); // (aa|bb)
+    }
+  } else {
+    // normal case
+    _oneel.emplace_back(new Integ2(_pgs));
+    _twoel.emplace_back(new Integ4(_pgs));
+    if ( _uhf ) {
+      _oneel.emplace_back(new Integ2(_pgs)); // h_bb
+      _twoel.emplace_back(new Integ4(_pgs)); // (bb|bb)
+      _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
+    }
   }
   
 #ifdef _DEBUG
-  assert( dynamic_cast<Integ4*>(_twoel[aaaa].get()) );
-  assert( dynamic_cast<Integ2*>(_oneel[aa].get()) );
-  if ( _uhf ) {
-    assert( dynamic_cast<Integ2*>(_oneel[bb].get()) );
-    assert( dynamic_cast<Integ4*>(_twoel[bbbb].get()) );
-    assert( dynamic_cast<Integ4ab*>(_twoel[aabb].get()) );
+  if (_simtra) {
+    assert( dynamic_cast<Integ4st*>(_twoel[aaaa].get()) );
+    assert( dynamic_cast<Integ2st*>(_oneel[aa].get()) );
+    if ( _uhf ) {
+      assert( dynamic_cast<Integ2st*>(_oneel[bb].get()) );
+      assert( dynamic_cast<Integ4st*>(_twoel[bbbb].get()) );
+      assert( dynamic_cast<Integ4stab*>(_twoel[aabb].get()) );
+    }
+  } else {
+    assert( dynamic_cast<Integ4*>(_twoel[aaaa].get()) );
+    assert( dynamic_cast<Integ2*>(_oneel[aa].get()) );
+    if ( _uhf ) {
+      assert( dynamic_cast<Integ2*>(_oneel[bb].get()) );
+      assert( dynamic_cast<Integ4*>(_twoel[bbbb].get()) );
+      assert( dynamic_cast<Integ4ab*>(_twoel[aabb].get()) );
+    }
   }
 //   check_addressing_integrals();
 #endif
+}
+
+void Hdump::read_dump()
+{
+  alloc_ints();
   int i,j,k,l;
   double value;
   
@@ -94,23 +122,38 @@ void Hdump::read_dump()
     switch(type){
       case FCIdump::I2aa:
         xout << "I2aa" << std::endl;
-        readrec( static_cast<Integ4*>(_twoel[aaaa].get()),i,j,k,l,value,type);
+        if (_simtra)
+          readrec( static_cast<Integ4st*>(_twoel[aaaa].get()),i,j,k,l,value,type);
+        else
+          readrec( static_cast<Integ4*>(_twoel[aaaa].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I2bb:
         xout << "I2bb" << std::endl;
-        readrec( static_cast<Integ4*>(_twoel[bbbb].get()),i,j,k,l,value,type);
+        if (_simtra)
+          readrec( static_cast<Integ4st*>(_twoel[bbbb].get()),i,j,k,l,value,type);
+        else
+          readrec( static_cast<Integ4*>(_twoel[bbbb].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I2ab:
         xout << "I2ab" << std::endl;
-        readrec( static_cast<Integ4ab*>(_twoel[aabb].get()),i,j,k,l,value,type);
+        if (_simtra)
+          readrec( static_cast<Integ4stab*>(_twoel[aabb].get()),i,j,k,l,value,type);
+        else
+          readrec( static_cast<Integ4ab*>(_twoel[aabb].get()),i,j,k,l,value,type);
         break;
       case FCIdump::I1a:
         xout << "I1a" << std::endl;
-        readrec( static_cast<Integ2*>(_oneel[aa].get()),i,j,value,type);
+        if (_simtra)
+          readrec( static_cast<Integ2st*>(_oneel[aa].get()),i,j,value,type);
+        else
+          readrec( static_cast<Integ2*>(_oneel[aa].get()),i,j,value,type);
         break;
       case FCIdump::I1b:
         xout << "I1b" << std::endl;
-        readrec( static_cast<Integ2*>(_oneel[bb].get()),i,j,value,type);
+        if (_simtra)
+          readrec( static_cast<Integ2st*>(_oneel[bb].get()),i,j,value,type);
+        else
+          readrec( static_cast<Integ2*>(_oneel[bb].get()),i,j,value,type);
         break;
       case FCIdump::I0:
         xout << "I0" << std::endl;
@@ -191,73 +234,122 @@ void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose)
     xout<<std::endl;
   }
 }
-#ifndef MOLPRO
-// fix to store hdump
 void Hdump::store(std::string fcidump)
 {
-  bool nosym = Input::iPars["ham"]["nosym"];
-  FDPar ORBSYM, ORBSYM_SAV ;
-  if ( nosym ) {
-    //remove the point-group symmetry
-    ORBSYM_SAV = _dump.parameter("ORBSYM");
-    ORBSYM.resize(ORBSYM_SAV.size());
-    for ( auto& s: ORBSYM)
-      s = 1;
-    _dump.modifyParameter("ORBSYM",ORBSYM);
+  bool newfile = _dump.fileName().empty();
+  bool nosym = false;
+#ifndef MOLPRO
+  nosym = Input::iPars["ham"]["nosym"];
+  FDPar ORBSYM, ORBSYM_SAV;
+#endif
+  if ( newfile ) {
+    // create a new FCIDUMP 
+    if ( _simtra ) _dump.addParameter("ST",std::vector<int>(1,1));
+    if ( _uhf ) _dump.addParameter("IUHF",std::vector<int>(1,1));
+    _dump.addParameter("ISYM",std::vector<int>(1,_sym));
+    _dump.addParameter("ORBSYM",_pgs.orbsym());
+    _dump.addParameter("MS2",std::vector<int>(1,_ms2));
+    _dump.addParameter("NELEC",std::vector<int>(1,_nelec));
+    _dump.addParameter("NORB",std::vector<int>(1,_norb));
+  } else {
+#ifdef MOLPRO
+    error("Cannot modify FCIDUMP "+_dump.fileName());
+#else
+    if ( nosym ) {
+      //remove the point-group symmetry
+      ORBSYM_SAV = _dump.parameter("ORBSYM");
+      ORBSYM.resize(ORBSYM_SAV.size());
+      for ( auto& s: ORBSYM)
+        s = 1;
+      _dump.modifyParameter("ORBSYM",ORBSYM);
+    }
+#endif
   }
   if (_dump.write(fcidump,FCIdump::FileFormatted,false))
     xout << "will be written to file " << fcidump << std::endl;
   else
     error("failure to write to file "+fcidump);
   
-  if (nosym) {
-    store_without_symmetry();
+  if (_simtra) {
+    // similarity transformed
+    Integ4st * pI4aa = 0;
+    Integ4stab * pI4ab = 0;
+    Integ2st * pI2 = 0;
+    if (nosym) {
+      store_without_symmetry(pI2,pI4aa,pI4ab);
+    } else {
+      store_with_symmetry(pI2,pI4aa,pI4ab);
+    }
   } else {
-    store_with_symmetry();
+    // normal case
+    Integ4 * pI4aa = 0;
+    Integ4ab * pI4ab = 0;
+    Integ2 * pI2 = 0;
+    if (nosym) {
+      store_without_symmetry(pI2,pI4aa,pI4ab);
+    } else {
+      store_with_symmetry(pI2,pI4aa,pI4ab);
+    }
   }
+#ifndef MOLPRO
   _dump.close_outputfile();
-  if ( nosym ) {
+  if ( nosym && !newfile ) {
     //restore the point-group symmetry
     _dump.modifyParameter("ORBSYM",ORBSYM_SAV);
   }
-}
 #endif
-void Hdump::store_with_symmetry() const
-{
-  storerec_sym(static_cast<Integ4*>(_twoel[aaaa].get()));
-  if (_uhf) {
-    _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_sym(static_cast<Integ4*>(_twoel[bbbb].get()));
-    _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_sym(static_cast<Integ4ab*>(_twoel[aabb].get()));
-    _dump.writeIntegral(0,0,0,0,0.0);
-  }
-  storerec_sym(static_cast<Integ2*>(_oneel[aa].get()));
-  if (_uhf) {
-    _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_sym(static_cast<Integ2*>(_oneel[bb].get()));
-    _dump.writeIntegral(0,0,0,0,0.0);
-  }
-  _dump.writeIntegral(0,0,0,0,_escal); 
 }
 
-void Hdump::store_without_symmetry() const
+template<typename I2, typename I4aa, typename I4ab>
+void Hdump::store_with_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
 {
-  storerec_nosym(static_cast<Integ4*>(_twoel[aaaa].get()));
+  pI4aa = dynamic_cast<I4aa*>(_twoel[aaaa].get()); assert(pI4aa);
+  storerec_sym(pI4aa);
   if (_uhf) {
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_nosym(static_cast<Integ4*>(_twoel[bbbb].get()));
+    pI4aa = dynamic_cast<I4aa*>(_twoel[bbbb].get()); assert(pI4aa);
+    storerec_sym(pI4aa);
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_nosym(static_cast<Integ4ab*>(_twoel[aabb].get()));
+    pI4ab = dynamic_cast<I4ab*>(_twoel[aabb].get()); assert(pI4ab);
+    storerec_sym(pI4ab);
     _dump.writeIntegral(0,0,0,0,0.0);
   }
-  storerec_nosym(static_cast<Integ2*>(_oneel[aa].get()));
+  pI2 = dynamic_cast<I2*>(_oneel[aa].get()); assert(pI2);
+  storerec_sym(pI2);
   if (_uhf) {
     _dump.writeIntegral(0,0,0,0,0.0);
-    storerec_nosym(static_cast<Integ2*>(_oneel[bb].get()));
+    pI2 = dynamic_cast<I2*>(_oneel[bb].get()); assert(pI2);
+    storerec_sym(pI2);
     _dump.writeIntegral(0,0,0,0,0.0);
   }
   _dump.writeIntegral(0,0,0,0,_escal); 
+  
+}
+
+template<typename I2, typename I4aa, typename I4ab>
+void Hdump::store_without_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
+{
+  pI4aa = dynamic_cast<I4aa*>(_twoel[aaaa].get()); assert(pI4aa);
+  storerec_nosym(pI4aa);
+  if (_uhf) {
+    _dump.writeIntegral(0,0,0,0,0.0);
+    pI4aa = dynamic_cast<I4aa*>(_twoel[bbbb].get()); assert(pI4aa);
+    storerec_nosym(pI4aa);
+    _dump.writeIntegral(0,0,0,0,0.0);
+    pI4ab = dynamic_cast<I4ab*>(_twoel[aabb].get()); assert(pI4ab);
+    storerec_nosym(pI4ab);
+    _dump.writeIntegral(0,0,0,0,0.0);
+  }
+  pI2 = dynamic_cast<I2*>(_oneel[aa].get()); assert(pI2);
+  storerec_nosym(pI2);
+  if (_uhf) {
+    _dump.writeIntegral(0,0,0,0,0.0);
+    pI2 = dynamic_cast<I2*>(_oneel[bb].get()); assert(pI2);
+    storerec_nosym(pI2);
+    _dump.writeIntegral(0,0,0,0,0.0);
+  }
+  _dump.writeIntegral(0,0,0,0,_escal); 
+  
 }
 
 void Hdump::storerec_sym(const Integ4* pInt) const
@@ -296,10 +388,53 @@ void Hdump::storerec_sym(const Integ4ab* pInt) const
     }
   }
 }
+void Hdump::storerec_sym(const Integ4st* pInt) const
+{
+  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+    for ( uint i = 1; i <= _norb; ++i) {
+      for ( uint j = 1; j <= _norb; ++j ) {
+        if ( _pgs.totIrrep(i-1,j-1) != isym ) continue;
+        for ( uint k = 1; k <= i; ++k ) {
+          uint lorb = _norb;
+          if ( k == i ) lorb = j;
+          for ( uint l = 1; l <= lorb; ++l ) {
+            if ( _pgs.totIrrep(k-1,l-1) != isym ) continue;
+            _dump.writeIntegral(i,j,k,l,pInt->get(i-1,j-1,k-1,l-1));
+          }
+        }
+      }
+    }
+  }
+}
+void Hdump::storerec_sym(const Integ4stab* pInt) const
+{
+  for ( Irrep isym = 0; isym < _pgs.nIrreps(); ++isym ) {
+    for ( uint i = 1; i <= _norb; ++i) {
+      for ( uint j = 1; j <= _norb; ++j ) {
+        if ( _pgs.totIrrep(i-1,j-1) != isym ) continue;
+        for ( uint k = 1; k <= _norb; ++k ) {
+          for ( uint l = 1; l <= _norb; ++l ) {
+            if ( _pgs.totIrrep(k-1,l-1) != isym ) continue;
+            _dump.writeIntegral(i,j,k,l,pInt->get(i-1,j-1,k-1,l-1));
+          }
+        }
+      }
+    }
+  }
+}
 void Hdump::storerec_sym(const Integ2* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i) {
     for ( uint j = 1; j <= i; ++j ) {
+        if ( _pgs.totIrrep(i-1,j-1) != 0 ) continue;
+        _dump.writeIntegral(i,j,0,0,pInt->get(i-1,j-1));
+    }
+  }
+}
+void Hdump::storerec_sym(const Integ2st* pInt) const
+{
+  for ( uint i = 1; i <= _norb; ++i) {
+    for ( uint j = 1; j <= _norb; ++j ) {
         if ( _pgs.totIrrep(i-1,j-1) != 0 ) continue;
         _dump.writeIntegral(i,j,0,0,pInt->get(i-1,j-1));
     }
@@ -310,7 +445,7 @@ void Hdump::storerec_nosym(const Integ4* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j )
-      for ( uint k = 1; k <= _norb; ++k )
+      for ( uint k = 1; k <= i; ++k )
         for ( uint l = 1; l <= k; ++l ) {
           uint ij = (i-1)*i/2 + j;
           uint kl = (k-1)*k/2 + l;
@@ -328,10 +463,39 @@ void Hdump::storerec_nosym(const Integ4ab* pInt) const
           _dump.writeIntegral(i,j,k,l,pInt->get_with_pgs(i-1,j-1,k-1,l-1));
         }
 }
+void Hdump::storerec_nosym(const Integ4st* pInt) const
+{
+  for ( uint i = 1; i <= _norb; ++i)
+    for ( uint j = 1; j <= _norb; ++j )
+      for ( uint k = 1; k <= i; ++k ) {
+        uint lorb = _norb;
+        if ( k == i ) lorb = j;
+        for ( uint l = 1; l <= lorb; ++l ) {
+          _dump.writeIntegral(i,j,k,l,pInt->get_with_pgs(i-1,j-1,k-1,l-1));
+        }
+      }
+}
+void Hdump::storerec_nosym(const Integ4stab* pInt) const
+{
+  for ( uint i = 1; i <= _norb; ++i)
+    for ( uint j = 1; j <= _norb; ++j )
+      for ( uint k = 1; k <= _norb; ++k ) {
+        for ( uint l = 1; l <= _norb; ++l ) {
+          _dump.writeIntegral(i,j,k,l,pInt->get_with_pgs(i-1,j-1,k-1,l-1));
+        }
+      }
+}
 void Hdump::storerec_nosym(const Integ2* pInt) const
 {
   for ( uint i = 1; i <= _norb; ++i)
     for ( uint j = 1; j <= i; ++j ) {
+      _dump.writeIntegral(i,j,0,0,pInt->get_with_pgs(i-1,j-1));
+    }
+}
+void Hdump::storerec_nosym(const Integ2st* pInt) const
+{
+  for ( uint i = 1; i <= _norb; ++i)
+    for ( uint j = 1; j <= _norb; ++j ) {
       _dump.writeIntegral(i,j,0,0,pInt->get_with_pgs(i-1,j-1));
     }
 }
@@ -349,6 +513,7 @@ uint Hdump::nclostot() const
 
 void Hdump::check_addressing_integrals() const
 {
+  if (_simtra) return;
   xout << "test one el" << std::endl;
   int oldidx=-1;
   for (uint i = 1; i <= _norb; ++i )

@@ -114,4 +114,73 @@ Integ4ab::Integ4ab(const PGSym& pgs): BaseTensors(pgs,4)
   _data.resize(nint,0.0);
 }
 
+Integ4st::Integ4st(const PGSym& pgs): BaseTensors(pgs,4)
+{
+  FDPar norb4ir = p_pgs->norbs_in_irreps();
+  uint nIrreps = p_pgs->nIrreps();
+  _blocks.resize(nIrreps*nIrreps*nIrreps*nIrreps);
+  BlkIdx nint = 0;
+  for ( Irrep isym = 0; isym < p_pgs->nIrreps(); ++isym ) {
+    std::vector<BlkIdx> len_of2, i_indx, j_indx;
+    for ( Irrep iri = 0; iri < p_pgs->nIrreps(); ++iri ) {
+      for ( Irrep irj = 0; irj <= iri; ++irj ) {
+        if ( p_pgs->product(iri,irj) != isym ) continue;
+        len_of2.push_back(norb4ir[iri]*norb4ir[irj]);
+        i_indx.push_back(iri);
+        j_indx.push_back(irj);
+      }
+    }
+    for ( uint iblk = 0; iblk < len_of2.size(); ++iblk ) {
+      for ( uint jblk = 0; jblk < len_of2.size(); ++jblk ) {
+        // irreps
+        uint
+          p = i_indx[iblk],
+          q = j_indx[iblk],
+          r = i_indx[jblk],
+          s = j_indx[jblk];
+        if ( p < r || ( p == r && q < s ) ) continue;
+        _blocks[p+nIrreps*(q+nIrreps*(r+nIrreps*s))] = nint;
+        if ( iblk == jblk ) {
+          nint += len_of2[iblk]*(len_of2[iblk]+1)/2;
+        } else {
+          nint += len_of2[iblk]*len_of2[jblk];
+        }
+      }
+    }
+  }
+  _data.resize(nint,0.0);
+}
+
+Integ4stab::Integ4stab(const PGSym& pgs): BaseTensors(pgs,4)
+{
+  FDPar norb4ir = p_pgs->norbs_in_irreps();
+  uint nIrreps = p_pgs->nIrreps();
+  _blocks.resize(nIrreps*nIrreps*nIrreps*nIrreps);
+  BlkIdx nint = 0;
+  for ( Irrep isym = 0; isym < p_pgs->nIrreps(); ++isym ) {
+    std::vector<BlkIdx> len_of2, i_indx, j_indx;
+    for ( Irrep iri = 0; iri < p_pgs->nIrreps(); ++iri ) {
+      for ( Irrep irj = 0; irj <= iri; ++irj ) {
+        if ( p_pgs->product(iri,irj) != isym ) continue;
+        len_of2.push_back(norb4ir[iri]*norb4ir[irj]);
+        i_indx.push_back(iri);
+        j_indx.push_back(irj);
+      }
+    }
+    for ( uint iblk = 0; iblk < len_of2.size(); ++iblk ) {
+      for ( uint jblk = 0; jblk < len_of2.size(); ++jblk ) {
+        // irreps
+        uint
+          p = i_indx[iblk],
+          q = j_indx[iblk],
+          r = i_indx[jblk],
+          s = j_indx[jblk];
+        _blocks[p+nIrreps*(q+nIrreps*(r+nIrreps*s))] = nint;
+        nint += len_of2[iblk]*len_of2[jblk];
+      }
+    }
+  }
+  _data.resize(nint,0.0);
+}
+
 } //namespace HamDump
