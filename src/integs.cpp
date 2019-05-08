@@ -123,7 +123,7 @@ Integ4st::Integ4st(const PGSym& pgs): BaseTensors(pgs,4)
   for ( Irrep isym = 0; isym < p_pgs->nIrreps(); ++isym ) {
     std::vector<BlkIdx> len_of2, i_indx, j_indx;
     for ( Irrep iri = 0; iri < p_pgs->nIrreps(); ++iri ) {
-      for ( Irrep irj = 0; irj <= iri; ++irj ) {
+      for ( Irrep irj = 0; irj < p_pgs->nIrreps(); ++irj ) {
         if ( p_pgs->product(iri,irj) != isym ) continue;
         len_of2.push_back(norb4ir[iri]*norb4ir[irj]);
         i_indx.push_back(iri);
@@ -160,7 +160,7 @@ Integ4stab::Integ4stab(const PGSym& pgs): BaseTensors(pgs,4)
   for ( Irrep isym = 0; isym < p_pgs->nIrreps(); ++isym ) {
     std::vector<BlkIdx> len_of2, i_indx, j_indx;
     for ( Irrep iri = 0; iri < p_pgs->nIrreps(); ++iri ) {
-      for ( Irrep irj = 0; irj <= iri; ++irj ) {
+      for ( Irrep irj = 0; irj < p_pgs->nIrreps(); ++irj ) {
         if ( p_pgs->product(iri,irj) != isym ) continue;
         len_of2.push_back(norb4ir[iri]*norb4ir[irj]);
         i_indx.push_back(iri);

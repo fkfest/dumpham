@@ -68,16 +68,16 @@ public:
   const FDPar& ncore() const { return _core; }
   // in spatial orbitals, PG symmetry is handled outside
   double oneel_spa(uint p, uint q) const {  
-          return static_cast<Integ2*>(_oneel[aa].get())->get(p,q);}
+          return (_oneel[aa].get())->get(p,q);}
   // in spatial orbitals, PG symmetry is handled outside
   inline void set_oneel_spa(uint p, uint q, double val) {  
-          static_cast<Integ2*>(_oneel[aa].get())->set(p,q,val);}
+          (_oneel[aa].get())->set(p,q,val);}
   // in spatial orbitals, PG symmetry is handled outside
   inline double twoel_spa(uint p, uint q, uint r, uint s) const { 
-          return static_cast<Integ4*>(_twoel[aaaa].get())->get(p,q,r,s);}
+          return (_twoel[aaaa].get())->get(p,q,r,s);}
   // in spatial orbitals, PG symmetry is handled outside
   inline void set_twoel_spa(uint p, uint q, uint r, uint s, double val) { 
-          static_cast<Integ4*>(_twoel[aaaa].get())->set(p,q,r,s,val);}
+          (_twoel[aaaa].get())->set(p,q,r,s,val);}
   // in spin orbitals, PG symmetry is handled outside
   inline double oneel_spi(uint p, uint q) const; 
   // in spin orbitals, PG symmetry is handled outside
@@ -88,19 +88,21 @@ public:
   inline void set_twoel_spi(uint p, uint q, uint r, uint s, double val); 
   // in spatial orbitals
   double oneel_spa_pgs(uint p, uint q) const {  
-          return static_cast<Integ2*>(_oneel[aa].get())->get_with_pgs(p,q);}
+          return (_oneel[aa].get())->get_with_pgs(p,q);}
   // in spatial orbitals
   inline double twoel_spa_pgs(uint p, uint q, uint r, uint s) const { 
-          return static_cast<Integ4*>(_twoel[aaaa].get())->get_with_pgs(p,q,r,s);}
+          return (_twoel[aaaa].get())->get_with_pgs(p,q,r,s);}
   // in spin orbitals
   inline double oneel_spi_pgs(uint p, uint q) const; 
   // in spin orbitals
   inline double twoel_spi_pgs(uint p, uint q, uint r, uint s) const; 
   // get block of integrals defined by start and end indices
   // type of integrals depends on start.size()
+  // h_pq or <pr | qs> (as p,r,q,s)
   inline void get_block(double * pData, const BlockIndices& start, const BlockIndices& end, bool spinorb = false) const;
   // set block of integrals defined by start and end indices
   // type of integrals depends on start.size()
+  // h_pq or <pr | qs> (as p,r,q,s)
   inline void set_block(double * pData, const BlockIndices& start, const BlockIndices& end, bool spinorb = false);
   double escal() const {return _escal;}
   void set_escal(double escal) { _escal = escal; }
@@ -168,10 +170,10 @@ inline double Hdump::twoel_spi(uint p, uint q, uint r, uint s) const {
   if (sp != sq || sr != ss) return 0;
   uint i = p/2, j = q/2, k = r/2, l = s/2;
   if (!_uhf || ( sp == alpha && sr == alpha )) 
-    return static_cast<Integ4*>(_twoel[aaaa].get())->get(i,j,k,l);
+    return (_twoel[aaaa].get())->get(i,j,k,l);
   if ( sp == alpha ) 
-    return static_cast<Integ4*>(_twoel[aabb].get())->get(i,j,k,l);
-  return static_cast<Integ4*>(_twoel[bbbb].get())->get(i,j,k,l);
+    return (_twoel[aabb].get())->get(i,j,k,l);
+  return (_twoel[bbbb].get())->get(i,j,k,l);
 }
 
 inline void Hdump::set_oneel_spi(uint p, uint q, double val) {
@@ -179,9 +181,9 @@ inline void Hdump::set_oneel_spi(uint p, uint q, double val) {
   if ( sp != sq) return;
   uint i = p/2, j = q/2;
   if (!_uhf || sp == alpha)
-    static_cast<Integ2*>(_oneel[aa].get())->set(i,j,val);
+    (_oneel[aa].get())->set(i,j,val);
   else
-    static_cast<Integ2*>(_oneel[bb].get())->set(i,j,val);
+    (_oneel[bb].get())->set(i,j,val);
 }
 void Hdump::set_twoel_spi(uint p, uint q, uint r, uint s, double val)
 {
@@ -189,11 +191,11 @@ void Hdump::set_twoel_spi(uint p, uint q, uint r, uint s, double val)
   if (sp != sq || sr != ss) return;
   uint i = p/2, j = q/2, k = r/2, l = s/2;
   if (!_uhf || ( sp == alpha && sr == alpha )) 
-    static_cast<Integ4*>(_twoel[aaaa].get())->set(i,j,k,l,val);
+    (_twoel[aaaa].get())->set(i,j,k,l,val);
   else if( sp == alpha ) 
-    static_cast<Integ4*>(_twoel[aabb].get())->set(i,j,k,l,val);
+    (_twoel[aabb].get())->set(i,j,k,l,val);
   else 
-    static_cast<Integ4*>(_twoel[bbbb].get())->set(i,j,k,l,val);
+    (_twoel[bbbb].get())->set(i,j,k,l,val);
 }
 
 inline double Hdump::oneel_spi_pgs(uint p, uint q) const {
@@ -201,8 +203,8 @@ inline double Hdump::oneel_spi_pgs(uint p, uint q) const {
   if ( sp != sq) return 0;
   uint i = p/2, j = q/2;
   if (!_uhf || sp == alpha)
-     return static_cast<Integ2*>(_oneel[aa].get())->get_with_pgs(i,j);
-  return static_cast<Integ2*>(_oneel[bb].get())->get_with_pgs(i,j);
+     return (_oneel[aa].get())->get_with_pgs(i,j);
+  return (_oneel[bb].get())->get_with_pgs(i,j);
 }
 
 inline double Hdump::twoel_spi_pgs(uint p, uint q, uint r, uint s) const {
@@ -210,10 +212,10 @@ inline double Hdump::twoel_spi_pgs(uint p, uint q, uint r, uint s) const {
   if (sp != sq || sr != ss) return 0;
   uint i = p/2, j = q/2, k = r/2, l = s/2;
   if (!_uhf || ( sp == alpha && sr == alpha )) 
-    return static_cast<Integ4*>(_twoel[aaaa].get())->get_with_pgs(i,j,k,l);
+    return (_twoel[aaaa].get())->get_with_pgs(i,j,k,l);
   if ( sp == alpha ) 
-    return static_cast<Integ4*>(_twoel[aabb].get())->get_with_pgs(i,j,k,l);
-  return static_cast<Integ4*>(_twoel[bbbb].get())->get_with_pgs(i,j,k,l);
+    return (_twoel[aabb].get())->get_with_pgs(i,j,k,l);
+  return (_twoel[bbbb].get())->get_with_pgs(i,j,k,l);
 }
 
 inline void Hdump::get_block(double* pData, const BlockIndices& start, const BlockIndices& end, bool spinorb) const
