@@ -17,24 +17,24 @@ namespace HamDump {
 class PGSym {
 public:
   typedef std::vector<Irrep> IrrepVec;
-  PGSym() : _nIrreps(0){};
+  PGSym(){};
   // construct from orbsym string
   // if listoforbs: orbsym is a list of orbitals, otherwise it's number of orbitals in each symmetry
   PGSym(const FDPar& orbsym, bool listoforbs = true) {
     if ( orbsym.size() == 0 ) 
       error("No orbital symmetries given!");
     if ( listoforbs ) {
-      _nIrreps = orbsym.back();
+      uint nIrreps = orbsym.back();
       // number of irreps can be only 1,2,4, or 8
       // if it's not, it means that the last irreps don't have any orbitals!
-      if ( _nIrreps > 4 )
-        _nIrreps = 8;
-      else if ( _nIrreps > 2 )
-        _nIrreps = 4;
-      else if ( _nIrreps < 1 )
+      if ( nIrreps > 4 )
+        nIrreps = 8;
+      else if ( nIrreps > 2 )
+        nIrreps = 4;
+      else if ( nIrreps < 1 )
         error("Orbital symmetry below 1!");
-      _norb4irrep.resize(_nIrreps,0);
-      _firstorb4irrep.resize(_nIrreps,0);
+      _norb4irrep.resize(nIrreps,0);
+      _firstorb4irrep.resize(nIrreps,0);
       uint orb = 0;
       for ( const auto& os: orbsym ) {
         if ( os < 1 ) 
@@ -48,9 +48,8 @@ public:
       for ( auto& fo: _firstorb4irrep )
         --fo;
     } else {
-      _nIrreps = orbsym.size();
       _norb4irrep = orbsym;
-      for ( Irrep ir = 0; ir < _nIrreps; ++ir ){
+      for ( Irrep ir = 0; ir < _norb4irrep.size(); ++ir ){
         _firstorb4irrep.push_back(_irrep4orb.size());
         for ( int imo = 0; imo < _norb4irrep[ir]; ++imo ) _irrep4orb.push_back(ir);
       }
@@ -64,18 +63,27 @@ public:
   Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) const 
                 { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); }
   // product of two irreps
-  Irrep product(Irrep i, Irrep j) const { assert((i^j)<_nIrreps); return (i^j);}
+  Irrep product(Irrep i, Irrep j) const { assert((i^j)< nIrreps()); return (i^j);}
   // return the original orbsym for fcidump
   FDPar orbsym() const { FDPar osym; for (const auto& ir:_irrep4orb) osym.push_back(ir+1); return osym;  }
   // number of orbitals in each irrep
   FDPar norbs_in_irreps() const { return _norb4irrep; }
   // number of orbitals in irrep
   uint norbs( Irrep ir ) const { assert(ir < _norb4irrep.size()); return _norb4irrep[ir]; }
+  // next after last orbital in irrep
+  uint beginorb( Irrep ir ) const { assert(ir < _firstorb4irrep.size()); return _firstorb4irrep[ir]; }
+  // next after last orbital in irrep
+  uint endorb( Irrep ir ) const { assert(ir < _norb4irrep.size()); return _norb4irrep[ir]+_firstorb4irrep[ir]; }
   // total number of orbitals
-  uint ntotorbs() const { assert(_nIrreps > 0); return _norb4irrep[_nIrreps-1] + _firstorb4irrep[_nIrreps-1]; }
-  uint nIrreps() const { return _nIrreps; }
+  uint ntotorbs() const { assert(nIrreps() > 0); return _norb4irrep.back() + _firstorb4irrep.back(); }
+  uint nIrreps() const { return _norb4irrep.size(); }
+  bool operator==(const PGSym& pgs) const { 
+       // if _irrep4orb is equal than all other arrays have to be equal, too.
+       assert(_irrep4orb != pgs._irrep4orb || (_norb4irrep == pgs._norb4irrep && _firstorb4irrep == pgs._firstorb4irrep));
+       return (_irrep4orb == pgs._irrep4orb);
+  }
+  bool operator!=(const PGSym& pgs) const { return !(*this == pgs); } 
   
-  uint _nIrreps;
   // Irreps of each orbital, Irrep is 0 based!
   IrrepVec _irrep4orb;
   // sizes for each irrep, Irrep is 0 based!

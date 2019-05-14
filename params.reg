@@ -36,7 +36,10 @@ set="syntax",type=a,name="eham",value={"\eham"},desc="begin hamiltonian specific
 set="syntax",type=a,name="newcommand",value={"\newcommand"}
 set="syntax",type=a,name="newoperator",value={"\newoperator","\newop"}
 set="syntax",type=a,name="comment",value={"%"}
-set="syntax",type=a,name="input",value={"\input","\file"},desc="specifies FCIDUMP input"
+
+%COMMANDS
+set="command",type=s,name="operator",value="op",desc="command for operator"
+set="command",type=s,name="fcidump",value="input",desc="command for FCIDUMP input"
 
 %DM
 set="dm",type=s,name="in",value="",desc="density matrix for alpha-alpha-alpha-alpha spins in form <xxx>aaaa<yy>"

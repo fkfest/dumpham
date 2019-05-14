@@ -32,6 +32,8 @@ public:
         uint sym_ = 0, bool uhf_ = false, bool simtra_ = false) :
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_), 
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_) {};
+  // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
+  Hdump(const Hdump& hd1, const Hdump& hd2);
   enum onetype {
     aa = 0,
     bb = 1
@@ -44,6 +46,8 @@ public:
   void read_dump();
   void store(std::string fcidump);
   void alloc_ints();
+  // import integrals from hd
+  void import(const Hdump& hd);
   uint norb() const { return _norb; }
   uint nelec() const { return _nelec; }
   uint ms2() const { return _ms2; }
@@ -66,6 +70,8 @@ public:
   const FDPar& nocc() const { return _occ; }
   // number of core orbitals in each symmetry (are not count in nclos or nocc!)
   const FDPar& ncore() const { return _core; }
+  // similarity transformed
+  bool simtra() const { return _simtra; }
   // in spatial orbitals, PG symmetry is handled outside
   double oneel_spa(uint p, uint q) const {  
           return (_oneel[aa].get())->get(p,q);}
@@ -107,6 +113,8 @@ public:
   double escal() const {return _escal;}
   void set_escal(double escal) { _escal = escal; }
   Spin spin(uint p) const { return Spin(p%2); }
+  // scale the integrals by a number
+  void scale(double scal);
   
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -120,18 +128,14 @@ private:
   void store_with_symmetry( I2 * pI2, I4aa * pI4aa, I4ab * pI4ab ) const; 
   template<typename I2, typename I4aa, typename I4ab>
   void store_without_symmetry( I2 * pI2, I4aa * pI4aa, I4ab * pI4ab ) const; 
-  void storerec_sym(const Integ4 * pInt) const;
-  void storerec_sym(const Integ4ab * pInt) const;
-  void storerec_sym(const Integ4st * pInt) const;
-  void storerec_sym(const Integ4stab * pInt) const;
-  void storerec_sym(const Integ2 * pInt) const;
-  void storerec_sym(const Integ2st * pInt) const;
-  void storerec_nosym(const Integ4 * pInt) const;
-  void storerec_nosym(const Integ4ab * pInt) const;
-  void storerec_nosym(const Integ4st * pInt) const;
-  void storerec_nosym(const Integ4stab * pInt) const;
-  void storerec_nosym(const Integ2 * pInt) const;
-  void storerec_nosym(const Integ2st * pInt) const;
+  template<typename T>
+  void storerec2_sym(const T * pInt) const;
+  template<typename T>
+  void storerec4_sym(const T * pInt) const;
+  template<typename T>
+  void storerec2_nosym(const T * pInt) const;
+  template<typename T>
+  void storerec4_nosym(const T * pInt) const;
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;

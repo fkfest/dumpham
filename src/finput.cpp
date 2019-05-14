@@ -94,6 +94,7 @@ bool Finput::addline(const std::string& line)
     _ham=false;
     analyzeline();
     _input="";
+    process_dump(*_dump);  
     newham = true;
   } else if (InSet(linesp.substr(ipos,ipend-ipos), newcs)) {// newcommand
     ipos = IL::addnewcom(linesp,ipend);
@@ -113,21 +114,93 @@ std::string Finput::input() const
 bool Finput::analyzeline()
 {
 //   xout << "analyzeline " << _input << std::endl;
-  std::string  dmfile = Input::sPars["dm"]["in"];
-  std::string  fmfile = Input::sPars["fm"]["outmat"];
-  // TODO: move somewhere else!
-  // TODO: the input file should be in the \input command!
-  lui
-    ibeg = IL::skip(_input,0," ,"),
-    iend = IL::skipr(_input,_input.size()," ,");
-  std::string inputfile = _input.substr(ibeg,iend-ibeg);
+  char ch;
+  lui i = 0;
+  while (i < _input.size()) {
+    ch=_input[i];
+    if ( ch == '\\' ) { // command
+      ++i;
+      i = analyzecommand(i) - 1;
+    } else if ( ch == '+' ) { // add next
+      _add = true;
+    } else if ( ch == '-' ) {
+      _add = true;
+      _scale = -1.0;
+    } else if ( isdigit(ch) ) { // number
+      lui ipos = IL::nextwordpos(_input,i);
+      double scal;
+      if ( str2num<double>(scal,_input.substr(i,ipos-i),std::dec) ) {
+        _scale *= scal;
+      } else {
+        error("Could not transform to a number: "+_input.substr(i,ipos-i));
+      }
+    } else if ( ch == ' ' ) { // skip
+    } else {
+      lui ipos1 = IL::nextwordpos(_input,i);
+      lui iend = IL::skipr(_input,ipos1," ,");
+      analyzeham(_input.substr(i,iend-i));
+      i = ipos1;
+    }
+    ++i;
+  }
+  return true;
+}
+
+lui Finput::analyzecommand(lui ipos)
+{
+  TsPar& commands = Input::sPars["command"];
+  lui ipos1 = IL::nextwordpos(_input,ipos);
+  std::string str = _input.substr(ipos,ipos1-ipos);
+  ipos = ipos1;
+  if ( str == commands["operator"] ) { // operators
+  } else if ( str == commands["fcidump"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} ");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    std::string filename = _input.substr(ipos,ipos2-ipos);
+    analyzeham(filename);
+  }
+  return ipos1;
+}
+
+bool Finput::analyzeham(const std::string& inputfile)
+{
+//   xout << "analyzeham " << _input << std::endl;
   if ( inputfile == "" ) {
     error("Empty hamiltonian specification!");
   }
   xout << "inputfile: *" << inputfile << "*" << std::endl;
+  
+  if ( !_dump ) { 
+    _dump = std::unique_ptr<Hdump>(new Hdump(inputfile));
+    _dump->read_dump();
+    if (scale()) _dump->scale(_scale);
+  } else {
+    if ( !_add ) error ("The Hamiltonian " + _dump->fcidump_filename() + " will be overwritten by "+inputfile);
+    Hdump dump(inputfile);
+    // check whether we will have to enlarge _dump
+    if ( !_dump->simtra() && dump.simtra() ) {
+      // transform old dump into similarity transformed version first!
+      Hdump newdump(*_dump,dump);
+      newdump.import(*_dump);
+      error("transform "+_dump->fcidump_filename() + " to ST!");
+    }
+    dump.read_dump();
+    if (scale()) dump.scale(_scale);
+    // add to the old dump
+    
+  }
+  _add = false;
+  _scale = 1.0;
+  
+  return true;
+}
+
+void Finput::process_dump(Hdump& dump)
+{
   std::string outputfile = Input::sPars["ham"]["out"];
   if ( outputfile == "" ) {
-    outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
+    outputfile = FileName(dump.fcidump_filename(),true)+"_NEW.FCIDUMP";
   }
   if ( Input::iPars["ham"]["store"] <= 0 ) {
     outputfile.clear();
@@ -135,10 +208,11 @@ bool Finput::analyzeline()
   if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
     outputfile = uppercase(outputfile);
   
-  Hdump dump(inputfile);
-  dump.read_dump();
   if ( outputfile != "" )
     dump.store(outputfile);
+  
+  std::string  dmfile = Input::sPars["dm"]["in"];
+  std::string  fmfile = Input::sPars["fm"]["outmat"];
   DMdump dmdump;
   if ( dmfile != "" ) {
     // read density matrices
@@ -161,7 +235,6 @@ bool Finput::analyzeline()
 //   Input::iPars["ham"]["nosym"] = 0;
 //   dump.store(outputfile+"sym");
   handle_orbdump(dump);
-  return true;
 }
 
 void Finput::handle_orbdump(const Hdump& dump)

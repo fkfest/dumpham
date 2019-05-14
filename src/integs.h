@@ -66,6 +66,15 @@ public:
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)ir;USERW;return 0;};
   virtual inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;USERW;return 0;}
+  virtual inline bool next_indices( uint& p, uint& q ) const 
+          {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;return false;};
+  virtual inline bool next_indices_nosym( uint& p, uint& q ) const 
+          {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;return false;};
+  virtual inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const 
+          {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)ir;return false;};
+  virtual inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const 
+          {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return false;};
+          
   const PGSym * pgs() const {return p_pgs;}
 protected:
   const PGSym * p_pgs;
@@ -90,6 +99,10 @@ public:
   inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
   // index of p,q value with p,q indices in irrep ir
   inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q ) const;
 };
 
 /*! 
@@ -103,6 +116,10 @@ public:
   inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
   // index of p,q value with p,q indices in irrep ir
   inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q ) const;
 };
 
 typedef Integ2ab Integ2st;
@@ -117,6 +134,10 @@ public:
   Integ4(const PGSym& pgs);
   // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
 /*! 
@@ -130,6 +151,10 @@ public:
   Integ4ab(const PGSym& pgs);
   // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
 /*! 
@@ -143,6 +168,10 @@ public:
   Integ4st(const PGSym& pgs);
   // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
 /*! 
@@ -156,6 +185,10 @@ public:
   Integ4stab(const PGSym& pgs);
   // index of p,q,r,s value
   inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
 // inline functions
@@ -183,6 +216,26 @@ inline BlkIdx Integ2::index(uint p, uint q, Irrep ir REDUNWAR__) const
   // triangular index
   return p*(p+1)/2+q+_blocks[ir+ir*p_pgs->nIrreps()];
 }
+inline bool Integ2::next_indices(uint& p, uint& q) const
+{
+  ++q;
+  do {
+    for ( ; q <= p; ++q ) {
+      if ( p_pgs->totIrrep(p,q) == 0 ) return true;
+    } q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs() );
+  return false;
+}
+bool Integ2::next_indices_nosym(uint& p, uint& q) const
+{
+  ++q;
+  do {
+    for ( ; q <= p; ++q ) {
+        return true;
+    } q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs());
+  return false;
+}
 
 inline BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
 {
@@ -203,6 +256,26 @@ inline BlkIdx Integ2ab::index(uint p, uint q, Irrep ir REDUNWAR__) const
   }
   // triangular index
   return p*p_pgs->_norb4irrep[ir]+q+_blocks[ir+ir*p_pgs->nIrreps()];
+}
+inline bool Integ2ab::next_indices(uint& p, uint& q) const
+{
+  ++q;
+  do {
+    for ( ; q < p_pgs->ntotorbs(); ++q ) {
+        if ( p_pgs->totIrrep(p,q) == 0 ) return true;
+    } q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs() );
+  return false;
+}
+bool Integ2ab::next_indices_nosym(uint& p, uint& q) const
+{
+  ++q;
+  do {
+    for ( ; q < p_pgs->ntotorbs(); ++q ) {
+        return true;
+    } q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs());
+  return false;
 }
 
 inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const
@@ -249,6 +322,36 @@ inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const
     return pqb*lenrs + rsb + blk_idx;
   }
 }
+inline bool Integ4::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir) const
+{
+  ++s;
+  do { // ir
+    do { // p
+      do { // q
+        if ( p_pgs->totIrrep(p,q) == ir ) do { // r
+          for ( ; s <= r; ++s ) {
+            if ( p_pgs->totIrrep(r,s) == ir && (r+1)*r/2 + s <= (p+1)*p/2 + q ) return true;
+          } s = 0;
+        ++r; } while ( r <= p ); r = 0; 
+      ++q; } while ( q <= p ); q = 0;
+    ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
+  ++ir; } while ( ir < p_pgs->nIrreps() );
+  return false;
+}
+inline bool Integ4::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
+{
+  ++s;
+  do { // p
+    do { // q
+      do { // r
+        for ( ; s <= r; ++s ) {
+          if ( (r+1)*r/2 + s <= (p+1)*p/2 + q ) return true;
+        } s = 0;
+      ++r; } while ( r <= p ); r = 0;
+    ++q; } while ( q <= p ); q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs());
+  return false;
+}
 
 inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
 {
@@ -284,6 +387,36 @@ inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
   }
   return pqb*lenrs + rsb + blk_idx;
 }
+inline bool Integ4ab::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir) const
+{
+  ++s;
+  do { // ir
+    do { // p
+      do { // q
+        if ( p_pgs->totIrrep(p,q) == ir ) do { // r
+          for ( ; s <= r; ++s ) {
+            if ( p_pgs->totIrrep(r,s) == ir ) return true;
+          } s = 0;
+        ++r; } while ( r < p_pgs->ntotorbs() ); r = 0; 
+      ++q; } while ( q <= p ); q = 0;
+    ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
+  ++ir; } while ( ir < p_pgs->nIrreps() );
+  return false;
+}
+inline bool Integ4ab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
+{
+  ++s;
+  do { // p
+    do { // q
+      do { // r
+        if( s <= r ) return true;
+        s = 0;
+      ++r; } while ( r < p_pgs->ntotorbs() ); r = 0;
+    ++q; } while ( q <= p ); q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs() );
+  
+  return false;
+}
 
 inline BlkIdx Integ4st::index(uint p, uint q, uint r, uint s REDUNWAR__) const
 {
@@ -317,6 +450,48 @@ inline BlkIdx Integ4st::index(uint p, uint q, uint r, uint s REDUNWAR__) const
     return pqb*lenrs + rsb + blk_idx;
   }
 }
+inline bool Integ4st::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir) const
+{
+  ++s;
+  do { // ir
+    do { // p
+      do { // q
+        if ( p_pgs->totIrrep(p,q) == ir ) do { // r 
+          if ( p == r ) {
+            for ( ; s <= q; ++s ) {
+              if ( p_pgs->totIrrep(r,s) == ir ) return true;
+            } 
+          } else {
+            for ( ; s < p_pgs->ntotorbs(); ++s ) {
+              if ( p_pgs->totIrrep(r,s) == ir ) return true;
+            } 
+          } 
+          s = 0;
+        ++r; } while ( r <= p ); r = 0; 
+      ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
+    ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
+  ++ir; } while ( ir < p_pgs->nIrreps() );
+  
+  return false;
+}
+inline bool Integ4st::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
+{
+  ++s;
+  do { // p
+    do { // q
+      do { // r
+        if ( p == r ) {
+          if ( s <= q ) return true;
+        } else {
+          if ( s < p_pgs->ntotorbs() ) return true;
+        }
+        s = 0;
+      ++r; } while ( r <= p ); r = 0;
+    ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs() ); 
+  
+  return false;
+}
 
 inline BlkIdx Integ4stab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
 {
@@ -337,6 +512,37 @@ inline BlkIdx Integ4stab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
   rsb = rb*p_pgs->_norb4irrep[sir]+sb;
   lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
   return pqb*lenrs + rsb + blk_idx;
+}
+inline bool Integ4stab::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir) const
+{
+  ++s;
+  do { // ir
+    do { // p
+      do { // q
+        if ( p_pgs->totIrrep(p,q) == ir ) do { // r
+          for ( ; s < p_pgs->ntotorbs(); ++s ) {
+            if ( p_pgs->totIrrep(r,s) == ir ) return true;
+          } s = 0;
+        ++r; } while ( r < p_pgs->ntotorbs() ); r = 0; 
+      ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
+    ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
+  ++ir; } while ( ir < p_pgs->nIrreps() );
+  
+  return false;
+}
+inline bool Integ4stab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
+{
+  ++s;
+  do { // p
+    do { // q
+      do { // r
+        if ( s < p_pgs->ntotorbs() ) return true;
+        s = 0;
+      ++r; } while ( r < p_pgs->ntotorbs() ); r = 0;
+    ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs() );
+  
+  return false;
 }
 
 #undef REDUNWAR_

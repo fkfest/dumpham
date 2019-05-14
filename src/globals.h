@@ -13,7 +13,7 @@
 #define _DEBUG
 #endif
 
-typedef long unsigned int lui;
+typedef std::size_t lui;
 typedef std::list< std::string > TParArray;
 typedef std::map< std::string, std::string > TsPar;
 typedef std::map< std::string, int > TiPar;

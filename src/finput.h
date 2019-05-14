@@ -29,6 +29,8 @@ public:
   std::string input() const;
   // analyze input line
   bool analyzeline();
+  // analyze hamiltonian
+  bool analyzeham(const std::string& inputfile);
   // clear all arrays
   void clear() {_inlines.clear(); _inham.clear(); _input.clear(); _ham = false;};
   // return input lines
@@ -38,13 +40,21 @@ public:
 private:
   // initialyse default input-parameters 
   void InitInpars(std::string paramspath);
+  // analyze command from the input line after backslash at ipos-1
+  lui analyzecommand(lui ipos);
+  // process the dump
+  void process_dump(Hdump& dump);
   // handle orbdump
   void handle_orbdump(const Hdump& dump);
+  bool scale() const { return std::abs(_scale - 1.0) > Numbers::small; }
   // variables
   std::string _input;
   bool _ham;
   std::vector<std::string> _inlines;
   std::vector<std::string> _inham;
+  bool _add = false;
+  double _scale = 1.0;
+  std::unique_ptr<Hdump> _dump;
 };
 
 std::ostream & operator << (std::ostream & o, Finput const & inp);
