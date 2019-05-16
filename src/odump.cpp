@@ -68,8 +68,12 @@ std::vector<int> Occupation::spinocc(int ibase) const
 std::ostream& operator<<(std::ostream& o, const Occupation& occ)
 {
   for ( const auto& iocc: occ ){
-    for ( const auto& ioir: iocc )
-      o << ioir << ",";
+    for ( uint i = 0; i < iocc.size(); ++i ) {
+      if ( i < iocc._nclos )
+        o << iocc[i] << ",";
+      else
+        o << iocc[i] << "(o),";
+    }
   }
   return o;
 }
@@ -102,6 +106,8 @@ Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
       }
     }
     assert( imo == p_pgs->norbs(ir) + p_pgs->_firstorb4irrep[ir] );
+    _nclos.push_back(occs[ir]._nclos);
+    _nocc.push_back(occs[ir].size());
   }
 }
 Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(&pgs)
@@ -182,12 +188,45 @@ void Odump::store(std::string orbdump)
   int maxlen = Input::iPars["output"]["maxncoef"];
   bool nosym = Input::iPars["ham"]["nosym"];
   if (nosym) {
-    for ( uint i = 0; i < p_pgs->ntotorbs(); ++i ) {
-      for ( uint j = 0; j < p_pgs->ntotorbs(); ++j ) {
-        double val = _orbs.get_with_pgs(i,j);
-        printval(outputStream,val,j,maxlen,scientific);
-      } 
-      outputStream << std::endl;
+    if ( p_pgs->nIrreps() <= 1 ) {
+      for ( uint i = 0; i < p_pgs->ntotorbs(); ++i ) {
+        for ( uint j = 0; j < p_pgs->ntotorbs(); ++j ) {
+          double val = _orbs.get_with_pgs(i,j);
+          printval(outputStream,val,j,maxlen,scientific);
+        } 
+        outputStream << std::endl;
+      }
+    } else {
+      if ( _nclos.size() != p_pgs->nIrreps() || _nocc.size() != p_pgs->nIrreps() ) 
+        error("Cannot de-symmetrize orbitals without occupation information! Something to be implemented...");
+      for ( uint i = 0; i < p_pgs->ntotorbs(); ++i ) {
+        // closed-shell
+        uint norb = 0;
+        for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+          for ( uint j = p_pgs->_firstorb4irrep[ir]; j < uint(p_pgs->_firstorb4irrep[ir] + _nclos[ir]); ++j ) {
+            double val = _orbs.get_with_pgs(i,j);
+            printval(outputStream,val,norb,maxlen,scientific);
+            ++norb;
+          }
+        }
+        // open-shell
+        for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+          for ( uint j = p_pgs->_firstorb4irrep[ir]+_nclos[ir]; j < uint(p_pgs->_firstorb4irrep[ir] + _nocc[ir]); ++j ) {
+            double val = _orbs.get_with_pgs(i,j);
+            printval(outputStream,val,norb,maxlen,scientific);
+            ++norb;
+          }
+        }
+        // virtual
+        for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+          for ( uint j = p_pgs->_firstorb4irrep[ir]+_nocc[ir]; j < uint(p_pgs->_firstorb4irrep[ir] + p_pgs->_norb4irrep[ir]); ++j ) {
+            double val = _orbs.get_with_pgs(i,j);
+            printval(outputStream,val,norb,maxlen,scientific);
+            ++norb;
+          }
+        }
+        outputStream << std::endl;
+      }
     }
   } else {
     for ( Irrep ir = 0; ir < p_pgs->nIrreps(); ++ir ) {

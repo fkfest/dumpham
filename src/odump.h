@@ -87,12 +87,14 @@ public:
 private:
   // print value
   void printval(std::ofstream& outputStream, double val, uint j, uint maxlen, bool scientific);
-  // Two-electron integrals
+  // orbital coefficients
   Integ2ab _orbs;
   // point group symmetry
   const PGSym * p_pgs;
   // number of core orbitals in each symmetry (have to be accounted in p_pgs)
   FDPar _ncore, _ncoreaccu;
+  // number of closed-shell and occupied orbitals in each symmetry
+  FDPar _nclos, _nocc;
 };
 
 
