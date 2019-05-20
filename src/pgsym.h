@@ -45,8 +45,17 @@ public:
         if ( _firstorb4irrep[os-1] == 0 ) _firstorb4irrep[os-1] = orb;
       }
       // make _firstorb4irrep zero based
-      for ( auto& fo: _firstorb4irrep )
-        --fo;
+      orb = 0;
+      uint ir = 0;
+      for ( auto& fo: _firstorb4irrep ) {
+        if ( fo > 0 ) {
+          --fo;
+        } else {
+          fo = orb;
+        }
+        orb = fo + _norb4irrep[ir];
+        ++ir;
+      }
     } else {
       _norb4irrep = orbsym;
       for ( Irrep ir = 0; ir < _norb4irrep.size(); ++ir ){

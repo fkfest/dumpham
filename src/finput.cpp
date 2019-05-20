@@ -181,14 +181,15 @@ bool Finput::analyzeham(const std::string& inputfile)
     // check whether we will have to enlarge _dump
     if ( !_dump->simtra() && dump.simtra() ) {
       // transform old dump into similarity transformed version first!
-      Hdump newdump(*_dump,dump);
-      newdump.import(*_dump);
-      error("transform "+_dump->fcidump_filename() + " to ST!");
+      auto newdump = std::unique_ptr<Hdump>(new Hdump(*_dump,dump));
+      newdump->import(*_dump);
+      _dump = std::move(newdump);
     }
     dump.read_dump();
     if (scale()) dump.scale(_scale);
     // add to the old dump
-    
+    error("add "+_dump->fcidump_filename() + " to ST!");
+
   }
   _add = false;
   _scale = 1.0;

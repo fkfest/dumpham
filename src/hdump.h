@@ -136,6 +136,16 @@ private:
   void storerec2_nosym(const T * pInt) const;
   template<typename T>
   void storerec4_nosym(const T * pInt) const;
+  // copy integrals with types SI2, SI4aa, SI4ab from hd to this integrals with types DI2, DI4aa, DI4ab 
+  template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
+  void copy_ints( DI2 * pDI2, DI4aa * pDI4aa, DI4ab * pDI4ab,
+                  SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, const Hdump& hd );
+  // copy 4-index integrals from pSrc to pDest
+  template<typename T, typename U>
+  void copy_int4( T * pDest, const U * pSrc );
+  // copy 2-index integrals from pSrc to pDest
+  template<typename T, typename U>
+  void copy_int2( T * pDest, const U * pSrc );
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;

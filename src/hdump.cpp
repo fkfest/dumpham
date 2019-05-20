@@ -403,11 +403,88 @@ void Hdump::storerec2_nosym(const T * pInt) const
   } while (pInt->next_indices_nosym(i,j));
 }
 
+template<typename T, typename U>
+void Hdump::copy_int4(T* pDest, const U* pSrc)
+{
+  uint i = 0, j = 0, k = 0, l = 0;
+  Irrep isym = 0;
+  do {
+    pDest->set(i,j,k,l, pSrc->get(i,j,k,l));
+  } while (pDest->next_indices(i,j,k,l,isym));
+}
+template<typename T, typename U>
+void Hdump::copy_int2(T* pDest, const U* pSrc)
+{
+  uint i = 0, j = 0;
+  do {
+    pDest->set(i,j, pSrc->get(i,j));
+  } while (pDest->next_indices(i,j));
+}
+template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
+void Hdump::copy_ints(DI2* pDI2, DI4aa* pDI4aa, DI4ab* pDI4ab, 
+                      SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd)
+{
+  pDI4aa = dynamic_cast<DI4aa*>(_twoel[aaaa].get()); assert(pDI4aa);
+  pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[aaaa].get()); assert(pSI4aa);
+  copy_int4(pDI4aa,pSI4aa);
+  pDI2 = dynamic_cast<DI2*>(_oneel[aa].get()); assert(pDI2);
+  pSI2 = dynamic_cast<SI2*>(hd._oneel[aa].get()); assert(pSI2);
+  copy_int2(pDI2,pSI2);
+  if ( _uhf ) {
+    pDI4aa = dynamic_cast<DI4aa*>(_twoel[bbbb].get()); assert(pDI4aa);
+    if ( hd._uhf ) {
+      pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[bbbb].get()); assert(pSI4aa);
+    }
+    copy_int4(pDI4aa,pSI4aa);
+    pDI4ab = dynamic_cast<DI4ab*>(_twoel[aabb].get()); assert(pDI4ab);
+    if ( hd._uhf ) {
+      pSI4ab = dynamic_cast<SI4ab*>(hd._twoel[aabb].get()); assert(pSI4ab);
+      copy_int4(pDI4ab,pSI4ab);
+    } else {
+      copy_int4(pDI4ab,pSI4aa);
+    }
+    pDI2 = dynamic_cast<DI2*>(_oneel[bb].get()); assert(pDI2);
+    if ( hd._uhf ) {
+      pSI2 = dynamic_cast<SI2*>(hd._oneel[bb].get()); assert(pSI2);
+    }
+    copy_int2(pDI2,pSI2);
+  }
+}
+
 void Hdump::import(const Hdump& hd)
 {
   if (_pgs != hd._pgs) error("Different orbital spaces in two hamiltonians");
   alloc_ints();
-  
+  if ( _simtra ) {
+    // expand the permutation symmetry
+    Integ4st * pDI4aa = 0;
+    Integ4stab * pDI4ab = 0;
+    Integ2st * pDI2 = 0;
+    if ( hd._simtra ) {
+      Integ4st * pSI4aa = 0;
+      Integ4stab * pSI4ab = 0;
+      Integ2st * pSI2 = 0;
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd);
+    } else {
+      Integ4 * pSI4aa = 0;
+      Integ4ab * pSI4ab = 0;
+      Integ2 * pSI2 = 0;
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd);
+    }
+  } else {
+    // expand the permutation symmetry
+    Integ4 * pDI4aa = 0;
+    Integ4ab * pDI4ab = 0;
+    Integ2 * pDI2 = 0;
+    if ( !hd._simtra ) {
+      Integ4 * pSI4aa = 0;
+      Integ4ab * pSI4ab = 0;
+      Integ2 * pSI2 = 0;
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd);
+    } else {
+      error("Implement a symmetrization of similarity transformed hamiltonian!");
+    }
+  }
 }
 
 
