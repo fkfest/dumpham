@@ -44,6 +44,8 @@ public:
   void set( uint p, uint q, double val REDUNWAR_) { _data[index(p,q REDUNWAR)] = val; }
   // set (pq|rs) value
   void set( uint p, uint q, uint r, uint s, double val REDUNWAR_) { _data[index(p,q,r,s REDUNWAR)] = val; }
+  // set value using the tuple index. Note that in most of the tensors(p,q,..) p is slow running!
+  double get( BlkIdx idx ) { assert(idx < _data.size()); return _data[idx]; }
   // get (pq) value
   double get( uint p, uint q REDUNWAR_) const { return _data[index(p,q REDUNWAR)]; }
   // get (pq) value with p,q: indices in irrep ir

@@ -84,6 +84,7 @@ Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
 
 void Hdump::alloc_ints()
 {
+  assert(!allocated());
   if (_simtra) {
     // similarity transformed integrals
     _oneel.emplace_back(new Integ2st(_pgs));
@@ -404,57 +405,76 @@ void Hdump::storerec2_nosym(const T * pInt) const
 }
 
 template<typename T, typename U>
-void Hdump::copy_int4(T* pDest, const U* pSrc)
+void Hdump::copy_int4(T* pDest, const U* pSrc, bool add)
 {
   uint i = 0, j = 0, k = 0, l = 0;
   Irrep isym = 0;
   do {
-    pDest->set(i,j,k,l, pSrc->get(i,j,k,l));
+    BlkIdx indxD = pDest->index(i,j,k,l);
+    if ( add ) { 
+      pDest->set(indxD, pSrc->get(i,j,k,l)+pDest->get(indxD));
+    } else {
+      pDest->set(indxD, pSrc->get(i,j,k,l));
+    }
   } while (pDest->next_indices(i,j,k,l,isym));
 }
 template<typename T, typename U>
-void Hdump::copy_int2(T* pDest, const U* pSrc)
+void Hdump::copy_int2(T* pDest, const U* pSrc, bool add)
 {
   uint i = 0, j = 0;
   do {
-    pDest->set(i,j, pSrc->get(i,j));
+    BlkIdx indxD = pDest->index(i,j);
+    if ( add ) { 
+      pDest->set(indxD, pSrc->get(i,j)+pDest->get(indxD));
+    } else {
+      pDest->set(indxD, pSrc->get(i,j));
+    }
   } while (pDest->next_indices(i,j));
 }
 template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
 void Hdump::copy_ints(DI2* pDI2, DI4aa* pDI4aa, DI4ab* pDI4ab, 
-                      SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd)
+                      SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd, bool add)
 {
   pDI4aa = dynamic_cast<DI4aa*>(_twoel[aaaa].get()); assert(pDI4aa);
   pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[aaaa].get()); assert(pSI4aa);
-  copy_int4(pDI4aa,pSI4aa);
+  copy_int4(pDI4aa,pSI4aa,add);
   pDI2 = dynamic_cast<DI2*>(_oneel[aa].get()); assert(pDI2);
   pSI2 = dynamic_cast<SI2*>(hd._oneel[aa].get()); assert(pSI2);
-  copy_int2(pDI2,pSI2);
+  copy_int2(pDI2,pSI2,add);
   if ( _uhf ) {
     pDI4aa = dynamic_cast<DI4aa*>(_twoel[bbbb].get()); assert(pDI4aa);
     if ( hd._uhf ) {
       pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[bbbb].get()); assert(pSI4aa);
     }
-    copy_int4(pDI4aa,pSI4aa);
+    copy_int4(pDI4aa,pSI4aa,add);
     pDI4ab = dynamic_cast<DI4ab*>(_twoel[aabb].get()); assert(pDI4ab);
     if ( hd._uhf ) {
       pSI4ab = dynamic_cast<SI4ab*>(hd._twoel[aabb].get()); assert(pSI4ab);
-      copy_int4(pDI4ab,pSI4ab);
+      copy_int4(pDI4ab,pSI4ab,add);
     } else {
-      copy_int4(pDI4ab,pSI4aa);
+      copy_int4(pDI4ab,pSI4aa,add);
     }
     pDI2 = dynamic_cast<DI2*>(_oneel[bb].get()); assert(pDI2);
     if ( hd._uhf ) {
       pSI2 = dynamic_cast<SI2*>(hd._oneel[bb].get()); assert(pSI2);
     }
-    copy_int2(pDI2,pSI2);
+    copy_int2(pDI2,pSI2,add);
+  }
+  if (add) {
+    _escal += hd._escal;
+  } else {
+    _escal = hd._escal;
   }
 }
 
-void Hdump::import(const Hdump& hd)
+void Hdump::import(const Hdump& hd, bool add)
 {
   if (_pgs != hd._pgs) error("Different orbital spaces in two hamiltonians");
-  alloc_ints();
+  if (!add) {
+    alloc_ints();
+  } else {
+    assert(allocated());
+  }
   if ( _simtra ) {
     // expand the permutation symmetry
     Integ4st * pDI4aa = 0;
@@ -464,12 +484,12 @@ void Hdump::import(const Hdump& hd)
       Integ4st * pSI4aa = 0;
       Integ4stab * pSI4ab = 0;
       Integ2st * pSI2 = 0;
-      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd);
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd,add);
     } else {
       Integ4 * pSI4aa = 0;
       Integ4ab * pSI4ab = 0;
       Integ2 * pSI2 = 0;
-      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd);
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd,add);
     }
   } else {
     // expand the permutation symmetry
@@ -480,13 +500,12 @@ void Hdump::import(const Hdump& hd)
       Integ4 * pSI4aa = 0;
       Integ4ab * pSI4ab = 0;
       Integ2 * pSI2 = 0;
-      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd);
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd,add);
     } else {
       error("Implement a symmetrization of similarity transformed hamiltonian!");
     }
   }
 }
-
 
 uint Hdump::nclostot() const
 {

@@ -159,6 +159,11 @@ lui Finput::analyzecommand(lui ipos)
     lui ipos2 = IL::skipr(_input,ipos1,"{} ");
     std::string filename = _input.substr(ipos,ipos2-ipos);
     analyzeham(filename);
+  } else if ( str == commands["outfcidump"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} ");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    Input::sPars["ham"]["out"] = _input.substr(ipos,ipos2-ipos);
   }
   return ipos1;
 }
@@ -188,12 +193,10 @@ bool Finput::analyzeham(const std::string& inputfile)
     dump.read_dump();
     if (scale()) dump.scale(_scale);
     // add to the old dump
-    error("add "+_dump->fcidump_filename() + " to ST!");
-
+    _dump->add(dump);
   }
   _add = false;
   _scale = 1.0;
-  
   return true;
 }
 
@@ -201,7 +204,11 @@ void Finput::process_dump(Hdump& dump)
 {
   std::string outputfile = Input::sPars["ham"]["out"];
   if ( outputfile == "" ) {
-    outputfile = FileName(dump.fcidump_filename(),true)+"_NEW.FCIDUMP";
+    if ( FileName(dump.fcidump_filename(),true) == "" ) {
+      outputfile = "FCIDUMP";
+    } else {
+      outputfile = FileName(dump.fcidump_filename(),true)+"_NEW.FCIDUMP";
+    }
   }
   if ( Input::iPars["ham"]["store"] <= 0 ) {
     outputfile.clear();

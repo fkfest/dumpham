@@ -46,8 +46,10 @@ public:
   void read_dump();
   void store(std::string fcidump);
   void alloc_ints();
-  // import integrals from hd
-  void import(const Hdump& hd);
+  // import integrals from hd. If add is true: add to the current integrals, otherwise the integrals are allocated 
+  void import(const Hdump& hd, bool add = false);
+  // add integrals from hd
+  void add(const Hdump& hd) { import(hd,true); };
   uint norb() const { return _norb; }
   uint nelec() const { return _nelec; }
   uint ms2() const { return _ms2; }
@@ -115,6 +117,7 @@ public:
   Spin spin(uint p) const { return Spin(p%2); }
   // scale the integrals by a number
   void scale(double scal);
+  bool allocated() const { return _oneel.size() > 0 || _twoel.size() > 0; };
   
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -137,15 +140,18 @@ private:
   template<typename T>
   void storerec4_nosym(const T * pInt) const;
   // copy integrals with types SI2, SI4aa, SI4ab from hd to this integrals with types DI2, DI4aa, DI4ab 
+  // if add = true: add integrals to the existing ones
   template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
   void copy_ints( DI2 * pDI2, DI4aa * pDI4aa, DI4ab * pDI4ab,
-                  SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, const Hdump& hd );
+                  SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, const Hdump& hd, bool add = false);
   // copy 4-index integrals from pSrc to pDest
+  // if add = true: add integrals to the existing ones
   template<typename T, typename U>
-  void copy_int4( T * pDest, const U * pSrc );
+  void copy_int4( T * pDest, const U * pSrc, bool add = false );
   // copy 2-index integrals from pSrc to pDest
+  // if add = true: add integrals to the existing ones
   template<typename T, typename U>
-  void copy_int2( T * pDest, const U * pSrc );
+  void copy_int2( T * pDest, const U * pSrc, bool add = false );
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;
