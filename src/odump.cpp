@@ -84,7 +84,7 @@ Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
   _orbs = Integ2ab(pgs);
   _ncore.resize(p_pgs->nIrreps(),0);
   _ncoreaccu.resize(p_pgs->nIrreps(),0);
-  if ( occs.empty() ) occs.resize(p_pgs->nIrreps());
+  if ( occs.empty() ) occs.resize(p_pgs->nIrreps()); // trivial occupation: all orbitals "empty"
   uint iao;
   xout << "Spatial orbital occupation: " << occs << std::endl;
   assert( occs.size() == p_pgs->nIrreps() );

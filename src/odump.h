@@ -24,7 +24,7 @@ public:
   // add to a list of occupied spin orbitals
   void spinocc(std::vector<int>& socc, int ibase = 0) const;
   // number of closed shell orbitals in this symmetry
-  uint _nclos;
+  uint _nclos = 0;
 };
 /*! Occupation vectors, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals}
  *  The orbital indices are zero based
