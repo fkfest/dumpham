@@ -1,7 +1,18 @@
 CC = g++ 
 PROFILE =
-LAPACK = -lblas -llapack
-#LAPACK =
+LAPACK =
+CHECKMKL = $(shell gcc -lmkl_rt 2>&1 | grep "cannot find")
+CHECKLAPACK = $(shell gcc -llapack 2>&1 | grep "cannot find")
+ifeq ($(LAPACK),)
+  ifeq ($(CHECKMKL),)
+    LAPACK = -lmkl_rt
+  endif
+endif
+ifeq ($(LAPACK),)
+  ifeq ($(CHECKLAPACK),)
+    LAPACK = -lblas -llapack
+  endif
+endif
 #PROFILE = -pg
 #PROFILE = -g
 CFLAGS := -c -Wall -Wextra -pedantic -std=gnu++11 -Ofast $(PROFILE)
