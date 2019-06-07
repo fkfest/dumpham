@@ -108,12 +108,14 @@ public:
   inline double twoel_spi_pgs(uint p, uint q, uint r, uint s) const; 
   // get block of integrals defined by start and end indices
   // type of integrals depends on start.size()
-  // h_pq or <pr | qs> (as p,r,q,s)
-  inline void get_block(double * pData, const BlockIndices& start, const BlockIndices& end, bool spinorb = false) const;
+  // index order given by Ham[i] <=> Data[order[i]]
+  inline void get_block(double * pData, const BlockIndices& start, const BlockIndices& end,
+                        const BlockIndices& order, bool spinorb = false) const;
   // set block of integrals defined by start and end indices
   // type of integrals depends on start.size()
-  // h_pq or <pr | qs> (as p,r,q,s)
-  inline void set_block(double * pData, const BlockIndices& start, const BlockIndices& end, bool spinorb = false);
+  // index order given by Ham[i] <=> Data[order[i]]
+  inline void set_block(double * pData, const BlockIndices& start, const BlockIndices& end, 
+                        const BlockIndices& order, bool spinorb = false);
   double escal() const {return _escal;}
   void set_escal(double escal) { _escal = escal; }
   Spin spin(uint p) const { return Spin(p%2); }
@@ -243,35 +245,38 @@ inline double Hdump::twoel_spi_pgs(uint p, uint q, uint r, uint s) const {
   return (_twoel[bbbb].get())->get_with_pgs(i,j,k,l);
 }
 
-inline void Hdump::get_block(double* pData, const BlockIndices& start, const BlockIndices& end, bool spinorb) const
+inline void Hdump::get_block(double* pData, const BlockIndices& start, const BlockIndices& end, 
+                             const BlockIndices& order, bool spinorb) const
 {
-  assert(start.size() == end.size());
+  assert(start.size() == end.size() && start.size() == order.size());
   double * p_Data = pData;
   if (start.size() == 2) {
     // h_pq
+    uint64_t indx[2];
     double (Hdump::*getHDElement)(uint,uint) const;
     if (spinorb)
       getHDElement = &Hdump::oneel_spi;
     else
       getHDElement = &Hdump::oneel_spa;
-    for ( uint64_t q = start[1]; q < end[1]; ++q ) {
-      for ( uint64_t p = start[0]; p < end[0]; ++p ) {
-        *p_Data = (this->*getHDElement)(p,q);
+    for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+      for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+        *p_Data = (this->*getHDElement)(indx[order[0]],indx[order[1]]);
         ++p_Data;
       }
     }
   } else if (start.size() == 4) {
-    // (pq|rs) as <pr | qs>
+    // (pq|rs) 
+    uint64_t indx[4];
     double (Hdump::*getHDElement)(uint,uint,uint,uint) const;
     if (spinorb)
       getHDElement = &Hdump::twoel_spi;
     else
       getHDElement = &Hdump::twoel_spa;
-    for ( uint64_t s = start[3]; s < end[3]; ++s ) {
-      for ( uint64_t q = start[2]; q < end[2]; ++q ) {
-        for ( uint64_t r = start[1]; r < end[1]; ++r ) {
-          for ( uint64_t p = start[0]; p < end[0]; ++p ) {
-            *p_Data = (this->*getHDElement)(p,q,r,s);
+    for ( indx[3] = start[3]; indx[3] < end[3]; ++indx[3] ) {
+      for ( indx[2] = start[2]; indx[2] < end[2]; ++indx[2] ) {
+        for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+          for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+            *p_Data = (this->*getHDElement)(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]]);
             ++p_Data;
           }
         }
@@ -281,35 +286,38 @@ inline void Hdump::get_block(double* pData, const BlockIndices& start, const Blo
     error("Number of indices is neither 2 nor 4","Hdump::get_block");
   }
 }
-inline void Hdump::set_block(double* pData, const BlockIndices& start, const BlockIndices& end, bool spinorb)
+inline void Hdump::set_block(double* pData, const BlockIndices& start, const BlockIndices& end, 
+                             const BlockIndices& order, bool spinorb)
 {
-  assert(start.size() == end.size());
+  assert(start.size() == end.size() && start.size() == order.size());
   double * p_Data = pData;
   if (start.size() == 2) {
     // h_pq
+    uint64_t indx[2];
     void (Hdump::*setHDElement)(uint,uint,double);
     if (spinorb)
       setHDElement = &Hdump::set_oneel_spi;
     else
       setHDElement = &Hdump::set_oneel_spa;
-    for ( uint64_t q = start[1]; q < end[1]; ++q ) {
-      for ( uint64_t p = start[0]; p < end[0]; ++p ) {
-        (this->*setHDElement)(p,q,*p_Data);
+    for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+      for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+        (this->*setHDElement)(indx[order[0]],indx[order[1]],*p_Data);
         ++p_Data;
       }
     }
   } else if (start.size() == 4) {
-    // (pq|rs) as <pr | qs>
+    // (pq|rs) 
+    uint64_t indx[4];
     void (Hdump::*setHDElement)(uint,uint,uint,uint,double);
     if (spinorb)
       setHDElement = &Hdump::set_twoel_spi;
     else
       setHDElement = &Hdump::set_twoel_spa;
-    for ( uint64_t s = start[3]; s < end[3]; ++s ) {
-      for ( uint64_t q = start[2]; q < end[2]; ++q ) {
-        for ( uint64_t r = start[1]; r < end[1]; ++r ) {
-          for ( uint64_t p = start[0]; p < end[0]; ++p ) {
-            (this->*setHDElement)(p,q,r,s,*p_Data);
+    for ( indx[3] = start[3]; indx[3] < end[3]; ++indx[3] ) {
+      for ( indx[2] = start[2]; indx[2] < end[2]; ++indx[2] ) {
+        for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+          for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+            (this->*setHDElement)(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],*p_Data);
             ++p_Data;
           }
         }
