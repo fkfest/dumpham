@@ -34,6 +34,8 @@ public:
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_) {};
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
+  // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true) 
+  Hdump(const Hdump& hd, int i_uhf = 0, int i_simtra = 0);
   enum onetype {
     aa = 0,
     bb = 1
@@ -141,17 +143,20 @@ private:
   void storerec4_nosym(const T * pInt) const;
   // copy integrals with types SI2, SI4aa, SI4ab from hd to this integrals with types DI2, DI4aa, DI4ab 
   // if add = true: add integrals to the existing ones
+  // if sym = true: symmetrize simtra to normal integrals
   template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
   void copy_ints( DI2 * pDI2, DI4aa * pDI4aa, DI4ab * pDI4ab,
-                  SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, const Hdump& hd, bool add = false);
+                  SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, const Hdump& hd, bool add = false, bool sym = false);
   // copy 4-index integrals from pSrc to pDest
   // if add = true: add integrals to the existing ones
+  // if sym = true: symmetrize simtra to normal integrals
   template<typename T, typename U>
-  void copy_int4( T * pDest, const U * pSrc, bool add = false );
+  void copy_int4( T * pDest, const U * pSrc, bool add = false, bool sym = false );
   // copy 2-index integrals from pSrc to pDest
   // if add = true: add integrals to the existing ones
+  // if sym = true: symmetrize simtra to normal integrals
   template<typename T, typename U>
-  void copy_int2( T * pDest, const U * pSrc, bool add = false );
+  void copy_int2( T * pDest, const U * pSrc, bool add = false, bool sym = false );
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;

@@ -171,6 +171,8 @@ lui Finput::analyzecommand(lui ipos)
 bool Finput::analyzeham(const std::string& inputfile)
 {
 //   xout << "analyzeham " << _input << std::endl;
+  int
+    ists = Input::iPars["ham"]["simtrasym"];
   if ( inputfile == "" ) {
     error("Empty hamiltonian specification!");
   }
@@ -180,6 +182,15 @@ bool Finput::analyzeham(const std::string& inputfile)
     _dump = std::unique_ptr<Hdump>(new Hdump(inputfile));
     _dump->read_dump();
     if (scale()) _dump->scale(_scale);
+    if ( ists != 0 ) { // check similarity transformation flag
+      bool simtra = (ists > 0);
+      if ( simtra != _dump->simtra() ) {
+        // the output should have different sim.tra. symmetry
+        auto newdump = std::unique_ptr<Hdump>(new Hdump(*_dump,0,ists));
+        newdump->import(*_dump);
+        _dump = std::move(newdump);
+      }
+    }
   } else {
     if ( !_add ) error ("The Hamiltonian " + _dump->fcidump_filename() + " will be overwritten by "+inputfile);
     Hdump dump(inputfile);

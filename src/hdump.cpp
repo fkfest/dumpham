@@ -82,6 +82,28 @@ Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
   _simtra = hd1._simtra || hd2._simtra;
 }
 
+Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
+{
+#define SETVAL(xx) xx=hd.xx;
+  SETVAL(_norb);
+  SETVAL(_nelec);
+  SETVAL(_ms2);
+  SETVAL(_sym);
+  SETVAL(_pgs);
+  _escal = 0.0;
+  SETVAL(_core);
+  SETVAL(_pgs_wcore);
+  SETVAL(_occ);
+  SETVAL(_clos);
+  SETVAL(_uhf);
+  SETVAL(_simtra);
+#undef SETVAL
+  if ( i_uhf < 0 ) _uhf = false;
+  if ( i_uhf > 0 ) _uhf = true;
+  if ( i_simtra < 0 ) _simtra = false;
+  if ( i_simtra > 0 ) _simtra = true;
+}
+
 void Hdump::alloc_ints()
 {
   assert(!allocated());
@@ -265,7 +287,7 @@ void Hdump::store(std::string fcidump)
     // create a new FCIDUMP 
     if ( _simtra ) _dump.addParameter("ST",std::vector<int>(1,1));
     if ( _uhf ) _dump.addParameter("IUHF",std::vector<int>(1,1));
-    _dump.addParameter("ISYM",std::vector<int>(1,_sym));
+    _dump.addParameter("ISYM",std::vector<int>(1,_sym+1));
     _dump.addParameter("ORBSYM",_pgs.orbsym());
     _dump.addParameter("MS2",std::vector<int>(1,_ms2));
     _dump.addParameter("NELEC",std::vector<int>(1,_nelec));
@@ -405,60 +427,102 @@ void Hdump::storerec2_nosym(const T * pInt) const
 }
 
 template<typename T, typename U>
-void Hdump::copy_int4(T* pDest, const U* pSrc, bool add)
+void Hdump::copy_int4(T* pDest, const U* pSrc, bool add, bool sym)
 {
   uint i = 0, j = 0, k = 0, l = 0;
   Irrep isym = 0;
-  do {
-    BlkIdx indxD = pDest->index(i,j,k,l);
-    if ( add ) { 
-      pDest->set(indxD, pSrc->get(i,j,k,l)+pDest->get(indxD));
-    } else {
-      pDest->set(indxD, pSrc->get(i,j,k,l));
+  if ( add ) {
+    if ( sym ) { 
+      // add, symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j,k,l);
+        pDest->set(indxD, 0.5*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k))+pDest->get(indxD));
+      } while (pDest->next_indices(i,j,k,l,isym));
+    } else { 
+      // add, no symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j,k,l);
+        pDest->set(indxD, pSrc->get(i,j,k,l)+pDest->get(indxD));
+      } while (pDest->next_indices(i,j,k,l,isym));
     }
-  } while (pDest->next_indices(i,j,k,l,isym));
+  } else {
+    if ( sym ) { 
+      // don't add, symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j,k,l);
+        pDest->set(indxD, 0.5*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k)));
+      } while (pDest->next_indices(i,j,k,l,isym));
+    } else {
+      // don't add, no symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j,k,l);
+        pDest->set(indxD, pSrc->get(i,j,k,l));
+      } while (pDest->next_indices(i,j,k,l,isym));
+    }
+  }
 }
 template<typename T, typename U>
-void Hdump::copy_int2(T* pDest, const U* pSrc, bool add)
+void Hdump::copy_int2(T* pDest, const U* pSrc, bool add, bool sym)
 {
   uint i = 0, j = 0;
-  do {
-    BlkIdx indxD = pDest->index(i,j);
-    if ( add ) { 
-      pDest->set(indxD, pSrc->get(i,j)+pDest->get(indxD));
-    } else {
-      pDest->set(indxD, pSrc->get(i,j));
+  if ( add ) {
+    if ( sym ) { 
+      // add, symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j);
+        pDest->set(indxD, 0.5*(pSrc->get(i,j)+pSrc->get(j,i))+pDest->get(indxD));
+      } while (pDest->next_indices(i,j));
+    } else { 
+      // add, no symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j);
+        pDest->set(indxD, pSrc->get(i,j)+pDest->get(indxD));
+      } while (pDest->next_indices(i,j));
     }
-  } while (pDest->next_indices(i,j));
+  } else {
+    if ( sym ) { 
+      // don't add, symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j);
+        pDest->set(indxD, 0.5*(pSrc->get(i,j)+pSrc->get(j,i)));
+      } while (pDest->next_indices(i,j));
+    } else {
+      // don't add, no symmetrization
+      do {
+        BlkIdx indxD = pDest->index(i,j);
+        pDest->set(indxD, pSrc->get(i,j));
+      } while (pDest->next_indices(i,j));
+    }
+  }
 }
 template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
 void Hdump::copy_ints(DI2* pDI2, DI4aa* pDI4aa, DI4ab* pDI4ab, 
-                      SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd, bool add)
+                      SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd, bool add, bool sym)
 {
   pDI4aa = dynamic_cast<DI4aa*>(_twoel[aaaa].get()); assert(pDI4aa);
   pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[aaaa].get()); assert(pSI4aa);
-  copy_int4(pDI4aa,pSI4aa,add);
+  copy_int4(pDI4aa,pSI4aa,add,sym);
   pDI2 = dynamic_cast<DI2*>(_oneel[aa].get()); assert(pDI2);
   pSI2 = dynamic_cast<SI2*>(hd._oneel[aa].get()); assert(pSI2);
-  copy_int2(pDI2,pSI2,add);
+  copy_int2(pDI2,pSI2,add,sym);
   if ( _uhf ) {
     pDI4aa = dynamic_cast<DI4aa*>(_twoel[bbbb].get()); assert(pDI4aa);
     if ( hd._uhf ) {
       pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[bbbb].get()); assert(pSI4aa);
     }
-    copy_int4(pDI4aa,pSI4aa,add);
+    copy_int4(pDI4aa,pSI4aa,add,sym);
     pDI4ab = dynamic_cast<DI4ab*>(_twoel[aabb].get()); assert(pDI4ab);
     if ( hd._uhf ) {
       pSI4ab = dynamic_cast<SI4ab*>(hd._twoel[aabb].get()); assert(pSI4ab);
-      copy_int4(pDI4ab,pSI4ab,add);
+      copy_int4(pDI4ab,pSI4ab,add,sym);
     } else {
-      copy_int4(pDI4ab,pSI4aa,add);
+      copy_int4(pDI4ab,pSI4aa,add,sym);
     }
     pDI2 = dynamic_cast<DI2*>(_oneel[bb].get()); assert(pDI2);
     if ( hd._uhf ) {
       pSI2 = dynamic_cast<SI2*>(hd._oneel[bb].get()); assert(pSI2);
     }
-    copy_int2(pDI2,pSI2,add);
+    copy_int2(pDI2,pSI2,add,sym);
   }
   if (add) {
     _escal += hd._escal;
@@ -492,7 +556,7 @@ void Hdump::import(const Hdump& hd, bool add)
       copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd,add);
     }
   } else {
-    // expand the permutation symmetry
+    // create the permutation symmetry
     Integ4 * pDI4aa = 0;
     Integ4ab * pDI4ab = 0;
     Integ2 * pDI2 = 0;
@@ -502,7 +566,10 @@ void Hdump::import(const Hdump& hd, bool add)
       Integ2 * pSI2 = 0;
       copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd,add);
     } else {
-      error("Implement a symmetrization of similarity transformed hamiltonian!");
+      Integ4st * pSI4aa = 0;
+      Integ4stab * pSI4ab = 0;
+      Integ2st * pSI2 = 0;
+      copy_ints(pDI2,pDI4aa,pDI4ab,pSI2,pSI4aa,pSI4ab,hd,add,true);
     }
   }
 }

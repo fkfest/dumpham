@@ -11,6 +11,7 @@ set="ham",type=s,name="out",value="",desc="fcidump file output"
 set="ham",type=i,name="store",value=1,desc="store fcidump to a file"
 set="ham",type=i,name="nosym",value=1,desc="ouput fcidump without point-group symmetry"
 set="ham",type=i,name="redunwarning",value=1,desc="warning for redundant entries in fcidump input"
+set="ham",type=i,name="simtrasym",value=0,desc="<0: transform to bra-ket symmetric (symmetrize), >0: transform to similarity-transformed form"
 
 %ORBITALS
 set="orbs",type=s,name="out",value="",desc="orbdump file"
