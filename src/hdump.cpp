@@ -58,7 +58,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   }
   if ( CLOSED.size() > 1 || CLOSED[0] > 0 ) {
     _clos = CLOSED;
-    _occ.resize(_pgs.nIrreps(),0);
+    _clos.resize(_pgs.nIrreps(),0);
   }
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
@@ -582,6 +582,24 @@ uint Hdump::nclostot() const
     error("Mismatch in NELEC and MS2 in Hdump");
   }
   return nclos;
+}
+FDPar Hdump::nclos_wcore() const
+{
+  FDPar clco(_clos); 
+  for ( uint io = 0; io < std::max(clco.size(),_core.size()); ++io )
+    clco[io] += _core[io];
+  for ( uint io = clco.size(); io < _core.size(); ++io )
+    clco.push_back(_core[io]);
+  return clco; 
+}
+FDPar Hdump::nocc_wcore() const
+{
+  FDPar occo(_occ); 
+  for ( uint io = 0; io < std::max(occo.size(),_core.size()); ++io )
+    occo[io] += _core[io];
+  for ( uint io = occo.size(); io < _core.size(); ++io )
+    occo.push_back(_core[io]);
+  return occo; 
 }
 
 void Hdump::scale(double scal)

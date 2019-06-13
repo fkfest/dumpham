@@ -72,8 +72,12 @@ public:
   const FDPar& nclos() const { return _clos; }
   // number of occupied orbitals in each irrep
   const FDPar& nocc() const { return _occ; }
-  // number of core orbitals in each symmetry (are not count in nclos or nocc!)
+  // number of core orbitals in each symmetry (are not counted in nclos() or nocc()!)
   const FDPar& ncore() const { return _core; }
+  // number of closed shell orbitals in each irrep including core
+  FDPar nclos_wcore() const;
+  // number of occupied orbitals in each irrep including core
+  FDPar nocc_wcore() const;
   // similarity transformed
   bool simtra() const { return _simtra; }
   // in spatial orbitals, PG symmetry is handled outside
