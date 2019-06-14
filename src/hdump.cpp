@@ -46,7 +46,9 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   assert( CORE.size() > 0 && OCC.size() > 0 && CLOSED.size() > 0 );
   if ( CORE.size() > 1 || CORE[0] > 0 ) {
     _core = CORE;
+    uint nIrrepsCore = _pgs.guess_nIrreps(_core);
     FDPar norb4irs(_pgs.norbs_in_irreps());
+    norb4irs.resize(nIrrepsCore,0);
     _core.resize(norb4irs.size(),0);
     for ( Irrep ir = 0; ir < norb4irs.size(); ++ir )
       norb4irs[ir] += _core[ir];
@@ -54,10 +56,16 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   }
   if ( OCC.size() > 1 || OCC[0] > 0 ) {
     _occ = OCC;
+    uint nIrrepsOcc = _pgs.guess_nIrreps(_occ);
+    _occ.resize(nIrrepsOcc,0);
+    add_or_subtract_core(_occ,"OCC",false);
     _occ.resize(_pgs.nIrreps(),0);
   }
   if ( CLOSED.size() > 1 || CLOSED[0] > 0 ) {
     _clos = CLOSED;
+    uint nIrrepsClos = _pgs.guess_nIrreps(_clos);
+    _clos.resize(nIrrepsClos,0);
+    add_or_subtract_core(_clos,"CLOSED",false);
     _clos.resize(_pgs.nIrreps(),0);
   }
   _uhf = bool(IUHF[0]);
@@ -285,6 +293,9 @@ void Hdump::store(std::string fcidump)
 #endif
   if ( newfile ) {
     // create a new FCIDUMP 
+    if (_occ.size() > 0) _dump.addParameter("OCC",nocc_wcore());
+    if (_clos.size() > 0) _dump.addParameter("CLOSED",nclos_wcore());
+    if (_core.size() > 0) _dump.addParameter("CORE",_core);
     if ( _simtra ) _dump.addParameter("ST",std::vector<int>(1,1));
     if ( _uhf ) _dump.addParameter("IUHF",std::vector<int>(1,1));
     _dump.addParameter("ISYM",std::vector<int>(1,_sym+1));
@@ -573,7 +584,26 @@ void Hdump::import(const Hdump& hd, bool add)
     }
   }
 }
-
+void Hdump::add_or_subtract_core(FDPar& orb, const std::string& kind, bool add) const 
+{
+  for ( uint io = 0; io < std::min(orb.size(),_core.size()); ++io ) {
+    if ( add ) {
+      orb[io] += _core[io];
+    } else if ( orb[io] < _core[io] ) {
+      xout << io << ") " << kind << ": " << orb[io] << " CORE: " << _core[io] << std::endl;
+      error("Core orbitals should be included in the "+kind+" specification!");
+    } else {
+      orb[io] -= _core[io];
+    }
+  }
+  for ( uint io = orb.size(); io < _core.size(); ++io ) {
+    if ( add ) {
+      orb.push_back(_core[io]);
+    } else if ( _core[io] != 0 ) {
+      error("Core orbitals should be included in the "+kind+" specification!");
+    }
+  }
+}
 uint Hdump::nclostot() const
 {
   uint nclos = (_nelec - _ms2)/2;
@@ -586,20 +616,28 @@ uint Hdump::nclostot() const
 FDPar Hdump::nclos_wcore() const
 {
   FDPar clco(_clos); 
-  for ( uint io = 0; io < std::max(clco.size(),_core.size()); ++io )
-    clco[io] += _core[io];
-  for ( uint io = clco.size(); io < _core.size(); ++io )
-    clco.push_back(_core[io]);
+  add_or_subtract_core(clco,"CLOSED",true);
   return clco; 
 }
 FDPar Hdump::nocc_wcore() const
 {
   FDPar occo(_occ); 
-  for ( uint io = 0; io < std::max(occo.size(),_core.size()); ++io )
-    occo[io] += _core[io];
-  for ( uint io = occo.size(); io < _core.size(); ++io )
-    occo.push_back(_core[io]);
+  add_or_subtract_core(occo,"OCC",true);
   return occo; 
+}
+void Hdump::set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& occ, bool wcore)
+{
+  assert(closed.size() < _pgs.nIrreps());
+  assert(occ.size() < _pgs.nIrreps());
+  assert(core.size() < _pgs.nIrreps());
+  _core = core;
+  _clos = closed;
+  _occ = occ;
+  if ( wcore ) {
+    // remove core
+    add_or_subtract_core(_clos,"CLOSED",false);
+    add_or_subtract_core(_occ,"OCC",false);
+  }
 }
 
 void Hdump::scale(double scal)

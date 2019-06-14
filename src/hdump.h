@@ -78,6 +78,9 @@ public:
   FDPar nclos_wcore() const;
   // number of occupied orbitals in each irrep including core
   FDPar nocc_wcore() const;
+  // set CLOSED, OCC and CORE (note that OCC includes CLOSED, which includes CORE!)
+  // if wcore = false: core is not included in OCC and CLOSED specifications
+  void set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& occ, bool wcore = true);
   // similarity transformed
   bool simtra() const { return _simtra; }
   // in spatial orbitals, PG symmetry is handled outside
@@ -166,6 +169,8 @@ private:
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;
+  // subtract or add core orbitals
+  void add_or_subtract_core(FDPar& orb, const std::string& kind, bool add = true) const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
   // One-electron integrals (one set for cs rhf, otherwise alpha and beta)

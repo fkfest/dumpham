@@ -25,14 +25,7 @@ public:
       error("No orbital symmetries given!");
     if ( listoforbs ) {
       uint nIrreps = orbsym.back();
-      // number of irreps can be only 1,2,4, or 8
-      // if it's not, it means that the last irreps don't have any orbitals!
-      if ( nIrreps > 4 )
-        nIrreps = 8;
-      else if ( nIrreps > 2 )
-        nIrreps = 4;
-      else if ( nIrreps < 1 )
-        error("Orbital symmetry below 1!");
+      roundof_nIrreps(nIrreps);
       _norb4irrep.resize(nIrreps,0);
       _firstorb4irrep.resize(nIrreps,0);
       uint orb = 0;
@@ -86,6 +79,23 @@ public:
   // total number of orbitals
   uint ntotorbs() const { assert(nIrreps() > 0); return _norb4irrep.back() + _firstorb4irrep.back(); }
   uint nIrreps() const { return _norb4irrep.size(); }
+  void roundof_nIrreps( uint& nIrreps ) const {
+      // number of irreps can be only 1,2,4, or 8
+      // if it's not, it means that the last irreps don't have any orbitals!
+      if ( nIrreps > 4 )
+        nIrreps = 8;
+      else if ( nIrreps > 2 )
+        nIrreps = 4;
+      else if ( nIrreps < 1 )
+        error("Orbital symmetry below 1!");
+  }
+  // guess nIrreps for a given norbs string. The result is always between or equal nIrreps() and 8. 
+  uint guess_nIrreps(const FDPar& norbs4irreps) const {
+        uint nIrr = norbs4irreps.size();
+        for ( ; nIrr > 0 && norbs4irreps[nIrr-1] == 0; --nIrr ) {}
+        roundof_nIrreps(nIrr);
+        return std::max(nIrr,nIrreps());
+  }
   bool operator==(const PGSym& pgs) const { 
        // if _irrep4orb is equal than all other arrays have to be equal, too.
        assert(_irrep4orb != pgs._irrep4orb || (_norb4irrep == pgs._norb4irrep && _firstorb4irrep == pgs._firstorb4irrep));
