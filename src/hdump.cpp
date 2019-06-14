@@ -627,9 +627,10 @@ FDPar Hdump::nocc_wcore() const
 }
 void Hdump::set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& occ, bool wcore)
 {
-  assert(closed.size() < _pgs.nIrreps());
-  assert(occ.size() < _pgs.nIrreps());
-  assert(core.size() < _pgs.nIrreps());
+  assert(closed.size() <= _pgs.nIrreps());
+  assert(occ.size() <= _pgs.nIrreps());
+  // core can have more irreps than the hamdump
+  assert(core.size() <= 8);
   _core = core;
   _clos = closed;
   _occ = occ;
