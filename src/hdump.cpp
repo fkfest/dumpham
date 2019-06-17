@@ -447,7 +447,7 @@ void Hdump::copy_int4(T* pDest, const U* pSrc, bool add, bool sym)
       // add, symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j,k,l);
-        pDest->set(indxD, 0.5*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k))+pDest->get(indxD));
+        pDest->set(indxD, 0.25*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k)+pSrc->get(j,i,k,l)+pSrc->get(i,j,l,k))+pDest->get(indxD));
       } while (pDest->next_indices(i,j,k,l,isym));
     } else { 
       // add, no symmetrization
@@ -461,7 +461,7 @@ void Hdump::copy_int4(T* pDest, const U* pSrc, bool add, bool sym)
       // don't add, symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j,k,l);
-        pDest->set(indxD, 0.5*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k)));
+        pDest->set(indxD, 0.25*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k)+pSrc->get(j,i,k,l)+pSrc->get(i,j,l,k)));
       } while (pDest->next_indices(i,j,k,l,isym));
     } else {
       // don't add, no symmetrization
