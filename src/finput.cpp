@@ -195,7 +195,7 @@ bool Finput::analyzeham(const std::string& inputfile)
     if ( !_add ) error ("The Hamiltonian " + _dump->fcidump_filename() + " will be overwritten by "+inputfile);
     Hdump dump(inputfile);
     // check whether we will have to enlarge _dump
-    if ( !_dump->simtra() && dump.simtra() ) {
+    if ( ists ==0 && !_dump->simtra() && dump.simtra() ) {
       // transform old dump into similarity transformed version first!
       auto newdump = std::unique_ptr<Hdump>(new Hdump(*_dump,dump));
       newdump->import(*_dump);
