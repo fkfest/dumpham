@@ -5,6 +5,7 @@
 #ifdef MOLPRO
 #include "hdtypes.h"
 #include "hdcommon.h"
+#include "memory.h"
 #else
 #include "globals.h"
 #include "utilities.h"
@@ -27,7 +28,11 @@ namespace HamDump {
 #define WARNRED4(p,q,r,s)
 #endif
 
+#ifdef MOLPRO
+typedef memory::vector<double> DData;
+#else
 typedef std::vector<double> DData; 
+#endif
 typedef uint64_t BlkIdx;
 
 /*! 

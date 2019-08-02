@@ -7,12 +7,11 @@
 #ifdef MOLPRO
 #include "hdtypes.h"
 #include "hdcommon.h"
-#include "global/FCIdump.h"
 #else
 #include "globals.h"
 #include "utilities.h"
-#include "FCIdump.h"
 #endif
+#include "FCIdump.h"
 
 #include "pgsym.h"
 #include "integs.h"
