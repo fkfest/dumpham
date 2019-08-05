@@ -72,7 +72,8 @@ public:
   // number of occupied orbitals in each irrep
   const FDPar& nocc() const { return _occ; }
   // number of core orbitals in each symmetry (are not counted in nclos() or nocc()!)
-  const FDPar& ncore() const { return _core; }
+  FDPar ncore() const { if ( _core.size() > 0 ) return _core;
+                        else return FDPar(_clos.size(),0); }
   // number of closed shell orbitals in each irrep including core
   FDPar nclos_wcore() const;
   // number of occupied orbitals in each irrep including core
