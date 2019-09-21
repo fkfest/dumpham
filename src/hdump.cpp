@@ -70,6 +70,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   }
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
+  gen_spinorbsref();
 }
 
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
@@ -88,6 +89,7 @@ Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
 #undef CHECKSET
   _uhf = hd1._uhf || hd2._uhf;
   _simtra = hd1._simtra || hd2._simtra;
+  gen_spinorbsref();
 }
 
 Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
@@ -110,6 +112,7 @@ Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
   if ( i_uhf > 0 ) _uhf = true;
   if ( i_simtra < 0 ) _simtra = false;
   if ( i_simtra > 0 ) _simtra = true;
+  gen_spinorbsref();
 }
 
 void Hdump::alloc_ints()
@@ -265,6 +268,38 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
   do {
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
+}
+
+void Hdump::gen_spinorbsref()
+{
+  _spinorbs.clear();
+  _spinorbs.reserve(_norb*2);
+  if ( _clos.size() == 0 ) {
+    // default: alternating alpha/beta
+    for ( uint i = 0; i < _norb; ++i ) {
+      _spinorbs.emplace_back(SpinOrb(i,alpha));
+      _spinorbs.emplace_back(SpinOrb(i,beta));
+    }
+  } else {
+    assert( _clos.size() == _occ.size() );
+    for ( uint ir = 0; ir < _clos.size(); ++ir ) {
+      for ( int i = 0; i < _clos[ir]; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i,alpha));
+        _spinorbs.emplace_back(SpinOrb(i,beta));
+      }
+      for ( int i = _clos[ir]; i < _occ[ir]; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i,alpha));
+      }
+      for ( int i = _clos[ir]; i < _occ[ir]; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i,beta));
+      }
+      int norbs = _pgs.norbs(ir);
+      for ( int i = _occ[ir]; i < norbs; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i,alpha));
+        _spinorbs.emplace_back(SpinOrb(i,beta));
+      }
+    }
+  }
 }
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
@@ -639,6 +674,7 @@ void Hdump::set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& oc
     add_or_subtract_core(_clos,"CLOSED",false);
     add_or_subtract_core(_occ,"OCC",false);
   }
+  gen_spinorbsref();
 }
 
 void Hdump::scale(double scal)

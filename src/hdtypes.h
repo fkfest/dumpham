@@ -10,6 +10,14 @@ enum Spin{
   alpha = 0,
   beta = 1
 };
+struct SpinOrb {
+  SpinOrb(){};
+  SpinOrb(uint orb_, Spin spin_ ) : orb(orb_), spin(spin_){};
+  // spatial orbital
+  uint orb = 0;
+  // spin
+  Spin spin = alpha;
+};
 
 } //namespace HamDump
 
