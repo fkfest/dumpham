@@ -282,22 +282,25 @@ void Hdump::gen_spinorbsref()
     }
   } else {
     assert( _clos.size() == _occ.size() );
+    // orbital offset for the irrep
+    uint oorb = 0;
     for ( uint ir = 0; ir < _clos.size(); ++ir ) {
       for ( int i = 0; i < _clos[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i,alpha));
-        _spinorbs.emplace_back(SpinOrb(i,beta));
+        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
+        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
       }
       for ( int i = _clos[ir]; i < _occ[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i,alpha));
+        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
       }
       for ( int i = _clos[ir]; i < _occ[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i,beta));
+        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
       }
       int norbs = _pgs.norbs(ir);
       for ( int i = _occ[ir]; i < norbs; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i,alpha));
-        _spinorbs.emplace_back(SpinOrb(i,beta));
+        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
+        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
       }
+      oorb += norbs;
     }
   }
 }
