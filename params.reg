@@ -26,6 +26,7 @@ set="orbs",type=i,name="guessoccu",value=0,desc="guess occupation from orbdump f
 set="orbs",type=a,name="del",value={},desc="delete specified orbitals from dump files"
 set="orbs",type=s,name="ektorb",value="",desc="orbdump file for EKT orbitals"
 set="orbs",type=s,name="dysorb",value="",desc="orbdump file for Dyson orbitals"
+set="orbs",type=i,name="soorder",value=0,desc="order of spin-orbitals: 0. alternating alpha/beta, 1. alpha/beta-alpha(open-shell)-beta(corresponding open-shell)-alpha/beta, 2. alpha(occ)-beta(occ)-alpha(virt)-beta(virt)"
 
 %SYNTAX
 set="syntax",type=s,name="brackets",value="(){}[]<>",desc="brackets"

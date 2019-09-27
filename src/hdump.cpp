@@ -272,15 +272,24 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
 
 void Hdump::gen_spinorbsref()
 {
+  // order of spin orbitals
+  int isoord; 
+  #ifndef MOLPRO
+  isoord = Input::iPars["orbs"]["soorder"];
+  #else
+  // spin-blocked order for molpro
+  isoord = 2;
+  #endif
   _spinorbs.clear();
   _spinorbs.reserve(_norb*2);
-  if ( _clos.size() == 0 ) {
+  if ( _clos.size() == 0 || isoord == 0 ) {
     // default: alternating alpha/beta
     for ( uint i = 0; i < _norb; ++i ) {
       _spinorbs.emplace_back(SpinOrb(i,alpha));
       _spinorbs.emplace_back(SpinOrb(i,beta));
     }
-  } else {
+  } else if ( isoord == 1 ) {
+    // alpha/beta-alpha(open-shell) + beta(corresponding open-shell) + alpha/beta
     assert( _clos.size() == _occ.size() );
     // orbital offset for the irrep
     uint oorb = 0;
@@ -301,6 +310,30 @@ void Hdump::gen_spinorbsref()
         _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
       }
       oorb += norbs;
+    }
+  } else {
+    // blocked spin order: alpha(occ) + beta(occ) + alpha(virt) + beta(virt)
+    assert( _clos.size() == _occ.size() );
+    // orbital offset for the irrep
+    uint oorb = 0;
+    for ( uint ir = 0; ir < _clos.size(); ++ir ) {
+      // alpha occ
+      for ( int i = 0; i < _occ[ir]; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
+      }
+      // beta occ
+      for ( int i = 0; i < _clos[ir]; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
+      }
+      int norbs = _pgs.norbs(ir);
+      // alpha virt
+      for ( int i = _occ[ir]; i < norbs; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
+      }
+      // beta virt
+      for ( int i = _clos[ir]; i < norbs; ++i ) {
+        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
+      }
     }
   }
 }
