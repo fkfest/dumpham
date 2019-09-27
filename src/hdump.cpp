@@ -334,6 +334,7 @@ void Hdump::gen_spinorbsref()
       for ( int i = _clos[ir]; i < norbs; ++i ) {
         _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
       }
+      oorb += norbs;
     }
   }
 }
