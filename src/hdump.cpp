@@ -1,5 +1,4 @@
 #include "hdump.h"
-
 namespace HamDump {
 
 Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
@@ -30,6 +29,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   check_input_norbs(CORE,"core",verbose);
   
   FDPar ST = _dump.parameter("ST");
+  FDPar DM = _dump.parameter("DM");
   
   int nn = NORB[0];
   if ( nn < 0 ) {
@@ -70,6 +70,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   }
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
+  _dm = bool(DM[0]);
   gen_spinorbsref();
 }
 
@@ -86,6 +87,7 @@ Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
   CHECKSET(_pgs_wcore,"orbital space with core orbitals");
   CHECKSET(_occ,"occupied orbitals");
   CHECKSET(_clos,"closed-shell orbitals");
+  CHECKSET(_dm,"density matrix flag");
 #undef CHECKSET
   _uhf = hd1._uhf || hd2._uhf;
   _simtra = hd1._simtra || hd2._simtra;
@@ -107,6 +109,7 @@ Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
   SETVAL(_clos);
   SETVAL(_uhf);
   SETVAL(_simtra);
+  SETVAL(_dm);
 #undef SETVAL
   if ( i_uhf < 0 ) _uhf = false;
   if ( i_uhf > 0 ) _uhf = true;
@@ -368,6 +371,7 @@ void Hdump::store(std::string fcidump)
     if (_occ.size() > 0) _dump.addParameter("OCC",nocc_wcore());
     if (_clos.size() > 0) _dump.addParameter("CLOSED",nclos_wcore());
     if (_core.size() > 0) _dump.addParameter("CORE",_core);
+    if ( _dm ) _dump.addParameter("DM",std::vector<int>(1,1));
     if ( _simtra ) _dump.addParameter("ST",std::vector<int>(1,1));
     if ( _uhf ) _dump.addParameter("IUHF",std::vector<int>(1,1));
     _dump.addParameter("ISYM",std::vector<int>(1,_sym+1));
@@ -759,4 +763,120 @@ void Hdump::check_addressing_integrals() const
    xout << "n2el: " << _twoel[aaaa]->nelem() << std::endl;
 }
 
+template<typename T, typename U, typename V>
+void Hdump::add1RDMto2RDM( T * pD2, const U * pD1, const V * pD11, double fact, bool exchange)
+{
+  Irrep isym = 0;
+  // spatial orbitals
+  uint p = 0, q = 0, r = 0, s = 0;
+  double val;
+  do { 
+    BlkIdx indx = pD2->index(p,q,r,s);
+    val = pD2->get(indx);
+    if ( _pgs.totIrrep(p, q) == 0 ) {
+      val += fact * pD1->get(p,q) * pD11->get(r,s);
+    }
+    if ( exchange && _pgs.totIrrep(p, s) == 0 ) {
+      val -= fact * pD1->get(p,s) * pD11->get(r,q);
+    }
+    pD2->set(indx,val);
+  } while (pD2->next_indices(p,q,r,s,isym));
+  
+}
+
+void Hdump::correct_2DM()
+// adds to the 2DM the (**|ll) parts etc. which where omitted in ITF StUccsd.itfaa
+{
+  assert(_simtra);
+  Integ2st * pDa = dynamic_cast<Integ2st*>(_oneel[aa].get()); assert(pDa);
+  Integ2st * pDb = dynamic_cast<Integ2st*>(_oneel[bb].get()); assert(pDb);
+  Integ4st * pDaa = dynamic_cast<Integ4st*>(_twoel[aaaa].get()); assert(pDaa);
+  Integ4st * pDbb = dynamic_cast<Integ4st*>(_twoel[bbbb].get()); assert(pDbb);
+  Integ4stab * pDab = dynamic_cast<Integ4stab*>(_twoel[aabb].get()); assert(pDab);
+  add1RDMto2RDM(pDaa,pDa,pDa,-1.0,true);
+  add1RDMto2RDM(pDbb,pDb,pDb,-1.0,true);
+  add1RDMto2RDM(pDab,pDa,pDb,-1.0,false);
+  
+  double val;
+  for( uint ir = 0; ir < _pgs.nIrreps(); ir++ ){ 
+    uint sporb = _pgs._firstorb4irrep[ir] * 2;
+    for( int iorb = 0; iorb < _clos[ir]; iorb++ ){
+      val = oneel_spi(sporb, sporb);
+      val += 1.0;
+      set_oneel_spi(sporb, sporb, val);
+      sporb += 1;
+      val = oneel_spi(sporb, sporb);
+      val += 1.0;
+      set_oneel_spi(sporb, sporb, val);
+      sporb += 1;
+    }
+    for( int iorb = _clos[ir]; iorb < _occ[ir]; iorb++ ){
+        val = oneel_spi(sporb, sporb);
+        val += 1;
+        set_oneel_spi(sporb, sporb, val);
+        sporb += 1;
+    }
+  }
+  assert(_simtra);
+  add1RDMto2RDM(pDaa,pDa,pDa,1.0,true);
+  add1RDMto2RDM(pDbb,pDb,pDb,1.0,true);
+  add1RDMto2RDM(pDab,pDa,pDb,1.0,false);
+}
+void Hdump::calc_Fock(const Hdump& DMmats)
+{
+  std::vector< std::vector<double> >_FMAT; // fock matrix for each symmetry
+  uint _nsorb = 2*_norb;
+  _FMAT.resize(_pgs.nIrreps());
+  // energy from the density matrices
+  double Tr = 0.0;
+  for ( uint ir = 0; ir < _pgs.nIrreps(); ++ir ) {
+    uint nsorb4ir = _pgs.norbs(ir) * 2;
+    uint ioff4ir = _pgs._firstorb4irrep[ir] * 2;
+    uint maxid = nsorb4ir-1;
+    uint nelem = maxid+maxid*nsorb4ir+1;
+    std::vector<double> & fmat = _FMAT[ir];
+    fmat.resize(nelem,0);
+    std::vector<double> fmat2(nelem,0);
+     
+    for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
+      uint p = p4ir+ioff4ir;
+      for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+        uint t = t4ir+ioff4ir;
+        uint pt = p4ir+t4ir*nsorb4ir;
+        for(uint q4ir = 0; q4ir < nsorb4ir; q4ir++){
+          uint q = q4ir+ioff4ir;
+          fmat[pt] += oneel_spi(t,q) * DMmats.oneel_spi(p,q);
+        }
+      }
+    }
+    std::vector<double> dm_qrs(nsorb4ir);
+    for(uint q = 0; q < _nsorb; q++){
+      for(uint r = 0; r < _nsorb; r++){
+        for(uint s = 0; s < _nsorb; s++){
+          for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+            uint t = t4ir+ioff4ir;
+            dm_qrs[t4ir] = DMmats.twoel_spi_pgs(t,r,q,s);
+          }
+          for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
+            uint p = p4ir+ioff4ir;
+            double twoel_prqs = twoel_spi_pgs(p,r,q,s); 
+            for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+              fmat2[t4ir+p4ir*nsorb4ir] += twoel_prqs * dm_qrs[t4ir];
+            }
+          }
+        }
+      }
+    }
+//     // add two electron parts to fock
+    for(uint pt = 0; pt < fmat.size(); pt++){
+      fmat[pt] += fmat2[pt]; 
+    }
+    
+    for(uint p = 0; p < nsorb4ir; p++){
+      uint pt = p+p*nsorb4ir;
+      Tr = Tr + fmat[pt]-0.5*fmat2[pt];
+    }
+  }
+  xout << "!!Energy:!!" << Tr+escal() << std::endl;
+}
 } //namespace HamDump

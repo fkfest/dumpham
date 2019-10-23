@@ -28,9 +28,9 @@ public:
   Hdump(std::string fcidump, bool verbose = true);
   // construct from PGSym 
   Hdump(const PGSym& pgs_, uint nelec_ = 0, uint ms2_ = 0, 
-        uint sym_ = 0, bool uhf_ = false, bool simtra_ = false) :
+        uint sym_ = 0, bool uhf_ = false, bool simtra_ = false, bool dm_ = false) :
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_), 
-        _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_) { gen_spinorbsref(); };
+        _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_), _dm(dm_) { gen_spinorbsref(); };
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
   // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true) 
@@ -129,6 +129,8 @@ public:
   // scale the integrals by a number
   void scale(double scal);
   bool allocated() const { return _oneel.size() > 0 || _twoel.size() > 0; };
+  void correct_2DM();
+  void calc_Fock(const Hdump& DMmats);
   
   
 private:
@@ -167,6 +169,9 @@ private:
   // if sym = true: symmetrize simtra to normal integrals
   template<typename T, typename U>
   void copy_int2( T * pDest, const U * pSrc, bool add = false, bool sym = false );
+  // add antisymmetrized product of 1RDM pD1 and pD11 to 2RDM pD2
+  template<typename T, typename U, typename V>
+  void add1RDMto2RDM( T * pD2, const U * pD1, const V * pD11, double fact, bool exchange);
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;
@@ -193,6 +198,8 @@ private:
   bool _uhf = false;
   // doesn't have the bra-ket symmetry
   bool _simtra = false;
+  // density matrix instead of integrals
+  bool _dm = false;
   // reference determinant for spinorbitals
   std::vector<SpinOrb> _spinorbs;
 };
@@ -204,8 +211,8 @@ inline double Hdump::oneel_spi(uint p, uint q) const {
     & qso = _spinorbs[q];    
   if ( pso.spin != qso.spin ) return 0.0;
   if (!_uhf || pso.spin == alpha)
-     return static_cast<Integ2*>(_oneel[aa].get())->get(pso.orb,qso.orb);
-  return static_cast<Integ2*>(_oneel[bb].get())->get(pso.orb,qso.orb);
+     return (_oneel[aa].get())->get(pso.orb,qso.orb);
+  return (_oneel[bb].get())->get(pso.orb,qso.orb);
 }
 
 inline double Hdump::twoel_spi(uint p, uint q, uint r, uint s) const {
@@ -215,12 +222,22 @@ inline double Hdump::twoel_spi(uint p, uint q, uint r, uint s) const {
     & qso = _spinorbs[q],    
     & rso = _spinorbs[r],
     & sso = _spinorbs[s];    
-  if (pso.spin != qso.spin || rso.spin != sso.spin) return 0;
-  if (!_uhf || ( pso.spin == alpha && rso.spin == alpha )) 
-    return (_twoel[aaaa].get())->get(pso.orb,qso.orb,rso.orb,sso.orb);
-  if ( pso.spin == alpha ) 
-    return (_twoel[aabb].get())->get(pso.orb,qso.orb,rso.orb,sso.orb);
-  return (_twoel[bbbb].get())->get(pso.orb,qso.orb,rso.orb,sso.orb);
+  if (pso.spin == qso.spin && rso.spin == sso.spin) {
+    if (!_uhf || ( pso.spin == alpha && rso.spin == alpha )) 
+      return (_twoel[aaaa].get())->get(pso.orb,qso.orb,rso.orb,sso.orb);
+    if ( pso.spin == alpha ) 
+      return (_twoel[aabb].get())->get(pso.orb,qso.orb,rso.orb,sso.orb);
+    if ( rso.spin == alpha ) 
+      return (_twoel[aabb].get())->get(rso.orb,sso.orb,pso.orb,qso.orb);
+    return (_twoel[bbbb].get())->get(pso.orb,qso.orb,rso.orb,sso.orb);
+  }
+  if (_dm && pso.spin == sso.spin && rso.spin == qso.spin) {
+    if ( pso.spin == alpha ) 
+      return -(_twoel[aabb].get())->get(pso.orb,sso.orb,rso.orb,qso.orb);
+    else 
+      return -(_twoel[aabb].get())->get(rso.orb,qso.orb,pso.orb,sso.orb);
+  }
+  return 0.0;
 }
 
 inline void Hdump::set_oneel_spi(uint p, uint q, double val) {
@@ -243,12 +260,15 @@ void Hdump::set_twoel_spi(uint p, uint q, uint r, uint s, double val)
     & rso = _spinorbs[r],
     & sso = _spinorbs[s];    
   if (pso.spin != qso.spin || rso.spin != sso.spin) return;
-  if (!_uhf || ( pso.spin == alpha && rso.spin == alpha )) 
+  if (!_uhf || ( pso.spin == alpha && rso.spin == alpha )) {
     (_twoel[aaaa].get())->set(pso.orb,qso.orb,rso.orb,sso.orb,val);
-  else if( pso.spin == alpha ) 
+  } else if( pso.spin == alpha ) {
     (_twoel[aabb].get())->set(pso.orb,qso.orb,rso.orb,sso.orb,val);
-  else 
+  } else if ( rso.spin == alpha ) {
+    (_twoel[aabb].get())->set(rso.orb,sso.orb,pso.orb,qso.orb,val);
+  } else { 
     (_twoel[bbbb].get())->set(pso.orb,qso.orb,rso.orb,sso.orb,val);
+  }
 }
 
 inline double Hdump::oneel_spi_pgs(uint p, uint q) const {
@@ -269,12 +289,22 @@ inline double Hdump::twoel_spi_pgs(uint p, uint q, uint r, uint s) const {
     & qso = _spinorbs[q],    
     & rso = _spinorbs[r],
     & sso = _spinorbs[s];    
-  if (pso.spin != qso.spin || rso.spin != sso.spin) return 0.0;
-  if (!_uhf || ( pso.spin == alpha && rso.spin == alpha )) 
-    return (_twoel[aaaa].get())->get_with_pgs(pso.orb,qso.orb,rso.orb,sso.orb);
-  if ( pso.spin == alpha ) 
-    return (_twoel[aabb].get())->get_with_pgs(pso.orb,qso.orb,rso.orb,sso.orb);
-  return (_twoel[bbbb].get())->get_with_pgs(pso.orb,qso.orb,rso.orb,sso.orb);
+  if (pso.spin == qso.spin && rso.spin == sso.spin) {
+    if (!_uhf || ( pso.spin == alpha && rso.spin == alpha )) 
+      return (_twoel[aaaa].get())->get_with_pgs(pso.orb,qso.orb,rso.orb,sso.orb);
+    if ( pso.spin == alpha ) 
+      return (_twoel[aabb].get())->get_with_pgs(pso.orb,qso.orb,rso.orb,sso.orb);
+    if ( rso.spin == alpha ) 
+      return (_twoel[aabb].get())->get_with_pgs(rso.orb,sso.orb,pso.orb,qso.orb);
+    return (_twoel[bbbb].get())->get_with_pgs(pso.orb,qso.orb,rso.orb,sso.orb);
+  }
+  if (_dm && pso.spin == sso.spin && rso.spin == qso.spin) {
+    if ( pso.spin == alpha ) 
+      return -(_twoel[aabb].get())->get_with_pgs(pso.orb,sso.orb,rso.orb,qso.orb);
+    else 
+      return -(_twoel[aabb].get())->get_with_pgs(rso.orb,qso.orb,pso.orb,sso.orb);
+  }
+  return 0.0;  
 }
 
 inline void Hdump::get_block(double* pData, const BlockIndices& start, const BlockIndices& end, 
