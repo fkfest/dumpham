@@ -113,6 +113,8 @@ public:
   inline double oneel_spi_pgs(uint p, uint q) const; 
   // in spin orbitals
   inline double twoel_spi_pgs(uint p, uint q, uint r, uint s) const; 
+  // spin-projection, PG symmetry is handled outside
+  inline double spinprojector(uint p, uint q, bool alphaspin) const; 
   // get block of integrals defined by start and end indices
   // type of integrals depends on start.size()
   // index order given by Ham[i] <=> Data[order[i]]
@@ -123,6 +125,9 @@ public:
   // index order given by Ham[i] <=> Data[order[i]]
   inline void set_block(double * pData, const BlockIndices& start, const BlockIndices& end, 
                         const BlockIndices& order, bool spinorb = false);
+  // get block of spin-projectors, see get_block
+  inline void get_block_spinprojector(double * pData, const BlockIndices& start, const BlockIndices& end,
+                        const BlockIndices& order, bool alphaspin) const;
   double escal() const {return _escal;}
   void set_escal(double escal) { _escal = escal; }
   Spin spin(uint p) const { return Spin(p%2); }
@@ -387,6 +392,30 @@ inline void Hdump::set_block(double* pData, const BlockIndices& start, const Blo
     }
   } else {
     error("Number of indices is neither 2 nor 4","Hdump::set_block");
+  }
+}
+
+inline double Hdump::spinprojector(uint p, uint q, bool alphaspin) const {
+  assert( p < _spinorbs.size() && q < _spinorbs.size() );
+  if ( p != q ) return 0.0;
+  bool isalpha = (_spinorbs[p].spin == alpha);
+  if ( alphaspin == isalpha ) return 1.0;
+  return 0.0;
+}
+inline void Hdump::get_block_spinprojector(double* pData, const BlockIndices& start, const BlockIndices& end, 
+                             const BlockIndices& order, bool alphaspin) const
+{
+  assert(start.size() == end.size() && start.size() == order.size());
+  if ( start.size() != 2 )
+    error("Number of indices is not 2","Hdump::get_block_spinprojector");
+  double * p_Data = pData;
+  // P_pq
+  uint64_t indx[2];
+  for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+    for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+      *p_Data = spinprojector(indx[order[0]],indx[order[1]],alphaspin);
+      ++p_Data;
+    }
   }
 }
 
