@@ -1,4 +1,4 @@
- &FCI NORB= 18,NELEC=  7,MS2= 1,
+ &FCI NORB= 18,NELEC=  9,MS2= 1,
   ORBSYM=1,1,1,1,1,1,1,1,1,2,2,2,2,3,3,3,3,4,
   ISYM=1,
   IUHF=1,

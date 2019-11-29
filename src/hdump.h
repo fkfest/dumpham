@@ -81,6 +81,9 @@ public:
   // set CLOSED, OCC and CORE (note that OCC includes CLOSED, which includes CORE!)
   // if wcore = false: core is not included in OCC and CLOSED specifications
   void set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& occ, bool wcore = true);
+  // set core from an 8-integers array. Check consistancy if core already set
+  template<typename TINT> 
+  void set_ncore( TINT* pNCore );
   // similarity transformed
   bool simtra() const { return _simtra; }
   // in spatial orbitals, PG symmetry is handled outside
@@ -137,7 +140,6 @@ public:
   void correct_2DM();
   void calc_Fock(const Hdump& DMmats);
   
-  
 private:
   // on input: first value (i,j,k,l,value,type)
   template<typename T>
@@ -184,6 +186,8 @@ private:
   void add_or_subtract_core(FDPar& orb, const std::string& kind, bool add = true) const;
   // generate _spinorbs from _occ/_clos/_core
   void gen_spinorbsref();
+  // check for nelec, ms2, norb, occ, clos, core...
+  void sanity_check() const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
   // One-electron integrals (one set for cs rhf, otherwise alpha and beta)
@@ -208,6 +212,44 @@ private:
   // reference determinant for spinorbitals
   std::vector<SpinOrb> _spinorbs;
 };
+
+template <typename TINT>
+void Hdump::set_ncore(TINT* pNCore)
+{
+  if ( _core.empty() ) {
+    // check if the new core is empty
+    if (*pNCore < 0) return;
+    int ntotcore = 0;
+    for ( uint ir = 0; ir < 8; ++ir ) {
+      assert(*(pNCore+ir) >= 0);
+      ntotcore += *(pNCore+ir);
+    }
+    if (ntotcore == 0) return;
+    // set core
+    _core.insert(_core.begin(),pNCore,pNCore+8);
+    uint nIrrepsCore = _pgs.guess_nIrreps(_core);
+    FDPar norb4irs(_pgs.norbs_in_irreps());
+    norb4irs.resize(nIrrepsCore,0);
+    _core.resize(norb4irs.size(),0);
+    xout << "Set core to: ";
+    for ( auto io: _core) xout << io << ",";
+    xout << std::endl;
+    for ( Irrep ir = 0; ir < norb4irs.size(); ++ir )
+      norb4irs[ir] += _core[ir];
+    _pgs_wcore = PGSym(norb4irs,false);
+  } else {
+    // check consistency 
+    for ( uint ir = 0; ir < _core.size(); ++ir ) {
+      if ( _core[ir] != *(pNCore+ir) ) {
+        for ( auto io: _core) xout << io << " "; 
+        xout << std::endl;
+        for ( uint i = 0; i < 8; ++i ) xout << *(pNCore+i) << " "; 
+        xout << std::endl;
+        error("Core already set and differs!");
+      }
+    }
+  }
+}
 
 inline double Hdump::oneel_spi(uint p, uint q) const {
   assert( p < _spinorbs.size() && q < _spinorbs.size() );

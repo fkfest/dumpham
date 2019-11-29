@@ -45,14 +45,8 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
  
   assert( CORE.size() > 0 && OCC.size() > 0 && CLOSED.size() > 0 );
   if ( CORE.size() > 1 || CORE[0] > 0 ) {
-    _core = CORE;
-    uint nIrrepsCore = _pgs.guess_nIrreps(_core);
-    FDPar norb4irs(_pgs.norbs_in_irreps());
-    norb4irs.resize(nIrrepsCore,0);
-    _core.resize(norb4irs.size(),0);
-    for ( Irrep ir = 0; ir < norb4irs.size(); ++ir )
-      norb4irs[ir] += _core[ir];
-    _pgs_wcore = PGSym(norb4irs,false);
+    CORE.resize(8,0);
+    set_ncore(&CORE[0]);
   }
   if ( OCC.size() > 1 || OCC[0] > 0 ) {
     _occ = OCC;
@@ -67,11 +61,16 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
     _clos.resize(nIrrepsClos,0);
     add_or_subtract_core(_clos,"CLOSED",false);
     _clos.resize(_pgs.nIrreps(),0);
+    if ( _occ.empty() ) {
+      // assume closed-shell case
+      _occ = _clos;
+    }
   }
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
   _dm = bool(DM[0]);
   gen_spinorbsref();
+  sanity_check();
 }
 
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
@@ -116,6 +115,41 @@ Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
   if ( i_simtra < 0 ) _simtra = false;
   if ( i_simtra > 0 ) _simtra = true;
   gen_spinorbsref();
+}
+
+void Hdump::sanity_check() const
+{
+  if ( _occ.size() < _clos.size() )
+    error("Number of values in OCC is smaller than in CLOSED!");
+  if ( _core.size() > 0 || _occ.size() > 0 || _clos.size() > 0 ) {
+    uint norb_core = 0, norb_closed = 0, norb_occ = 0;
+    for ( auto io: _core ) {
+      if ( io < 0 ) error("Negative number of orbitals in CORE!");
+      norb_core += io;
+    }
+    auto iocc = _occ.begin();
+    for ( auto io: _clos ) {
+      if ( io < 0 ) error("Negative number of orbitals in CLOSED!");
+      if ( *iocc < io ) error("Number of OCC orbitals in a symmetry larger than number of CLOSED!");
+      ++iocc;
+      norb_closed += io;
+    }
+    for ( auto io: _occ ) {
+      if ( io < 0 ) error("Negative number of orbitals in OCC!");
+      norb_occ += io;
+    }
+    if ( norb_occ > _norb ) {
+      error("Number of OCC orbitals exceeds the total number of orbitals!");
+    }
+    // number of electrons without core!
+    if ( norb_closed + norb_occ != _nelec ) {
+      error("Mismatch in number of electrons and OCC/CLOSED orbitals!");
+    }
+    if ( norb_occ - norb_closed != _ms2 ) {
+      error("MS2 is not equal #OCC-#CLOSED!");
+    }
+      
+  }
 }
 
 void Hdump::alloc_ints()
@@ -707,7 +741,12 @@ void Hdump::set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& oc
   assert(occ.size() <= _pgs.nIrreps());
   // core can have more irreps than the hamdump
   assert(core.size() <= 8);
-  _core = core;
+  _core.clear();
+  if (!core.empty()){
+    FDPar tmpcore(core);
+    tmpcore.resize(8,0);
+    set_ncore(&tmpcore[0]);
+  }
   _clos = closed;
   _occ = occ;
   if ( wcore ) {
