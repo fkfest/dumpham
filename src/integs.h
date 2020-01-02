@@ -13,17 +13,9 @@
 
 namespace HamDump {
 #ifdef _DEBUG
-#define REDUNWAR_ ,bool redunwar = false
-#define REDUNWAR__ ,bool redunwar
-#define REDUNWAR ,redunwar
-#define USERW (void)redunwar
-#define WARNRED2(p,q) if(redunwar) warning("Redundant entry in FCIDUMP: "+ std::to_string(p) + " " + std::to_string(q) );
-#define WARNRED4(p,q,r,s) if(redunwar) warning("Redundant entry in FCIDUMP: "+std::to_string(p)+" "+std::to_string(q)+" "+std::to_string(r)+" "+std::to_string(s) );
+#define WARNRED2(p,q) if(redunwarn) warning("Redundant entry in FCIDUMP: "+ std::to_string(p) + " " + std::to_string(q) );
+#define WARNRED4(p,q,r,s) if(redunwarn) warning("Redundant entry in FCIDUMP: "+std::to_string(p)+" "+std::to_string(q)+" "+std::to_string(r)+" "+std::to_string(s) );
 #else
-#define REDUNWAR_
-#define REDUNWAR__
-#define REDUNWAR
-#define USERW 
 #define WARNRED2(p,q)
 #define WARNRED4(p,q,r,s)
 #endif
@@ -46,17 +38,19 @@ public:
   // set value using the tuple index. Note that in most of the tensors(p,q,..) p is slow running!
   void set( BlkIdx idx, double val ) { assert(idx < _data.size()); _data[idx] = val; }
   // set (pq) value
-  void set( uint p, uint q, double val REDUNWAR_) { _data[index(p,q REDUNWAR)] = val; }
+  void set( uint p, uint q, double val ) { _data[index(p,q)] = val; }
+  // set (pq) value with p,q: indices in irrep ir
+  void set( uint p, uint q, Irrep ir, double val ) { _data[index(p,q,ir)] = val; }
   // set (pq|rs) value
-  void set( uint p, uint q, uint r, uint s, double val REDUNWAR_) { _data[index(p,q,r,s REDUNWAR)] = val; }
+  void set( uint p, uint q, uint r, uint s, double val ) { _data[index(p,q,r,s)] = val; }
   // set value using the tuple index. Note that in most of the tensors(p,q,..) p is slow running!
   double get( BlkIdx idx ) { assert(idx < _data.size()); return _data[idx]; }
   // get (pq) value
-  double get( uint p, uint q REDUNWAR_) const { return _data[index(p,q REDUNWAR)]; }
+  double get( uint p, uint q ) const { return _data[index(p,q)]; }
   // get (pq) value with p,q: indices in irrep ir
-  double get( uint p, uint q, Irrep ir REDUNWAR_) const { return _data[index(p,q,ir REDUNWAR)]; }
+  double get( uint p, uint q, Irrep ir ) const { return _data[index(p,q,ir)]; }
   // get (pq|rs) value
-  double get( uint p, uint q, uint r, uint s REDUNWAR_) const { return _data[index(p,q,r,s REDUNWAR)]; }
+  double get( uint p, uint q, uint r, uint s ) const { return _data[index(p,q,r,s)]; }
   // return (pq) value with point-group symmetry handling
   double get_with_pgs( uint p, uint q ) const {
     if ( p_pgs->totIrrep(p,q) == 0 ) return get(p,q);
@@ -67,12 +61,12 @@ public:
     if ( p_pgs->totIrrep(p,q,r,s) == 0 ) return get(p,q,r,s);
     else return 0.0;
   }
-  virtual inline BlkIdx index( uint p, uint q REDUNWAR_) const 
-          {error("Incompatible index call!","BaseTensors");(void)p;(void)q;USERW;return 0;};
-  virtual inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const 
-          {error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)ir;USERW;return 0;};
-  virtual inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const 
-          { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;USERW;return 0;}
+  virtual inline BlkIdx index( uint p, uint q ) const 
+          {error("Incompatible index call!","BaseTensors");(void)p;(void)q;return 0;};
+  virtual inline BlkIdx index( uint p, uint q, Irrep ir ) const 
+          {error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)ir;return 0;};
+  virtual inline BlkIdx index( uint p, uint q, uint r, uint s ) const 
+          { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return 0;}
   virtual inline bool next_indices( uint& p, uint& q ) const 
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;return false;};
   virtual inline bool next_indices_nosym( uint& p, uint& q ) const 
@@ -83,6 +77,9 @@ public:
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return false;};
           
   const PGSym * pgs() const {return p_pgs;}
+#ifdef _DEBUG
+  bool redunwarn = false;
+#endif
 protected:
   const PGSym * p_pgs;
   // number of indices
@@ -103,9 +100,9 @@ public:
   Integ2() : BaseTensors(2) {};
   Integ2(const PGSym& pgs);
   // index of p,q value
-  inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
+  inline BlkIdx index( uint p, uint q ) const; 
   // index of p,q value with p,q indices in irrep ir
-  inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
+  inline BlkIdx index( uint p, uint q, Irrep ir ) const; 
   // iterate to next index
   inline bool next_indices( uint& p, uint& q ) const;
   // iterate to next index without symmetry
@@ -120,9 +117,9 @@ public:
   Integ2ab() : BaseTensors(2) {};
   Integ2ab(const PGSym& pgs);
   // index of p,q value
-  inline BlkIdx index( uint p, uint q REDUNWAR_) const; 
+  inline BlkIdx index( uint p, uint q ) const; 
   // index of p,q value with p,q indices in irrep ir
-  inline BlkIdx index( uint p, uint q, Irrep ir REDUNWAR_) const; 
+  inline BlkIdx index( uint p, uint q, Irrep ir ) const; 
   // iterate to next index
   inline bool next_indices( uint& p, uint& q ) const;
   // iterate to next index without symmetry
@@ -140,7 +137,7 @@ public:
   Integ4() : BaseTensors(4) {};
   Integ4(const PGSym& pgs);
   // index of p,q,r,s value
-  inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  inline BlkIdx index( uint p, uint q, uint r, uint s ) const;
   // iterate to next index
   inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
   // iterate to next index without symmetry
@@ -157,7 +154,7 @@ public:
   Integ4ab() : BaseTensors(4) {};
   Integ4ab(const PGSym& pgs);
   // index of p,q,r,s value
-  inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  inline BlkIdx index( uint p, uint q, uint r, uint s ) const;
   // iterate to next index
   inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
   // iterate to next index without symmetry
@@ -174,7 +171,7 @@ public:
   Integ4st() : BaseTensors(4) {};
   Integ4st(const PGSym& pgs);
   // index of p,q,r,s value
-  inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  inline BlkIdx index( uint p, uint q, uint r, uint s ) const;
   // iterate to next index
   inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
   // iterate to next index without symmetry
@@ -191,7 +188,7 @@ public:
   Integ4stab() : BaseTensors(4) {};
   Integ4stab(const PGSym& pgs);
   // index of p,q,r,s value
-  inline BlkIdx index( uint p, uint q, uint r, uint s REDUNWAR_) const;
+  inline BlkIdx index( uint p, uint q, uint r, uint s ) const;
   // iterate to next index
   inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
   // iterate to next index without symmetry
@@ -199,7 +196,7 @@ public:
 };
 
 // inline functions
-inline BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
+inline BlkIdx Integ2::index(uint p, uint q ) const
 {
   if ( p < q ) {
     WARNRED2(p,q)
@@ -214,7 +211,7 @@ inline BlkIdx Integ2::index(uint p, uint q REDUNWAR__) const
   // triangular index
   return pb*(pb+1)/2+qb+blk_idx;
 }
-inline BlkIdx Integ2::index(uint p, uint q, Irrep ir REDUNWAR__) const
+inline BlkIdx Integ2::index(uint p, uint q, Irrep ir ) const
 {
   if ( p < q ) {
     WARNRED2(p,q)
@@ -244,9 +241,8 @@ bool Integ2::next_indices_nosym(uint& p, uint& q) const
   return false;
 }
 
-inline BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
+inline BlkIdx Integ2ab::index(uint p, uint q ) const
 {
-  USERW;
   Irrep pir = p_pgs->irrep(p),
         qir = p_pgs->irrep(q);
   BlkIdx blk_idx = _blocks[pir+qir*p_pgs->nIrreps()];
@@ -255,13 +251,8 @@ inline BlkIdx Integ2ab::index(uint p, uint q REDUNWAR__) const
        qb = q - p_pgs->_firstorb4irrep[qir];
   return pb*p_pgs->_norb4irrep[qir]+qb+blk_idx;
 }
-inline BlkIdx Integ2ab::index(uint p, uint q, Irrep ir REDUNWAR__) const
+inline BlkIdx Integ2ab::index(uint p, uint q, Irrep ir ) const
 {
-  if ( p < q ) {
-    WARNRED2(p,q)
-    std::swap(p,q);
-  }
-  // triangular index
   return p*p_pgs->_norb4irrep[ir]+q+_blocks[ir+ir*p_pgs->nIrreps()];
 }
 inline bool Integ2ab::next_indices(uint& p, uint& q) const
@@ -285,7 +276,7 @@ bool Integ2ab::next_indices_nosym(uint& p, uint& q) const
   return false;
 }
 
-inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s ) const
 {
   if ( p < q ) {
     WARNRED4(p,q,r,s)
@@ -360,7 +351,7 @@ inline bool Integ4::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
   return false;
 }
 
-inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s ) const
 {
   if ( p < q ) {
     WARNRED4(p,q,r,s)
@@ -425,7 +416,7 @@ inline bool Integ4ab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) con
   return false;
 }
 
-inline BlkIdx Integ4st::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+inline BlkIdx Integ4st::index(uint p, uint q, uint r, uint s ) const
 {
   if ( p < r ){
     WARNRED4(p,q,r,s)
@@ -500,9 +491,8 @@ inline bool Integ4st::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) con
   return false;
 }
 
-inline BlkIdx Integ4stab::index(uint p, uint q, uint r, uint s REDUNWAR__) const
+inline BlkIdx Integ4stab::index(uint p, uint q, uint r, uint s ) const
 {
-  USERW;
   Irrep pir = p_pgs->irrep(p),
         qir = p_pgs->irrep(q),
         rir = p_pgs->irrep(r),
@@ -552,10 +542,6 @@ inline bool Integ4stab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) c
   return false;
 }
 
-#undef REDUNWAR_
-#undef REDUNWAR__
-#undef REDUNWAR
-#undef USERW
 #undef WARNRED2
 #undef WARNRED4
 } // namespace HamDump

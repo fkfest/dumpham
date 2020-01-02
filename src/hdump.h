@@ -7,6 +7,7 @@
 #ifdef MOLPRO
 #include "hdtypes.h"
 #include "hdcommon.h"
+#include "global/fmt.h"
 #else
 #include "globals.h"
 #include "utilities.h"
@@ -87,17 +88,21 @@ public:
   // similarity transformed
   bool simtra() const { return _simtra; }
   // in spatial orbitals, PG symmetry is handled outside
-  double oneel_spa(uint p, uint q) const {  
-          return (_oneel[aa].get())->get(p,q);}
+  double oneel_spa(uint p, uint q, onetype xx = aa) const {
+          assert( xx < _oneel.size() );
+          return (_oneel[xx].get())->get(p,q);}
   // in spatial orbitals, PG symmetry is handled outside
-  inline void set_oneel_spa(uint p, uint q, double val) {  
-          (_oneel[aa].get())->set(p,q,val);}
+  inline void set_oneel_spa(uint p, uint q, double val, onetype xx = aa) {  
+          assert( xx < _oneel.size() );
+          (_oneel[xx].get())->set(p,q,val);}
   // in spatial orbitals, PG symmetry is handled outside
-  inline double twoel_spa(uint p, uint q, uint r, uint s) const { 
-          return (_twoel[aaaa].get())->get(p,q,r,s);}
+  inline double twoel_spa(uint p, uint q, uint r, uint s, twotype xxxx = aaaa) const { 
+          assert( xxxx < _twoel.size() );
+          return (_twoel[xxxx].get())->get(p,q,r,s);}
   // in spatial orbitals, PG symmetry is handled outside
-  inline void set_twoel_spa(uint p, uint q, uint r, uint s, double val) { 
-          (_twoel[aaaa].get())->set(p,q,r,s,val);}
+  inline void set_twoel_spa(uint p, uint q, uint r, uint s, double val, twotype xxxx = aaaa) { 
+          assert( xxxx < _twoel.size() );
+          (_twoel[xxxx].get())->set(p,q,r,s,val);}
   // in spin orbitals, PG symmetry is handled outside
   inline double oneel_spi(uint p, uint q) const; 
   // in spin orbitals, PG symmetry is handled outside
@@ -117,20 +122,22 @@ public:
   // in spin orbitals
   inline double twoel_spi_pgs(uint p, uint q, uint r, uint s) const; 
   // spin-projection, PG symmetry is handled outside
-  inline double spinprojector(uint p, uint q, bool alphaspin) const; 
+  inline double spinprojector(uint p, uint q, Spin spintype) const; 
   // get block of integrals defined by start and end indices
   // type of integrals depends on start.size()
   // index order given by Ham[i] <=> Data[order[i]]
+  // spintype from onetype or twotype
   inline void get_block(double * pData, const BlockIndices& start, const BlockIndices& end,
-                        const BlockIndices& order, bool spinorb = false) const;
+                        const BlockIndices& order, bool spinorb = false, uint spintype = 0) const;
   // set block of integrals defined by start and end indices
   // type of integrals depends on start.size()
   // index order given by Ham[i] <=> Data[order[i]]
+  // spintype from onetype or twotype
   inline void set_block(double * pData, const BlockIndices& start, const BlockIndices& end, 
-                        const BlockIndices& order, bool spinorb = false);
+                        const BlockIndices& order, bool spinorb = false, uint spintype = 0);
   // get block of spin-projectors, see get_block
   inline void get_block_spinprojector(double * pData, const BlockIndices& start, const BlockIndices& end,
-                        const BlockIndices& order, bool alphaspin) const;
+                        const BlockIndices& order, uint spintype) const;
   double escal() const {return _escal;}
   void set_escal(double escal) { _escal = escal; }
   Spin spin(uint p) const { return Spin(p%2); }
@@ -139,6 +146,10 @@ public:
   bool allocated() const { return _oneel.size() > 0 || _twoel.size() > 0; };
   void correct_2DM();
   void calc_Fock(const Hdump& DMmats);
+  // brings 2RDM with only particle-exchange symmetry in compressed Molcas format
+  void molcas_2DM(bool plus = true);
+  //calculates total spin expectation value
+  void calc_Spin2(const Integ2ab& Overlap);
   
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -186,6 +197,8 @@ private:
   void add_or_subtract_core(FDPar& orb, const std::string& kind, bool add = true) const;
   // generate _spinorbs from _occ/_clos/_core
   void gen_spinorbsref();
+  // calculates spin-summed 2RDM from spatial orbital indices
+  double spinsum_2DM(uint p, uint q, uint r, uint s);
   // check for nelec, ms2, norb, occ, clos, core...
   void sanity_check() const;
   // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
@@ -355,37 +368,34 @@ inline double Hdump::twoel_spi_pgs(uint p, uint q, uint r, uint s) const {
 }
 
 inline void Hdump::get_block(double* pData, const BlockIndices& start, const BlockIndices& end, 
-                             const BlockIndices& order, bool spinorb) const
+                             const BlockIndices& order, bool spinorb, uint spintype) const
 {
   assert(start.size() == end.size() && start.size() == order.size());
+  if ( !_uhf ) spintype = 0;
   double * p_Data = pData;
   if (start.size() == 2) {
     // h_pq
     uint64_t indx[2];
-    double (Hdump::*getHDElement)(uint,uint) const;
-    if (spinorb)
-      getHDElement = &Hdump::oneel_spi;
-    else
-      getHDElement = &Hdump::oneel_spa;
     for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
       for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
-        *p_Data = (this->*getHDElement)(indx[order[0]],indx[order[1]]);
+        if (spinorb)
+          *p_Data = oneel_spi(indx[order[0]],indx[order[1]]);
+        else      
+          *p_Data = oneel_spa(indx[order[0]],indx[order[1]],onetype(spintype));
         ++p_Data;
       }
     }
   } else if (start.size() == 4) {
     // (pq|rs) 
     uint64_t indx[4];
-    double (Hdump::*getHDElement)(uint,uint,uint,uint) const;
-    if (spinorb)
-      getHDElement = &Hdump::twoel_spi;
-    else
-      getHDElement = &Hdump::twoel_spa;
     for ( indx[3] = start[3]; indx[3] < end[3]; ++indx[3] ) {
       for ( indx[2] = start[2]; indx[2] < end[2]; ++indx[2] ) {
         for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
           for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
-            *p_Data = (this->*getHDElement)(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]]);
+            if (spinorb)
+              *p_Data = twoel_spi(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]]);
+            else
+              *p_Data = twoel_spa(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],twotype(spintype));
             ++p_Data;
           }
         }
@@ -396,37 +406,35 @@ inline void Hdump::get_block(double* pData, const BlockIndices& start, const Blo
   }
 }
 inline void Hdump::set_block(double* pData, const BlockIndices& start, const BlockIndices& end, 
-                             const BlockIndices& order, bool spinorb)
+                             const BlockIndices& order, bool spinorb, uint spintype) 
 {
   assert(start.size() == end.size() && start.size() == order.size());
+  // other spintypes defined only in _uhf case!
+  assert(_uhf || spintype == 0);
   double * p_Data = pData;
   if (start.size() == 2) {
     // h_pq
     uint64_t indx[2];
-    void (Hdump::*setHDElement)(uint,uint,double);
-    if (spinorb)
-      setHDElement = &Hdump::set_oneel_spi;
-    else
-      setHDElement = &Hdump::set_oneel_spa;
     for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
       for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
-        (this->*setHDElement)(indx[order[0]],indx[order[1]],*p_Data);
+        if (spinorb)
+          set_oneel_spi(indx[order[0]],indx[order[1]],*p_Data);
+        else
+          set_oneel_spa(indx[order[0]],indx[order[1]],*p_Data,onetype(spintype));
         ++p_Data;
       }
     }
   } else if (start.size() == 4) {
     // (pq|rs) 
     uint64_t indx[4];
-    void (Hdump::*setHDElement)(uint,uint,uint,uint,double);
-    if (spinorb)
-      setHDElement = &Hdump::set_twoel_spi;
-    else
-      setHDElement = &Hdump::set_twoel_spa;
     for ( indx[3] = start[3]; indx[3] < end[3]; ++indx[3] ) {
       for ( indx[2] = start[2]; indx[2] < end[2]; ++indx[2] ) {
         for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
           for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
-            (this->*setHDElement)(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],*p_Data);
+            if (spinorb)
+              set_twoel_spi(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],*p_Data);
+            else
+              set_twoel_spa(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],*p_Data,twotype(spintype));
             ++p_Data;
           }
         }
@@ -437,15 +445,14 @@ inline void Hdump::set_block(double* pData, const BlockIndices& start, const Blo
   }
 }
 
-inline double Hdump::spinprojector(uint p, uint q, bool alphaspin) const {
+inline double Hdump::spinprojector(uint p, uint q, Spin spintype) const {
   assert( p < _spinorbs.size() && q < _spinorbs.size() );
   if ( p != q ) return 0.0;
-  bool isalpha = (_spinorbs[p].spin == alpha);
-  if ( alphaspin == isalpha ) return 1.0;
+  if ( _spinorbs[p].spin == spintype ) return 1.0;
   return 0.0;
 }
 inline void Hdump::get_block_spinprojector(double* pData, const BlockIndices& start, const BlockIndices& end, 
-                             const BlockIndices& order, bool alphaspin) const
+                             const BlockIndices& order, uint spintype) const
 {
   assert(start.size() == end.size() && start.size() == order.size());
   if ( start.size() != 2 )
@@ -455,12 +462,33 @@ inline void Hdump::get_block_spinprojector(double* pData, const BlockIndices& st
   uint64_t indx[2];
   for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
     for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
-      *p_Data = spinprojector(indx[order[0]],indx[order[1]],alphaspin);
+      *p_Data = spinprojector(indx[order[0]],indx[order[1]],Spin(spintype));
       ++p_Data;
     }
   }
 }
 
+inline double Hdump::spinsum_2DM(uint p, uint q, uint r, uint s) {
+  assert( p < _norb && q < _norb && r < _norb && s < _norb );
+  double twoRDM;
+  if(!_uhf) error("Spin summation of 2DM not implemented for not UHF case.");
+  twoRDM = _twoel[aaaa].get()->get_with_pgs(p,q,r,s)
+          +_twoel[aabb].get()->get_with_pgs(p,q,r,s)
+          +_twoel[aabb].get()->get_with_pgs(r,s,p,q)
+          +_twoel[bbbb].get()->get_with_pgs(p,q,r,s);
+  return twoRDM;
+}
+
+/*!
+    Overlap dump with point-group symmetry
+*/
+struct Overlapdump {
+public:  
+  Overlapdump() {};
+  // construct from file
+  Overlapdump(std::string ovdump, const PGSym& pgs, const FDPar& ncore, bool verbose = true);
+  Integ2ab overlap;
+};
 
 } //namespace HamDump
 

@@ -1,4 +1,5 @@
 #include "hdump.h"
+#include <iomanip> 
 namespace HamDump {
 
 Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
@@ -155,6 +156,7 @@ void Hdump::sanity_check() const
 void Hdump::alloc_ints()
 {
   assert(!allocated());
+  assert(int(aaaa) == int(aa) && int(aa) == int(alpha) && int(bbbb) == int(bb) && int(bb) == int(beta));
   if (_simtra) {
     // similarity transformed integrals
     _oneel.emplace_back(new Integ2st(_pgs));
@@ -263,41 +265,39 @@ void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCId
 {
   #ifdef _DEBUG
     #ifndef MOLPRO
-    bool redunwarn = Input::iPars["ham"]["redunwarning"];
+    pInt->redunwarn = Input::iPars["ham"]["redunwarning"];
     #else
-    bool redunwarn = true;
+    pInt->redunwarn = true;
     #endif
-    #define REDUNWAR ,redunwarn
-  #else
-    #define REDUNWAR
   #endif
   FCIdump::integralType type;
   do {
-    pInt->set(i-1,j-1,k-1,l-1, value REDUNWAR);
+    pInt->set(i-1,j-1,k-1,l-1, value);
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
-  #undef REDUNWAR
+  #ifdef _DEBUG
+    pInt->redunwarn = false;
+  #endif
 }
 template<typename T>
 void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralType& curtype)
 {
   #ifdef _DEBUG
     #ifndef MOLPRO
-    bool redunwarn = Input::iPars["ham"]["redunwarning"];
+    pInt->redunwarn = Input::iPars["ham"]["redunwarning"];
     #else
-    bool redunwarn = true;
+    pInt->redunwarn = true;
     #endif
-    #define REDUNWAR ,redunwarn
-  #else
-    #define REDUNWAR
   #endif
   FCIdump::integralType type;
   int k,l;
   do {
-    pInt->set(i-1,j-1, value REDUNWAR);
+    pInt->set(i-1,j-1, value);
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
-  #undef REDUNWAR
+  #ifdef _DEBUG
+    pInt->redunwarn = false;
+  #endif
 }
 void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype)
 {
@@ -861,6 +861,7 @@ void Hdump::correct_2DM()
   add1RDMto2RDM(pDbb,pDb,pDb,1.0,true);
   add1RDMto2RDM(pDab,pDa,pDb,1.0,false);
 }
+
 void Hdump::calc_Fock(const Hdump& DMmats)
 {
   std::vector< std::vector<double> >_FMAT; // fock matrix for each symmetry
@@ -870,7 +871,7 @@ void Hdump::calc_Fock(const Hdump& DMmats)
   double Tr = 0.0;
   for ( uint ir = 0; ir < _pgs.nIrreps(); ++ir ) {
     uint nsorb4ir = _pgs.norbs(ir) * 2;
-    uint ioff4ir = _pgs._firstorb4irrep[ir] * 2;
+    uint isoff4ir = _pgs._firstorb4irrep[ir] * 2;
     uint maxid = nsorb4ir-1;
     uint nelem = maxid+maxid*nsorb4ir+1;
     std::vector<double> & fmat = _FMAT[ir];
@@ -878,26 +879,29 @@ void Hdump::calc_Fock(const Hdump& DMmats)
     std::vector<double> fmat2(nelem,0);
      
     for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
-      uint p = p4ir+ioff4ir;
+      uint p = p4ir+isoff4ir;
       for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
-        uint t = t4ir+ioff4ir;
+        uint t = t4ir+isoff4ir;
         uint pt = p4ir+t4ir*nsorb4ir;
         for(uint q4ir = 0; q4ir < nsorb4ir; q4ir++){
-          uint q = q4ir+ioff4ir;
-          fmat[pt] += oneel_spi(t,q) * DMmats.oneel_spi(p,q);
+          uint q = q4ir+isoff4ir;
+          fmat[pt] += oneel_spi(t,q) * DMmats.oneel_spi(p,q); 
         }
       }
     }
     std::vector<double> dm_qrs(nsorb4ir);
+    
     for(uint q = 0; q < _nsorb; q++){
       for(uint r = 0; r < _nsorb; r++){
         for(uint s = 0; s < _nsorb; s++){
           for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
-            uint t = t4ir+ioff4ir;
+            uint t = t4ir+isoff4ir;
+            //ATTENTION hermitian symmetrisation only for comparison. TS
+//             dm_qrs[t4ir] = (DMmats.twoel_spi_pgs(t,r,q,s) + DMmats.twoel_spi_pgs(r,t,s,q))/2.0;
             dm_qrs[t4ir] = DMmats.twoel_spi_pgs(t,r,q,s);
           }
           for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
-            uint p = p4ir+ioff4ir;
+            uint p = p4ir+isoff4ir;
             double twoel_prqs = twoel_spi_pgs(p,r,q,s); 
             for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
               fmat2[t4ir+p4ir*nsorb4ir] += twoel_prqs * dm_qrs[t4ir];
@@ -916,6 +920,209 @@ void Hdump::calc_Fock(const Hdump& DMmats)
       Tr = Tr + fmat[pt]-0.5*fmat2[pt];
     }
   }
-  xout << "!!Energy:!!" << Tr+escal() << std::endl;
+  xout << "Energy: " << std::setprecision (15) << Tr+escal() << std::endl;
+}
+
+void Hdump::molcas_2DM(bool plus){
+    if( _pgs.nIrreps() > 1 ) error( "Molcas format for 2DM only implemented for no symmetry." );
+    std::ofstream cDMfile;
+    cDMfile.open("/home/schraivogel/cDM_dummy.dat");
+    int cDMsize = _norb * _norb * _norb * _norb; //TODO cDMsize will definitively be smaller than that..
+    std::vector<double> cDM(cDMsize); //compressed density matrix
+    cDMfile << std::setprecision(10);
+    double symdiff = 0;
+    int tr, qs, trqs;
+    for(uint t = 0; t < _norb; t++){
+      for(uint r = 0; r < _norb; r++){
+        for(uint q = 0; q < _norb; q++){
+          for(uint s = 0; s < _norb; s++){
+            if( t >= r ){
+              tr = t*(t+1)/2 + r;
+              if( q > s ){
+                qs = q*(q+1)/2 +s;
+                  if( tr >= qs ){
+                    trqs = tr*(tr+1)/2 + qs;
+                    if ( plus )
+                      cDM[trqs] = (  ( spinsum_2DM(t,r,q,s) + spinsum_2DM(r,t,s,q) )/2.0 
+                                    +( spinsum_2DM(t,r,s,q) + spinsum_2DM(r,t,q,s) )/2.0
+                                  )/2.0;
+                    else
+                      cDM[trqs] = (  ( spinsum_2DM(t,r,q,s) + spinsum_2DM(r,t,s,q) )/2.0
+                                    -( spinsum_2DM(t,r,s,q) + spinsum_2DM(r,t,q,s) )/2.0
+                                  )/2.0;
+                    symdiff += std::abs(twoel_spi_pgs(t,r,q,s) - twoel_spi_pgs(r,t,s,q));
+                    if ( std::abs(cDM[trqs]) > 1.e-24 )
+                      cDMfile << std::setw(20) << cDM[trqs] << " ";
+                    else
+                      cDMfile << std::setw(20)  << "0.0" << " ";
+                  }
+              }
+              else if( q == s ){
+                qs = q*(q+1)/2 +s;
+                if( tr >= qs ){
+                  trqs = tr*(tr+1)/2 + qs; 
+                  symdiff += std::abs(twoel_spi_pgs(t,r,q,s) - twoel_spi_pgs(r,t,s,q));
+                    cDM[trqs] = (spinsum_2DM(t,r,q,s)+spinsum_2DM(r,t,s,q))/4.0;
+                  if ( std::abs(cDM[trqs]) > 1.e-24 )
+                    cDMfile << std::setw(20) << cDM[trqs] << " ";
+                  else
+                    cDMfile << std::setw(20) << "0.0" << " ";
+                }
+              }
+            }
+          }
+      }
+        cDMfile << std::endl;
+    }
+    }
+    cDMfile.close();
+    //delete empty lines in cDM file
+    std::ifstream inFile;
+    inFile.open("/home/schraivogel/cDM_dummy.dat");
+    std::ofstream outFile;
+    outFile.open("/home/schraivogel/cDM.dat");
+    std::string line;
+    while( std::getline( inFile, line) ){
+      if( ! line.empty() ){
+        outFile << line << std::endl;
+      }
+    }
+    inFile.close();
+    outFile.close();
+    
+    xout << "A compressed 2RDM file called cDM.dat has been written to Thomas' home directory." << std::endl;
+    xout << "Hermitian symmetry badness of 2RDM: " << symdiff << std::endl;
+    remove( "/home/schraivogel/cDM_dummy.dat" );
+}
+
+std::size_t skip(const std::string& str, std::size_t ipos, const std::string& what) 
+{
+  while (ipos<str.size()&& what.find(str[ipos])!=std::string::npos )
+    ++ipos;
+  return ipos;
+}
+std::vector<std::string> split(const std::string& str, const std::string& listsep)
+{
+  std::vector<std::string> res;
+  std::size_t 
+    ipos = skip(str,0,listsep),
+    ipend = str.find_first_of(listsep,ipos+1);
+  
+  while( ipend != ipos ){
+    res.push_back(str.substr(ipos,ipend-ipos));
+    ipos = ipend;
+    if ( ipos < str.size() ) ++ipos;
+    ipos = skip(str,ipos,listsep);
+    ipend =str.find_first_of(listsep,ipos+1);
+    if (ipend == std::string::npos ) ipend = str.size();
+  }
+  return res;
+}
+template<typename T>
+void str2numvec(std::vector<T>& numvec, const std::vector<std::string>& strvec, uint startpos=0) {
+#ifdef MOLPRO
+  using namespace fmt;
+#endif
+  for ( uint pos = startpos; pos < strvec.size(); ++pos ) {
+    T val;
+    if ( str2num<T>(val,strvec[pos],std::dec) ) {
+      numvec.push_back(val);
+    } else
+      error("Not a number: "+strvec[pos]);
+  }
+}
+
+Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs, 
+                         const FDPar& ncore, bool verbose)
+{
+  overlap = Integ2ab(pgs);
+  uint nIrreps = pgs.nIrreps();
+  std::ifstream oin;
+    oin.open(ovdump.c_str());
+  if ( !oin.is_open() ) {
+    error("Error opening "+ ovdump);
+  }
+  std::string line;
+  oin >> std::ws;
+  std::getline(oin,line);
+  if ( line.compare(0,3,"BAS") != 0 ) 
+    error("No basis information in file "+ovdump);
+  std::vector<int> nbasis;
+  std::vector<std::string> strvec = split(line," ,;:");
+  str2numvec(nbasis,strvec,1);
+  if (verbose) {
+    xout << "Basis dimensions of the overlap: ";
+    for(auto bb: nbasis ) xout << bb << " ";
+    xout << std::endl; 
+  }
+  // TODO sanity check for nbasis 
+  
+  
+  std::vector<double> numbers;
+  std::vector<double> pnumbers;
+  uint p;
+  for( uint isym = 0; isym < nIrreps; isym++ ){
+    numbers.reserve(nbasis[isym]);
+    pnumbers.reserve(nbasis[isym]);
+    for( int row = 0; row < nbasis[isym]; row++ ){
+      while (oin.good()) {
+        std::getline(oin,line);
+        if ( line.empty() || line[0] == '#' ||  
+            line.compare("BEGIN_DATA,") == 0 || line.compare("END_DATA,") == 0  ) continue;
+        strvec = split(line," ,;:");
+        numbers.clear();
+        str2numvec(numbers,strvec);
+        pnumbers.insert(std::end(pnumbers), std::begin(numbers), std::end(numbers));
+        if( pnumbers.size() > unsigned(nbasis[isym]) ) {
+            xout << "Unexpected format of " << ovdump << std::endl;
+            error("Basis dimensions do not correspond to the number of entries in a row");
+        }
+        if( pnumbers.size() == unsigned(nbasis[isym]) ) break;
+      }   
+      if( row >= ncore[isym] && unsigned(row) < ncore[isym] + pgs.norbs(isym) ){
+        p = row - ncore[isym];
+        for( uint q = 0; q < pgs.norbs(isym); q++ ){
+          overlap.set(p,q,isym,pnumbers[q+ncore[isym]]);
+        }
+      }
+      pnumbers.clear();
+    }
+//     xout << "Overlap, irrep=" << isym << std::endl;
+//     for ( uint p = 0; p < pgs.norbs(isym); ++p ) {
+//       for ( uint q = 0; q < pgs.norbs(isym); ++q ) {
+//         xout << fmt::ff(overlap.get(p,q,isym),15,8);
+//       }
+//       xout << std::endl;
+//     }
+      
+  }
+}
+void Hdump::calc_Spin2(const Integ2ab& Overlap){
+  double spin = 0;
+  double spinHF = 0;
+  double ms = 0;
+  for( uint p = 0; p < _norb; p++ ){
+    ms += _oneel[aa].get()->get_with_pgs(p,p);
+    ms -= _oneel[bb].get()->get_with_pgs(p,p);
+    for( uint q = 0; q < _norb; q++ ){
+      for( uint s = 0; s < _norb; s++ ){
+        spin += Overlap.get_with_pgs(q,p) * Overlap.get_with_pgs(q,s) * _oneel[bb].get()->get_with_pgs(p,s);
+        for( uint r = 0; r < _norb; r++ ){
+          spin  -= Overlap.get_with_pgs(q,p) * Overlap.get_with_pgs(r,s) * _twoel[aabb].get()->get_with_pgs(r,q,p,s);
+        }
+      }
+    }
+  }
+  spin += 0.5*ms * ( 0.5*ms + 1 );
+  if( _pgs.nIrreps() > 1 ) xout << "ATTENTION: <0|S**2|0> only implemented for nosym." << std::endl;
+  for( int ibeta = 0; ibeta < _clos[0]; ibeta++ ){
+    for( uint aalpha = _occ[0]; aalpha < _norb; aalpha++ ){
+      spinHF += Overlap.get_with_pgs(aalpha,ibeta) * Overlap.get_with_pgs(aalpha,ibeta);
+    }
+  }
+  spinHF += 0.5*ms * ( 0.5*ms + 1 );
+    
+  xout << "<0|S**2|0>: " << spinHF << std::endl;
+  xout << "Expectation value of S**2: " << spin << std::endl;
 }
 } //namespace HamDump

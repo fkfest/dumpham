@@ -1,5 +1,6 @@
 #ifndef PGSym_H
 #define PGSym_H
+
 #include <string>
 #include <vector>
 #ifdef MOLPRO
@@ -86,8 +87,6 @@ public:
         nIrreps = 8;
       else if ( nIrreps > 2 )
         nIrreps = 4;
-      else if ( nIrreps < 1 )
-        error("Orbital symmetry below 1!");
   }
   // guess nIrreps for a given norbs string. The result is always between or equal nIrreps() and 8. 
   uint guess_nIrreps(const FDPar& norbs4irreps) const {
