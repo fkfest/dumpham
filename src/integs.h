@@ -34,6 +34,7 @@ class BaseTensors {
 public:
   BaseTensors(uint nidx = 0) : _nidx(nidx) {}
   BaseTensors(const PGSym& pgs, uint nidx = 0) : p_pgs(&pgs), _nidx(nidx) {}
+  virtual ~BaseTensors() = default;
   BlkIdx nelem() const { return _data.size(); }
   // set value using the tuple index. Note that in most of the tensors(p,q,..) p is slow running!
   void set( BlkIdx idx, double val ) { assert(idx < _data.size()); _data[idx] = val; }

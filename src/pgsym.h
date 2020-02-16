@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 #ifdef MOLPRO
 #include "hdtypes.h"
 #include "hdcommon.h"
