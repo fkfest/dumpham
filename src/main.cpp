@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     }
   }
   
-  if ( !args.nextremaining(arg) ) error("Please provide an input file!");
+  if ( !args.nextremaining(arg) ) error("Please provide an input file or -h option!");
   inputfile=arg;
   if ( args.nextremaining(arg) ) {
     outputfile=arg;
