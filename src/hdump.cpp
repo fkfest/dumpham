@@ -139,6 +139,7 @@ void Hdump::sanity_check() const
       if ( io < 0 ) error("Negative number of orbitals in OCC!");
       norb_occ += io;
     }
+    xout << "norb_closed: " << norb_closed << " norb_occ: " << norb_occ << std::endl;
     if ( norb_occ > _norb ) {
       error("Number of OCC orbitals exceeds the total number of orbitals!");
     }

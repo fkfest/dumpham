@@ -19,6 +19,7 @@ int main(int argc, char **argv)
   std::string inputfile, outputfile, orboutputfile,
     exePath = exepath();
   bool fcidump = false;
+  bool fcidump_out = true;
   bool orbdump = false;
   bool use_pgs = false;
   // handle options  
@@ -33,6 +34,8 @@ int main(int argc, char **argv)
 //       xout << "Verbosity: " << Input::verbose << std::endl;
     } else if ( opts.check(opt,ArgOpt("the input file is an FCIDUMP file","d","-dump")) ) {
       fcidump = true;
+    } else if ( opts.check(opt,ArgOpt("don't write a new FCIDUMP file (for -d option)","n","-nodump")) ) {
+      fcidump_out = false;
     } else if ( opts.check(opt,ArgOpt("generate the corresponding orbital file","o","-orbs")) ) {
       orbdump = true;
     } else if ( opts.check(opt,ArgOpt("generate files with point-group symmetry","s","-sym")) ) {
@@ -81,8 +84,10 @@ int main(int argc, char **argv)
       Input::iPars["ham"]["nosym"] = 1;
     }
     Hdump dump(inputfile);
-    dump.read_dump();
-    dump.store(outputfile);
+    if ( fcidump_out ) {
+      dump.read_dump();
+      dump.store(outputfile);
+    }
     if ( orbdump ) {
       Odump odump(dump.pgs());
       odump.store(orboutputfile);
