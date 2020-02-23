@@ -11,11 +11,12 @@
 #include "odump.h"
 
 using namespace HamDump;
+using namespace ArgParser;
 
 int main(int argc, char **argv)
 {
   ArgPars args(argc,argv);
-  std::string opt, arg;
+  std::string arg;
   std::string inputfile, outputfile, orboutputfile,
     exePath = exepath();
   bool fcidump = false;
@@ -23,25 +24,24 @@ int main(int argc, char **argv)
   bool orbdump = false;
   bool use_pgs = false;
   // handle options  
-  while ( args.nextoption(opt) ) {
-    ArgOpts opts;
-    if ( opts.check(opt,ArgOpt("Verbosity level","v","-verbose" ))) {
+  while ( args.nextoption() ) {
+    if ( args.check(ArgOpt("Verbosity level","v","-verbose" ))) {
       if ( args.optarg(arg) && str2num<int>(Input::verbose,arg,std::dec)){
         args.markasoption();
       } else {
         Input::verbose = 1;
       }
 //       xout << "Verbosity: " << Input::verbose << std::endl;
-    } else if ( opts.check(opt,ArgOpt("the input file is an FCIDUMP file","d","-dump")) ) {
+    } else if ( args.check(ArgOpt("the input file is an FCIDUMP file","d","-dump")) ) {
       fcidump = true;
-    } else if ( opts.check(opt,ArgOpt("don't write a new FCIDUMP file (for -d option)","n","-nodump")) ) {
+    } else if ( args.check(ArgOpt("don't write a new FCIDUMP file (for -d option)","n","-nodump")) ) {
       fcidump_out = false;
-    } else if ( opts.check(opt,ArgOpt("generate the corresponding orbital file","o","-orbs")) ) {
+    } else if ( args.check(ArgOpt("generate the corresponding orbital file","o","-orbs")) ) {
       orbdump = true;
-    } else if ( opts.check(opt,ArgOpt("generate files with point-group symmetry","s","-sym")) ) {
+    } else if ( args.check(ArgOpt("generate files with point-group symmetry","s","-sym")) ) {
       use_pgs = true;
-    } else if ( opts.check(opt,ArgOpt("print this help","h","-help")) ) {
-      opts.printhelp(xout,"dumpham [OPTIONS] <input-file> [<output-file>]",
+    } else if ( args.check(ArgOpt("print this help","h","-help")) ) {
+      args.printhelp(xout,"dumpham [OPTIONS] <input-file> [<output-file>]",
                      "Dump various model Hamiltonians as FCIDUMP files");
 //       // print README file if exists
 //       std::ifstream readme;
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 //       }
       return 0;
     } else {
-      error("Unknown paratemer -"+opt);
+      error("Unknown paratemer -"+args.get_current_option());
     }
   }
   
