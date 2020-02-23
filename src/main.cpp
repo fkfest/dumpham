@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 //       }
       return 0;
     } else {
-      error("Unknown paratemer -"+args.get_current_option());
+      error("Unknown parameter -"+args.get_current_option());
     }
   }
   
