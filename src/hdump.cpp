@@ -1,10 +1,15 @@
 #include "hdump.h"
 #include <iomanip> 
+#include <fstream>
 namespace HamDump {
 
 Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
 {
   if (verbose) xout << "\n Process file "<< fcidump <<std::endl;
+  { // check existence 
+    std::ifstream infile(fcidump);
+    if (!infile.good()) error("Cannot access the fcidump file "+fcidump);
+  }
   FDPar NELEC = _dump.parameter("NELEC");
   if (verbose) xout << "NELEC=" << NELEC[0] << std::endl;
   FDPar MS2 = _dump.parameter("MS2");
