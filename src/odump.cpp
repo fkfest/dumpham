@@ -21,7 +21,7 @@ Occupation::Occupation(const PGSym& pgs, const FDPar& nclos, const FDPar& nocc)
 }
 
 
-Occupation::Occupation(const PGSym& pgs, const std::vector< int >& occs, int ibase)
+Occupation::Occupation(const PGSym& pgs, const OrbOrder& oord, const std::vector< int >& occs, int ibase)
     : p_pgs(&pgs)
 {
   resize(p_pgs->nIrreps());
@@ -30,6 +30,8 @@ Occupation::Occupation(const PGSym& pgs, const std::vector< int >& occs, int iba
   int iorb0 = -1;
   for ( const auto& iocc: occs ){
     int iorb1 = int((iocc-ibase)/2);
+    assert( iorb1 >= 0 );
+    iorb1 = oord[iorb1];
     if ( iorb0 == iorb1 ) {
       // doubly occupied
       (*this)[p_pgs->irrep(iorb0)].push_back(iorb0);

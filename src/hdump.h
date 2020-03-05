@@ -68,6 +68,8 @@ public:
   const PGSym& pgs() const { return _pgs; }
   // point group symmetry with core orbitals
   const PGSym& pgs_wcore() const { return _pgs_wcore; }
+  // internal order of orbital indices (idx_in_hdump = osord[idx_in_fcidump])
+  const OrbOrder& orborder() const { return _osord; }
   // number of closed shell orbitals in each irrep
   const FDPar& nclos() const { return _clos; }
   // number of occupied orbitals in each irrep
@@ -216,6 +218,9 @@ private:
   // wf symmetry (zero based) 
   uint _sym = 0;
   FDPar _occ, _clos, _core;
+  // order of orbitals to bring them to symmetry-sorted order
+  // used for reading in only
+  OrbOrder _osord;
   // dump file in uhf orbitals
   bool _uhf = false;
   // doesn't have the bra-ket symmetry

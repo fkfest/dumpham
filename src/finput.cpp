@@ -291,7 +291,7 @@ void Finput::handle_orbdump(const Hdump& dump)
     }
     std::vector<int> occ_spin;
     apars2nums<int>(occ_spin,occ,std::dec);
-    Occupation occupation(dump.pgs(), occ_spin);
+    Occupation occupation(dump.pgs(), dump.orborder(), occ_spin);
     Odump odump(dump.pgs(), occupation);
     odump.store(orboutputfile);
   }

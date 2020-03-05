@@ -37,7 +37,7 @@ public:
   Occupation(const PGSym& pgs, const FDPar& nclos, const FDPar& nocc);
   // occupation from a list of occupied spin orbitals
   // ibase - base for the indices in occs
-  Occupation(const PGSym& pgs, const std::vector<int>& occs, int ibase = 1);
+  Occupation(const PGSym& pgs, const OrbOrder& oord, const std::vector<int>& occs, int ibase = 1);
   // return a list of occupied spin orbitals
   std::vector<int> spinocc(int ibase = 0) const;
 private:

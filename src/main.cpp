@@ -23,6 +23,7 @@ int main(int argc, char **argv)
   bool fcidump_out = true;
   bool orbdump = false;
   bool use_pgs = false;
+  int warning_level = -1;
   // handle options  
   while ( args.nextoption() ) {
     if ( args.check(ArgOpt("Verbosity level","v","-verbose" ))) {
@@ -40,6 +41,12 @@ int main(int argc, char **argv)
       orbdump = true;
     } else if ( args.check(ArgOpt("generate files with point-group symmetry","s","-sym")) ) {
       use_pgs = true;
+    } else if ( args.check(ArgOpt("set level of warnings","w","-warn")) ) {
+      if ( args.optarg(arg) && str2num<int>(warning_level,arg,std::dec)){
+        args.markasoption();
+      } else {
+        warning_level = 0;
+      }
     } else if ( args.check(ArgOpt("print this help","h","-help")) ) {
       args.printhelp(xout,"dumpham [OPTIONS] <input-file> [<output-file>]",
                      "Dump various model Hamiltonians as FCIDUMP files");
@@ -76,6 +83,7 @@ int main(int argc, char **argv)
     outputfile = uppercase(outputfile);
   if ( orbdump && Input::iPars["output"]["orbnamtolower"] > 0 )
     orboutputfile = lowercase(orboutputfile);
+  if ( warning_level >= 0 ) Input::iPars["ham"]["redunwarning"] = warning_level;
   if (fcidump) {
     if ( use_pgs ) {
       Input::iPars["ham"]["nosym"] = 0;

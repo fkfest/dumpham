@@ -22,6 +22,8 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
       xout << s << ","; 
     xout<<std::endl;
   }
+  _osord = OrbOrder(ORBSYM);
+  _osord.reorder(ORBSYM);
   FDPar OCC = _dump.parameter("OCC");
   check_input_norbs(OCC,"occ",verbose);
   FDPar CLOSED = _dump.parameter("CLOSED");
@@ -273,7 +275,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCId
   #endif
   FCIdump::integralType type;
   do {
-    pInt->set(i-1,j-1,k-1,l-1, value);
+    pInt->set(_osord[i-1],_osord[j-1],_osord[k-1],_osord[l-1], value);
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
   #ifdef _DEBUG
@@ -293,7 +295,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   FCIdump::integralType type;
   int k,l;
   do {
-    pInt->set(i-1,j-1, value);
+    pInt->set(_osord[i-1],_osord[j-1], value);
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
   curtype = type;
   #ifdef _DEBUG
@@ -425,6 +427,12 @@ void Hdump::store(std::string fcidump)
       for ( auto& s: ORBSYM)
         s = 1;
       _dump.modifyParameter("ORBSYM",ORBSYM);
+    } else if ( _osord.reordered ) {
+      //reorder orbitals according to the point-group symmetry
+      ORBSYM_SAV = _dump.parameter("ORBSYM");
+      ORBSYM = ORBSYM_SAV;
+      _osord.reorder(ORBSYM);
+      _dump.modifyParameter("ORBSYM",ORBSYM);
     }
 #endif
   }
@@ -456,7 +464,7 @@ void Hdump::store(std::string fcidump)
   }
 #ifndef MOLPRO
   _dump.close_outputfile();
-  if ( nosym && !newfile ) {
+  if ( ( nosym || _osord.reordered ) && !newfile ) {
     //restore the point-group symmetry
     _dump.modifyParameter("ORBSYM",ORBSYM_SAV);
   }
