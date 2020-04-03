@@ -6,6 +6,7 @@
 #include <list>
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <stdlib.h>
 #include <algorithm>
 #include <unistd.h>
@@ -265,6 +266,10 @@ bool next_combination( std::bitset<N>& bset)
     }
   }
   return false;
+}
+
+namespace fmt {
+std::string ff(double num,int width, int prec );
 }
 
 #endif

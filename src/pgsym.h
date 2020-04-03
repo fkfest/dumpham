@@ -75,7 +75,7 @@ public:
   FDPar norbs_in_irreps() const { return _norb4irrep; }
   // number of orbitals in irrep
   uint norbs( Irrep ir ) const { assert(ir < _norb4irrep.size()); return _norb4irrep[ir]; }
-  // next after last orbital in irrep
+  // first orbital in irrep
   uint beginorb( Irrep ir ) const { assert(ir < _firstorb4irrep.size()); return _firstorb4irrep[ir]; }
   // next after last orbital in irrep
   uint endorb( Irrep ir ) const { assert(ir < _norb4irrep.size()); return _norb4irrep[ir]+_firstorb4irrep[ir]; }
@@ -110,32 +110,6 @@ public:
   FDPar _norb4irrep;
   // start of each irrep, Irrep and orbs are 0 based!
   FDPar _firstorb4irrep;
-};
-
-// internal orbital order. 
-// e.g. from sorting ORBSYM symmetry-wise and store the order
-struct OrbOrder : public std::vector<std::size_t> {
-  OrbOrder() : std::vector<std::size_t>() {};
-  OrbOrder(const FDPar& ORBSYM) : std::vector<std::size_t>(ORBSYM.size()) {
-    std::vector<std::size_t> oldorder(ORBSYM.size());
-    std::iota(oldorder.begin(),oldorder.end(),0);
-    uint nSwaps = InsertionSort(&ORBSYM[0],&oldorder[0],oldorder.size());
-    for ( uint i = 0; i < size(); ++i ) (*this)[oldorder[i]]=i;
-    if (nSwaps > 0) {
-      reordered = true;
-      xout << "The orbitals in the fcidump will be reordered according to the symmetries" << std::endl;
-      xout << "ORBSYMORDER="; 
-      for ( const auto& s: (*this)) xout << s << ","; 
-      xout<<std::endl;
-    }
-  }
-  void reorder(FDPar& orbsym) {
-    if (!reordered) return;
-    assert(orbsym.size() == size());
-    FDPar oldorbsym(orbsym);
-    for ( uint i = 0; i < size(); ++i ) orbsym[(*this)[i]] = oldorbsym[i];
-  }
-  bool reordered = false;
 };
 
 } //namespace HamDump

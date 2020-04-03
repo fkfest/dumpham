@@ -1,12 +1,16 @@
 #include "hdump.h"
-#include <iomanip> 
+#include <iomanip>
 #include <fstream>
+#include <algorithm>
+
 namespace HamDump {
+
+constexpr Spin Hdump::spin4el[2][3];
 
 Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
 {
   if (verbose) xout << "\n Process file "<< fcidump <<std::endl;
-  { // check existence 
+  { // check existence
     std::ifstream infile(fcidump);
     if (!infile.good()) error("Cannot access the fcidump file "+fcidump);
   }
@@ -22,9 +26,9 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   if (verbose) xout << "IUHF=" << IUHF[0] << std::endl;
   FDPar ORBSYM = _dump.parameter("ORBSYM");
   if (verbose) {
-    xout << "ORBSYM="; 
+    xout << "ORBSYM=";
     for ( const auto& s: ORBSYM)
-      xout << s << ","; 
+      xout << s << ",";
     xout<<std::endl;
   }
   _osord = OrbOrder(ORBSYM);
@@ -35,10 +39,10 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   check_input_norbs(CLOSED,"closed",verbose);
   FDPar CORE = _dump.parameter("CORE");
   check_input_norbs(CORE,"core",verbose);
-  
+
   FDPar ST = _dump.parameter("ST");
   FDPar DM = _dump.parameter("DM");
-  
+
   int nn = NORB[0];
   if ( nn < 0 ) {
     error("NORB < 0 in FCIDUMP!");
@@ -50,34 +54,12 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   if ( _sym > 0 ) --_sym; // make zero-based
   _pgs = PGSym(ORBSYM);
   _escal = 0.0;
- 
-  assert( CORE.size() > 0 && OCC.size() > 0 && CLOSED.size() > 0 );
-  if ( CORE.size() > 1 || CORE[0] > 0 ) {
-    CORE.resize(8,0);
-    set_ncore(&CORE[0]);
-  }
-  if ( OCC.size() > 1 || OCC[0] > 0 ) {
-    _occ = OCC;
-    uint nIrrepsOcc = _pgs.guess_nIrreps(_occ);
-    _occ.resize(nIrrepsOcc,0);
-    add_or_subtract_core(_occ,"OCC",false);
-    _occ.resize(_pgs.nIrreps(),0);
-  }
-  if ( CLOSED.size() > 1 || CLOSED[0] > 0 ) {
-    _clos = CLOSED;
-    uint nIrrepsClos = _pgs.guess_nIrreps(_clos);
-    _clos.resize(nIrrepsClos,0);
-    add_or_subtract_core(_clos,"CLOSED",false);
-    _clos.resize(_pgs.nIrreps(),0);
-    if ( _occ.empty() ) {
-      // assume closed-shell case
-      _occ = _clos;
-    }
-  }
+
+  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
   _dm = bool(DM[0]);
-  gen_spinorbsref();
   sanity_check();
 }
 
@@ -90,15 +72,11 @@ Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
   CHECKSET(_sym,"total symmetry");
   CHECKSET(_pgs,"orbital space");
   _escal = 0.0;
-  CHECKSET(_core,"core orbitals");
-  CHECKSET(_pgs_wcore,"orbital space with core orbitals");
-  CHECKSET(_occ,"occupied orbitals");
-  CHECKSET(_clos,"closed-shell orbitals");
+  CHECKSET(_rd,"reference determinant info");
   CHECKSET(_dm,"density matrix flag");
 #undef CHECKSET
   _uhf = hd1._uhf || hd2._uhf;
   _simtra = hd1._simtra || hd2._simtra;
-  gen_spinorbsref();
 }
 
 Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
@@ -110,10 +88,7 @@ Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
   SETVAL(_sym);
   SETVAL(_pgs);
   _escal = 0.0;
-  SETVAL(_core);
-  SETVAL(_pgs_wcore);
-  SETVAL(_occ);
-  SETVAL(_clos);
+  SETVAL(_rd);
   SETVAL(_uhf);
   SETVAL(_simtra);
   SETVAL(_dm);
@@ -122,43 +97,20 @@ Hdump::Hdump(const Hdump& hd, int i_uhf, int i_simtra)
   if ( i_uhf > 0 ) _uhf = true;
   if ( i_simtra < 0 ) _simtra = false;
   if ( i_simtra > 0 ) _simtra = true;
-  gen_spinorbsref();
 }
 
 void Hdump::sanity_check() const
 {
-  if ( _occ.size() < _clos.size() )
-    error("Number of values in OCC is smaller than in CLOSED!");
-  if ( _core.size() > 0 || _occ.size() > 0 || _clos.size() > 0 ) {
-    uint norb_core = 0, norb_closed = 0, norb_occ = 0;
-    for ( auto io: _core ) {
-      if ( io < 0 ) error("Negative number of orbitals in CORE!");
-      norb_core += io;
-    }
-    auto iocc = _occ.begin();
-    for ( auto io: _clos ) {
-      if ( io < 0 ) error("Negative number of orbitals in CLOSED!");
-      if ( *iocc < io ) error("Number of OCC orbitals in a symmetry larger than number of CLOSED!");
-      ++iocc;
-      norb_closed += io;
-    }
-    for ( auto io: _occ ) {
-      if ( io < 0 ) error("Negative number of orbitals in OCC!");
-      norb_occ += io;
-    }
-    xout << "norb_closed: " << norb_closed << " norb_occ: " << norb_occ << std::endl;
-    if ( norb_occ > _norb ) {
-      error("Number of OCC orbitals exceeds the total number of orbitals!");
-    }
-    // number of electrons without core!
-    if ( norb_closed + norb_occ != _nelec ) {
-      error("Mismatch in number of electrons and OCC/CLOSED orbitals!");
-    }
-    if ( norb_occ - norb_closed != _ms2 ) {
-      error("MS2 is not equal #OCC-#CLOSED!");
-    }
-      
-  }
+  _rd.sanity_check(_nelec,_ms2);
+}
+
+void Hdump::set_occupationAB(const std::vector<uint>& occorba, const uint* nocca,
+                      const std::vector<uint>& occorbb, const uint* noccb)
+{
+  // set _clos and _occ
+  if (occorba.size() + occorbb.size() != _nelec)
+    error("Mismatch in number of electrons in dump and in OccA+OccB");
+  _rd = RefDet(_pgs,occorba,nocca,occorbb,noccb);
 }
 
 void Hdump::alloc_ints()
@@ -184,7 +136,7 @@ void Hdump::alloc_ints()
       _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
     }
   }
-  
+
 #ifdef _DEBUG
   if (_simtra) {
     assert( dynamic_cast<Integ4st*>(_twoel[aaaa].get()) );
@@ -212,7 +164,7 @@ void Hdump::read_dump()
   alloc_ints();
   int i,j,k,l;
   double value;
-  
+
   FCIdump::integralType type;
   _dump.rewind();
   // read integrals
@@ -265,7 +217,7 @@ void Hdump::read_dump()
       default:
         if ( type != FCIdump::endOfFile ) error("Unknown integral type","hdump.cpp");
     }
-      
+
   } while (type != FCIdump::endOfFile);
 }
 template<typename T>
@@ -281,7 +233,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCId
   FCIdump::integralType type;
   do {
     pInt->set(_osord[i-1],_osord[j-1],_osord[k-1],_osord[l-1], value);
-  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
+  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype );
   curtype = type;
   #ifdef _DEBUG
     pInt->redunwarn = false;
@@ -301,7 +253,7 @@ void Hdump::readrec(T* pInt, int& i, int& j, double& value, FCIdump::integralTyp
   int k,l;
   do {
     pInt->set(_osord[i-1],_osord[j-1], value);
-  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
+  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype );
   curtype = type;
   #ifdef _DEBUG
     pInt->redunwarn = false;
@@ -311,78 +263,11 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
 {
   FCIdump::integralType type;
   do {
-  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype ); 
+  } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype );
   curtype = type;
 }
 
-void Hdump::gen_spinorbsref()
-{
-  // order of spin orbitals
-  int isoord; 
-  #ifndef MOLPRO
-  isoord = Input::iPars["orbs"]["soorder"];
-  #else
-  // spin-blocked order for molpro
-  isoord = 2;
-  #endif
-  _spinorbs.clear();
-  _spinorbs.reserve(_norb*2);
-  if ( _clos.size() == 0 || isoord == 0 ) {
-    // default: alternating alpha/beta
-    for ( uint i = 0; i < _norb; ++i ) {
-      _spinorbs.emplace_back(SpinOrb(i,alpha));
-      _spinorbs.emplace_back(SpinOrb(i,beta));
-    }
-  } else if ( isoord == 1 ) {
-    // alpha/beta-alpha(open-shell) + beta(corresponding open-shell) + alpha/beta
-    assert( _clos.size() == _occ.size() );
-    // orbital offset for the irrep
-    uint oorb = 0;
-    for ( uint ir = 0; ir < _clos.size(); ++ir ) {
-      for ( int i = 0; i < _clos[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
-        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
-      }
-      for ( int i = _clos[ir]; i < _occ[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
-      }
-      for ( int i = _clos[ir]; i < _occ[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
-      }
-      int norbs = _pgs.norbs(ir);
-      for ( int i = _occ[ir]; i < norbs; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
-        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
-      }
-      oorb += norbs;
-    }
-  } else {
-    // blocked spin order: alpha(occ) + beta(occ) + alpha(virt) + beta(virt)
-    assert( _clos.size() == _occ.size() );
-    // orbital offset for the irrep
-    uint oorb = 0;
-    for ( uint ir = 0; ir < _clos.size(); ++ir ) {
-      // alpha occ
-      for ( int i = 0; i < _occ[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
-      }
-      // beta occ
-      for ( int i = 0; i < _clos[ir]; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
-      }
-      int norbs = _pgs.norbs(ir);
-      // alpha virt
-      for ( int i = _occ[ir]; i < norbs; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,alpha));
-      }
-      // beta virt
-      for ( int i = _clos[ir]; i < norbs; ++i ) {
-        _spinorbs.emplace_back(SpinOrb(i+oorb,beta));
-      }
-      oorb += norbs;
-    }
-  }
-}
+
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
 {
@@ -396,7 +281,7 @@ void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose)
   if ( verbose && ( orb.size() > 1 || orb[0] > 0 ) ) {
     xout << kind << "=";
     for ( const auto& s: orb)
-      xout << s << ","; 
+      xout << s << ",";
     xout<<std::endl;
   }
 }
@@ -409,10 +294,10 @@ void Hdump::store(std::string fcidump)
   FDPar ORBSYM, ORBSYM_SAV;
 #endif
   if ( newfile ) {
-    // create a new FCIDUMP 
-    if (_occ.size() > 0) _dump.addParameter("OCC",nocc_wcore());
-    if (_clos.size() > 0) _dump.addParameter("CLOSED",nclos_wcore());
-    if (_core.size() > 0) _dump.addParameter("CORE",_core);
+    // create a new FCIDUMP
+    if (_rd.occ.size() > 0) _dump.addParameter("OCC",nocc_wcore());
+    if (_rd.clos.size() > 0) _dump.addParameter("CLOSED",nclos_wcore());
+    if (_rd.core.size() > 0) _dump.addParameter("CORE",_rd.core);
     if ( _dm ) _dump.addParameter("DM",std::vector<int>(1,1));
     if ( _simtra ) _dump.addParameter("ST",std::vector<int>(1,1));
     if ( _uhf ) _dump.addParameter("IUHF",std::vector<int>(1,1));
@@ -445,7 +330,7 @@ void Hdump::store(std::string fcidump)
     xout << "will be written to file " << fcidump << std::endl;
   else
     error("failure to write to file "+fcidump);
-  
+
   if (_simtra) {
     // similarity transformed
     Integ4st * pI4aa = 0;
@@ -498,8 +383,8 @@ void Hdump::store_with_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
     storerec2_sym(pI2);
     _dump.writeIntegral(0,0,0,0,0.0);
   }
-  _dump.writeIntegral(0,0,0,0,_escal); 
-  
+  _dump.writeIntegral(0,0,0,0,_escal);
+
 }
 
 template<typename I2, typename I4aa, typename I4ab>
@@ -524,8 +409,8 @@ void Hdump::store_without_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
     storerec2_nosym(pI2);
     _dump.writeIntegral(0,0,0,0,0.0);
   }
-  _dump.writeIntegral(0,0,0,0,_escal); 
-  
+  _dump.writeIntegral(0,0,0,0,_escal);
+
 }
 template<typename T>
 void Hdump::storerec4_sym(const T * pInt) const
@@ -567,13 +452,13 @@ void Hdump::copy_int4(T* pDest, const U* pSrc, bool add, bool sym)
   uint i = 0, j = 0, k = 0, l = 0;
   Irrep isym = 0;
   if ( add ) {
-    if ( sym ) { 
+    if ( sym ) {
       // add, symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j,k,l);
         pDest->set(indxD, 0.25*(pSrc->get(i,j,k,l)+pSrc->get(j,i,l,k)+pSrc->get(j,i,k,l)+pSrc->get(i,j,l,k))+pDest->get(indxD));
       } while (pDest->next_indices(i,j,k,l,isym));
-    } else { 
+    } else {
       // add, no symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j,k,l);
@@ -581,7 +466,7 @@ void Hdump::copy_int4(T* pDest, const U* pSrc, bool add, bool sym)
       } while (pDest->next_indices(i,j,k,l,isym));
     }
   } else {
-    if ( sym ) { 
+    if ( sym ) {
       // don't add, symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j,k,l);
@@ -601,13 +486,13 @@ void Hdump::copy_int2(T* pDest, const U* pSrc, bool add, bool sym)
 {
   uint i = 0, j = 0;
   if ( add ) {
-    if ( sym ) { 
+    if ( sym ) {
       // add, symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j);
         pDest->set(indxD, 0.5*(pSrc->get(i,j)+pSrc->get(j,i))+pDest->get(indxD));
       } while (pDest->next_indices(i,j));
-    } else { 
+    } else {
       // add, no symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j);
@@ -615,7 +500,7 @@ void Hdump::copy_int2(T* pDest, const U* pSrc, bool add, bool sym)
       } while (pDest->next_indices(i,j));
     }
   } else {
-    if ( sym ) { 
+    if ( sym ) {
       // don't add, symmetrization
       do {
         BlkIdx indxD = pDest->index(i,j);
@@ -631,7 +516,7 @@ void Hdump::copy_int2(T* pDest, const U* pSrc, bool add, bool sym)
   }
 }
 template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
-void Hdump::copy_ints(DI2* pDI2, DI4aa* pDI4aa, DI4ab* pDI4ab, 
+void Hdump::copy_ints(DI2* pDI2, DI4aa* pDI4aa, DI4ab* pDI4ab,
                       SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd, bool add, bool sym)
 {
   pDI4aa = dynamic_cast<DI4aa*>(_twoel[aaaa].get()); assert(pDI4aa);
@@ -708,68 +593,6 @@ void Hdump::import(const Hdump& hd, bool add)
     }
   }
 }
-void Hdump::add_or_subtract_core(FDPar& orb, const std::string& kind, bool add) const 
-{
-  for ( uint io = 0; io < std::min(orb.size(),_core.size()); ++io ) {
-    if ( add ) {
-      orb[io] += _core[io];
-    } else if ( orb[io] < _core[io] ) {
-      xout << io << ") " << kind << ": " << orb[io] << " CORE: " << _core[io] << std::endl;
-      error("Core orbitals should be included in the "+kind+" specification!");
-    } else {
-      orb[io] -= _core[io];
-    }
-  }
-  for ( uint io = orb.size(); io < _core.size(); ++io ) {
-    if ( add ) {
-      orb.push_back(_core[io]);
-    } else if ( _core[io] != 0 ) {
-      error("Core orbitals should be included in the "+kind+" specification!");
-    }
-  }
-}
-uint Hdump::nclostot() const
-{
-  uint nclos = (_nelec - _ms2)/2;
-  if ( nclos*2 + _ms2 != _nelec ) {
-    xout << "NELEC: " << _nelec << " MS2: " << _ms2 << std::endl;
-    error("Mismatch in NELEC and MS2 in Hdump");
-  }
-  return nclos;
-}
-FDPar Hdump::nclos_wcore() const
-{
-  FDPar clco(_clos); 
-  add_or_subtract_core(clco,"CLOSED",true);
-  return clco; 
-}
-FDPar Hdump::nocc_wcore() const
-{
-  FDPar occo(_occ); 
-  add_or_subtract_core(occo,"OCC",true);
-  return occo; 
-}
-void Hdump::set_noccorbs(const FDPar& core, const FDPar& closed, const FDPar& occ, bool wcore)
-{
-  assert(closed.size() <= _pgs.nIrreps());
-  assert(occ.size() <= _pgs.nIrreps());
-  // core can have more irreps than the hamdump
-  assert(core.size() <= 8);
-  _core.clear();
-  if (!core.empty()){
-    FDPar tmpcore(core);
-    tmpcore.resize(8,0);
-    set_ncore(&tmpcore[0]);
-  }
-  _clos = closed;
-  _occ = occ;
-  if ( wcore ) {
-    // remove core
-    add_or_subtract_core(_clos,"CLOSED",false);
-    add_or_subtract_core(_occ,"OCC",false);
-  }
-  gen_spinorbsref();
-}
 
 void Hdump::scale(double scal)
 {
@@ -823,7 +646,7 @@ void Hdump::add1RDMto2RDM( T * pD2, const U * pD1, const V * pD11, double fact, 
   // spatial orbitals
   uint p = 0, q = 0, r = 0, s = 0;
   double val;
-  do { 
+  do {
     BlkIdx indx = pD2->index(p,q,r,s);
     val = pD2->get(indx);
     if ( _pgs.totIrrep(p, q) == 0 ) {
@@ -834,12 +657,24 @@ void Hdump::add1RDMto2RDM( T * pD2, const U * pD1, const V * pD11, double fact, 
     }
     pD2->set(indx,val);
   } while (pD2->next_indices(p,q,r,s,isym));
-  
+
 }
 
 void Hdump::correct_2DM()
 // adds to the 2DM the (**|ll) parts etc. which where omitted in ITF StUccsd.itfaa
 {
+//     xout << "before correction: " << std::endl;
+//     for(uint p = 0; p < _norb; p++){
+//         for(uint q = 0; q < _norb; q++){
+//             for(uint r = 0; r < _norb; r++){
+//                 for(uint s = 0; s < _norb; s++){
+//                     if (std::abs(_twoel[aabb].get()->get_with_pgs(p,q,r,s)) > 1e-13) xout << fmt::ff(_twoel[aabb].get()->get_with_pgs(p,q,r,s),15,8);
+//                     else xout << fmt::ff(0.0,15,8);
+//                 }
+//                 xout << " " << std::endl;
+//             }
+//       }
+//     }
   assert(_simtra);
   Integ2st * pDa = dynamic_cast<Integ2st*>(_oneel[aa].get()); assert(pDa);
   Integ2st * pDb = dynamic_cast<Integ2st*>(_oneel[bb].get()); assert(pDb);
@@ -849,31 +684,38 @@ void Hdump::correct_2DM()
   add1RDMto2RDM(pDaa,pDa,pDa,-1.0,true);
   add1RDMto2RDM(pDbb,pDb,pDb,-1.0,true);
   add1RDMto2RDM(pDab,pDa,pDb,-1.0,false);
-  
+
   double val;
-  for( uint ir = 0; ir < _pgs.nIrreps(); ir++ ){ 
-    uint sporb = _pgs._firstorb4irrep[ir] * 2;
-    for( int iorb = 0; iorb < _clos[ir]; iorb++ ){
-      val = oneel_spi(sporb, sporb);
+
+  for( uint ir = 0; ir < _pgs.nIrreps(); ir++ ){
+    uint off = _pgs._firstorb4irrep[ir];
+    for ( uint iorb = off; iorb < _rd.nocc[alpha][ir]+off; ++iorb ) {
+      val = oneel_spa(iorb, iorb, aa);
       val += 1.0;
-      set_oneel_spi(sporb, sporb, val);
-      sporb += 1;
-      val = oneel_spi(sporb, sporb);
-      val += 1.0;
-      set_oneel_spi(sporb, sporb, val);
-      sporb += 1;
+      set_oneel_spa(iorb, iorb, val, aa);
     }
-    for( int iorb = _clos[ir]; iorb < _occ[ir]; iorb++ ){
-        val = oneel_spi(sporb, sporb);
-        val += 1;
-        set_oneel_spi(sporb, sporb, val);
-        sporb += 1;
+    for ( uint iorb = off; iorb < _rd.nocc[beta][ir]+off; ++iorb ) {
+      val = oneel_spa(iorb, iorb, bb);
+      val += 1.0;
+      set_oneel_spa(iorb, iorb, val, bb);
     }
   }
   assert(_simtra);
   add1RDMto2RDM(pDaa,pDa,pDa,1.0,true);
   add1RDMto2RDM(pDbb,pDb,pDb,1.0,true);
   add1RDMto2RDM(pDab,pDa,pDb,1.0,false);
+//       xout << "after correction: " << std::endl;
+//   for(uint p = 0; p < _norb; p++){
+//         for(uint q = 0; q < _norb; q++){
+//             for(uint r = 0; r < _norb; r++){
+//                 for(uint s = 0; s < _norb; s++){
+//                     if (std::abs(_twoel[aabb].get()->get_with_pgs(p,q,r,s)) > 1e-13) xout << fmt::ff(_twoel[aabb].get()->get_with_pgs(p,q,r,s),15,8);
+//                     else xout << fmt::ff(0.0,15,8);
+//                 }
+//                 xout << " " << std::endl;
+//             }
+//       }
+//     }
 }
 
 void Hdump::calc_Fock(const Hdump& DMmats)
@@ -891,7 +733,35 @@ void Hdump::calc_Fock(const Hdump& DMmats)
     std::vector<double> & fmat = _FMAT[ir];
     fmat.resize(nelem,0);
     std::vector<double> fmat2(nelem,0);
-     
+//     xout << "h_ij" << std::endl;
+//     for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+//       uint t = t4ir+isoff4ir;
+//       for(uint q4ir = 0; q4ir < nsorb4ir; q4ir++){
+//         uint q = q4ir+isoff4ir;
+//         xout << oneel_spi(t,q) << " ";
+//       }
+//       xout << std::endl;
+//     }
+
+		//std::ofstream dmFile;
+    //std::stringstream ssdm;
+    //ssdm << "/home/schraivogel/Projects/master/ekt/h2o/vdz/h2o_" << ir << ".dmat";
+    //std::string dmname = ssdm.str();
+    //dmFile.open(dmname);
+
+// 		xout << "d_ij" << std::endl;
+		//for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
+			//uint t = t4ir+isoff4ir;
+			//for(uint q4ir = 0; q4ir < nsorb4ir; q4ir++){
+				//uint q = q4ir+isoff4ir;
+				//if(std::abs(DMmats.oneel_spi(t,q)) < 1.e-15) dmFile << std::setw(15) << 0.00 << " " ;
+				//else dmFile << std::setw(15) << std::setprecision(8) << 2.0*DMmats.oneel_spi(t,q) << " " ;
+			//}
+			//dmFile << std::endl;
+		//}
+		//dmFile.close();
+//       }
+
     for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
       uint p = p4ir+isoff4ir;
       for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
@@ -899,12 +769,12 @@ void Hdump::calc_Fock(const Hdump& DMmats)
         uint pt = p4ir+t4ir*nsorb4ir;
         for(uint q4ir = 0; q4ir < nsorb4ir; q4ir++){
           uint q = q4ir+isoff4ir;
-          fmat[pt] += oneel_spi(t,q) * DMmats.oneel_spi(p,q); 
+          fmat[pt] += oneel_spi(t,q) * DMmats.oneel_spi(p,q);
         }
       }
     }
     std::vector<double> dm_qrs(nsorb4ir);
-    
+
     for(uint q = 0; q < _nsorb; q++){
       for(uint r = 0; r < _nsorb; r++){
         for(uint s = 0; s < _nsorb; s++){
@@ -916,7 +786,9 @@ void Hdump::calc_Fock(const Hdump& DMmats)
           }
           for(uint p4ir = 0; p4ir < nsorb4ir; p4ir++){
             uint p = p4ir+isoff4ir;
-            double twoel_prqs = twoel_spi_pgs(p,r,q,s); 
+            double twoel_prqs = twoel_spi_pgs(p,r,q,s);
+//             if (std::abs(twoel_prqs) > 1.e-8 )
+//               xout << "twoel:" << p << " " << r << " " << q << " " << s << " " << twoel_prqs << std::endl;
             for(uint t4ir = 0; t4ir < nsorb4ir; t4ir++){
               fmat2[t4ir+p4ir*nsorb4ir] += twoel_prqs * dm_qrs[t4ir];
             }
@@ -924,11 +796,41 @@ void Hdump::calc_Fock(const Hdump& DMmats)
         }
       }
     }
+
+//     xout << "f_ij" << std::endl;
+//     for (uint p = 0; p < nsorb4ir; p++){
+//       for (uint q = 0; q < nsorb4ir; q++){
+//         xout << fmat[oneif4ir(p,q,nsorb4ir)] << " ";
+//       }
+//       xout << std::endl;
+//     }
+//     xout << "f2_ij" << std::endl;
+//     for (uint p = 0; p < nsorb4ir; p++){
+//       for (uint q = 0; q < nsorb4ir; q++){
+//         xout << fmat2[oneif4ir(p,q,nsorb4ir)] << " ";
+//       }
+//       xout << std::endl;
+//     }
 //     // add two electron parts to fock
     for(uint pt = 0; pt < fmat.size(); pt++){
-      fmat[pt] += fmat2[pt]; 
+      fmat[pt] += fmat2[pt];
     }
-    
+
+	//std::ofstream fmFile;
+  //std::stringstream ssfm;
+  //ssfm << "/home/schraivogel/Projects/master/ekt/h2o/vdz/h2o_" << ir << ".fmat";
+  //std::string fmname = ssfm.str();
+  //fmFile.open(fmname);
+
+// 		xout << "f_pq" << std::endl;
+	//for (uint p = 0; p < nsorb4ir; p++){
+		//for (uint q = 0; q < nsorb4ir; q++){
+			//if(std::abs(fmat[oneif4ir(q,p,nsorb4ir)]) < 1.e-12) fmFile << std::setw(15) << 0.00 << " " ;
+			//else fmFile << std::setw(15) << std::setprecision(8) << 2.00*fmat[oneif4ir(p,q,nsorb4ir)] << " " ;
+		//}
+		//fmFile << std::endl;
+	//}
+	//fmFile.close();
     for(uint p = 0; p < nsorb4ir; p++){
       uint pt = p+p*nsorb4ir;
       Tr = Tr + fmat[pt]-0.5*fmat2[pt];
@@ -937,13 +839,13 @@ void Hdump::calc_Fock(const Hdump& DMmats)
   xout << "Energy: " << std::setprecision (15) << Tr+escal() << std::endl;
 }
 
-void Hdump::molcas_2DM(bool plus){
+void Hdump::molcas_2DM(const std::string& filepname, bool plus){
     if( _pgs.nIrreps() > 1 ) error( "Molcas format for 2DM only implemented for no symmetry." );
-    std::ofstream cDMfile;
-    cDMfile.open("/home/schraivogel/cDM_dummy.dat");
+		std::ofstream cDMfile;
+    cDMfile.open("cDM_dummy.dat");
     int cDMsize = _norb * _norb * _norb * _norb; //TODO cDMsize will definitively be smaller than that..
     std::vector<double> cDM(cDMsize); //compressed density matrix
-    cDMfile << std::setprecision(10);
+    cDMfile << std::setprecision(15);
     double symdiff = 0;
     int tr, qs, trqs;
     for(uint t = 0; t < _norb; t++){
@@ -957,7 +859,7 @@ void Hdump::molcas_2DM(bool plus){
                   if( tr >= qs ){
                     trqs = tr*(tr+1)/2 + qs;
                     if ( plus )
-                      cDM[trqs] = (  ( spinsum_2DM(t,r,q,s) + spinsum_2DM(r,t,s,q) )/2.0 
+                      cDM[trqs] = (  ( spinsum_2DM(t,r,q,s) + spinsum_2DM(r,t,s,q) )/2.0
                                     +( spinsum_2DM(t,r,s,q) + spinsum_2DM(r,t,q,s) )/2.0
                                   )/2.0;
                     else
@@ -966,21 +868,21 @@ void Hdump::molcas_2DM(bool plus){
                                   )/2.0;
                     symdiff += std::abs(twoel_spi_pgs(t,r,q,s) - twoel_spi_pgs(r,t,s,q));
                     if ( std::abs(cDM[trqs]) > 1.e-24 )
-                      cDMfile << std::setw(20) << cDM[trqs] << " ";
+                      cDMfile << std::setw(25) << cDM[trqs] << " ";
                     else
-                      cDMfile << std::setw(20)  << "0.0" << " ";
+                      cDMfile << std::setw(25)  << "0.0" << " ";
                   }
               }
               else if( q == s ){
                 qs = q*(q+1)/2 +s;
                 if( tr >= qs ){
-                  trqs = tr*(tr+1)/2 + qs; 
+                  trqs = tr*(tr+1)/2 + qs;
                   symdiff += std::abs(twoel_spi_pgs(t,r,q,s) - twoel_spi_pgs(r,t,s,q));
                     cDM[trqs] = (spinsum_2DM(t,r,q,s)+spinsum_2DM(r,t,s,q))/4.0;
                   if ( std::abs(cDM[trqs]) > 1.e-24 )
-                    cDMfile << std::setw(20) << cDM[trqs] << " ";
+                    cDMfile << std::setw(25) << cDM[trqs] << " ";
                   else
-                    cDMfile << std::setw(20) << "0.0" << " ";
+                    cDMfile << std::setw(25) << "0.0" << " ";
                 }
               }
             }
@@ -992,9 +894,9 @@ void Hdump::molcas_2DM(bool plus){
     cDMfile.close();
     //delete empty lines in cDM file
     std::ifstream inFile;
-    inFile.open("/home/schraivogel/cDM_dummy.dat");
+    inFile.open("cDM_dummy.dat");
     std::ofstream outFile;
-    outFile.open("/home/schraivogel/cDM.dat");
+    outFile.open(filepname);
     std::string line;
     while( std::getline( inFile, line) ){
       if( ! line.empty() ){
@@ -1003,13 +905,14 @@ void Hdump::molcas_2DM(bool plus){
     }
     inFile.close();
     outFile.close();
-    
-    xout << "A compressed 2RDM file called cDM.dat has been written to Thomas' home directory." << std::endl;
+
+    if (plus) xout << "A compressed 2RDM file in Molcas format (plus part) called PSMAT has been written." << std::endl;
+    else xout << "A compressed 2RDM file in Molcas format (minus part) called PAMAT has been written." << std::endl;
     xout << "Hermitian symmetry badness of 2RDM: " << symdiff << std::endl;
-    remove( "/home/schraivogel/cDM_dummy.dat" );
+    remove( "cDM_dummy.dat" );
 }
 
-std::size_t skip(const std::string& str, std::size_t ipos, const std::string& what) 
+std::size_t skip(const std::string& str, std::size_t ipos, const std::string& what)
 {
   while (ipos<str.size()&& what.find(str[ipos])!=std::string::npos )
     ++ipos;
@@ -1018,10 +921,10 @@ std::size_t skip(const std::string& str, std::size_t ipos, const std::string& wh
 std::vector<std::string> split(const std::string& str, const std::string& listsep)
 {
   std::vector<std::string> res;
-  std::size_t 
+  std::size_t
     ipos = skip(str,0,listsep),
     ipend = str.find_first_of(listsep,ipos+1);
-  
+
   while( ipend != ipos ){
     res.push_back(str.substr(ipos,ipend-ipos));
     ipos = ipend;
@@ -1046,7 +949,7 @@ void str2numvec(std::vector<T>& numvec, const std::vector<std::string>& strvec, 
   }
 }
 
-Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs, 
+Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
                          const FDPar& ncore, bool verbose)
 {
   overlap = Integ2ab(pgs);
@@ -1059,7 +962,7 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
   std::string line;
   oin >> std::ws;
   std::getline(oin,line);
-  if ( line.compare(0,3,"BAS") != 0 ) 
+  if ( line.compare(0,3,"BAS") != 0 )
     error("No basis information in file "+ovdump);
   std::vector<int> nbasis;
   std::vector<std::string> strvec = split(line," ,;:");
@@ -1067,11 +970,10 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
   if (verbose) {
     xout << "Basis dimensions of the overlap: ";
     for(auto bb: nbasis ) xout << bb << " ";
-    xout << std::endl; 
+    xout << std::endl;
   }
-  // TODO sanity check for nbasis 
-  
-  
+  // TODO sanity check for nbasis
+
   std::vector<double> numbers;
   std::vector<double> pnumbers;
   uint p;
@@ -1081,7 +983,7 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
     for( int row = 0; row < nbasis[isym]; row++ ){
       while (oin.good()) {
         std::getline(oin,line);
-        if ( line.empty() || line[0] == '#' ||  
+        if ( line.empty() || line[0] == '#' ||
             line.compare("BEGIN_DATA,") == 0 || line.compare("END_DATA,") == 0  ) continue;
         strvec = split(line," ,;:");
         numbers.clear();
@@ -1092,7 +994,7 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
             error("Basis dimensions do not correspond to the number of entries in a row");
         }
         if( pnumbers.size() == unsigned(nbasis[isym]) ) break;
-      }   
+      }
       if( row >= ncore[isym] && unsigned(row) < ncore[isym] + pgs.norbs(isym) ){
         p = row - ncore[isym];
         for( uint q = 0; q < pgs.norbs(isym); q++ ){
@@ -1108,10 +1010,11 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
 //       }
 //       xout << std::endl;
 //     }
-      
+
   }
 }
-void Hdump::calc_Spin2(const Integ2ab& Overlap){
+
+void Hdump::calc_Spin2(const Integ2ab& Overlap, bool alt){
   double spin = 0;
   double spinHF = 0;
   double ms = 0;
@@ -1122,21 +1025,145 @@ void Hdump::calc_Spin2(const Integ2ab& Overlap){
       for( uint s = 0; s < _norb; s++ ){
         spin += Overlap.get_with_pgs(q,p) * Overlap.get_with_pgs(q,s) * _oneel[bb].get()->get_with_pgs(p,s);
         for( uint r = 0; r < _norb; r++ ){
-          spin  -= Overlap.get_with_pgs(q,p) * Overlap.get_with_pgs(r,s) * _twoel[aabb].get()->get_with_pgs(r,q,p,s);
+          if (alt) spin  += Overlap.get_with_pgs(s,p) * Overlap.get_with_pgs(r,q) * _twoel[aabb].get()->get_with_pgs(r,q,p,s);
+          else spin  -= Overlap.get_with_pgs(q,p) * Overlap.get_with_pgs(r,s) * _twoel[aabb].get()->get_with_pgs(r,q,p,s);
         }
       }
     }
   }
   spin += 0.5*ms * ( 0.5*ms + 1 );
-  if( _pgs.nIrreps() > 1 ) xout << "ATTENTION: <0|S**2|0> only implemented for nosym." << std::endl;
-  for( int ibeta = 0; ibeta < _clos[0]; ibeta++ ){
-    for( uint aalpha = _occ[0]; aalpha < _norb; aalpha++ ){
-      spinHF += Overlap.get_with_pgs(aalpha,ibeta) * Overlap.get_with_pgs(aalpha,ibeta);
+  for( uint ir = 0; ir < _pgs.nIrreps(); ir++ ){
+    uint off = _pgs._firstorb4irrep[ir];
+    for ( int ib = 0; ib < _rd.nocc[beta][ir]; ++ib ) {
+      uint ibeta = _rd.ref[beta][off+ib];
+      assert(_pgs.irrep(ibeta) == ir);
+      for ( int a = _rd.nocc[alpha][ir]; a < int(_pgs.norbs(ir)); ++a ) {
+        uint aalpha = _rd.ref[alpha][off+a];
+        assert(_pgs.irrep(aalpha) == ir);
+        spinHF += Overlap.get(aalpha,ibeta) * Overlap.get(aalpha,ibeta);
+      }
     }
   }
   spinHF += 0.5*ms * ( 0.5*ms + 1 );
-    
+  if (alt) xout << "Calculating spin with the alternative formulation." << std::endl;
   xout << "<0|S**2|0>: " << spinHF << std::endl;
   xout << "Expectation value of S**2: " << spin << std::endl;
 }
+
+void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
+  //change upper to lowercase in filename...
+  std::string ucfilename = filename;
+  std::for_each(filename.begin(), filename.end(), [](char & c){
+        c = ::tolower(c);
+  });
+
+  //find and replace uppercase filename in filep(ath)name with lowercase filename
+  size_t pos = filepname.find(ucfilename);
+  filepname.replace(pos, ucfilename.length(), filename);
+
+  //store 1RDM in file
+  if(!uhf){
+    std::ofstream oneRDMFile;
+    oneRDMFile.open(filepname);
+    oneRDMFile << "BEGIN_DATA," << std::endl;
+    oneRDMFile << "# ONE BODY DENSITY MATRIX" << std::endl;
+    for ( uint ir = 0; ir < _pgs.nIrreps(); ++ir ){
+      uint counter=1;
+      uint norb4ir = _pgs.norbs(ir);
+      uint norbwc4ir = norb4ir + ncore()[ir];
+      for ( int r = 0; r < ncore()[ir]; r++ ){
+        for ( uint s = 0; s < norbwc4ir; s++ ){
+          if ( r == s ) oneRDMFile << fmt::ff(2.0,15,8) << ",";
+          else oneRDMFile << fmt::ff(0.0,15,8) << ",";
+          if( counter%5 == 0 || s == (norbwc4ir - 1) ){
+            oneRDMFile << std::endl;
+          }
+          counter += 1;
+        }
+        counter = 1;
+      }
+      counter = 0;
+      for( uint p4ir = 0; p4ir < norb4ir; p4ir++ ){
+        for( int r = 0; r < ncore()[ir]; r++ ){
+          oneRDMFile << fmt::ff(0.0,15,8) << ",";
+          counter += 1;
+        }
+        for( uint q4ir = 0; q4ir < norb4ir; q4ir++ ){
+          oneRDMFile << fmt::ff((spinsum_1DM(p4ir,q4ir,ir)+spinsum_1DM(q4ir,p4ir,ir))/2,15,8) << ",";
+          counter += 1;
+          if( counter%5 == 0 || q4ir == (norb4ir - 1)){
+            oneRDMFile << std::endl;
+            counter = 0;
+          }
+        }
+      }
+    }
+    oneRDMFile << "END_DATA," << std::endl;
+    oneRDMFile.close();
+  }
+  else{
+    std::string filename_aa, filepname_aa;
+    std::string filename_bb, filepname_bb;
+    filename_aa = filename + "_aa";
+    filename_bb = filename + "_bb";
+    filepname_aa = filepname;
+    filepname_bb = filepname;
+    size_t pos = filepname_aa.find(filename);
+    filepname_aa.replace(pos, filename.length(), filename_aa);
+    filepname_bb.replace(pos, filename.length(), filename_bb);
+    std::ofstream oneRDMFile_aa, oneRDMFile_bb;
+    oneRDMFile_aa.open(filepname_aa);
+    oneRDMFile_bb.open(filepname_bb);
+    oneRDMFile_aa << "BEGIN_DATA," << std::endl;
+    oneRDMFile_bb << "BEGIN_DATA," << std::endl;
+    oneRDMFile_aa << "# ONE BODY DENSITY MATRIX ALPHA ALPHA" << std::endl;
+    oneRDMFile_bb << "# ONE BODY DENSITY MATRIX BETA BETA" << std::endl;
+    for ( uint ir = 0; ir < _pgs.nIrreps(); ++ir ){
+      uint counter=1;
+      uint norb4ir = _pgs.norbs(ir);
+      uint norbwc4ir = norb4ir + ncore()[ir];
+      for ( int r = 0; r < ncore()[ir]; r++ ){
+        for ( uint s = 0; s < norbwc4ir; s++ ){
+          if ( r == s ) {
+            oneRDMFile_aa << fmt::ff(1.0,15,8) << ",";
+            oneRDMFile_bb << fmt::ff(1.0,15,8) << ",";
+          }
+          else {
+            oneRDMFile_aa << fmt::ff(0.0,15,8) << ",";
+            oneRDMFile_bb << fmt::ff(0.0,15,8) << ",";
+          }
+          if( counter%5 == 0 || s == (norbwc4ir - 1) ){
+            oneRDMFile_aa << std::endl;
+            oneRDMFile_bb << std::endl;
+          }
+          counter += 1;
+        }
+        counter = 1;
+      }
+      counter = 0;
+      for( uint p4ir = 0; p4ir < norb4ir; p4ir++ ){
+        for( int r = 0; r < ncore()[ir]; r++ ){
+          oneRDMFile_aa << fmt::ff(0.0,15,8) << ","; //WRONG there some non-zeros in molpro reference
+          oneRDMFile_bb << fmt::ff(0.0,15,8) << ","; //WRONG there some non-zeros in molpro reference
+          counter += 1;
+        }
+        for( uint q4ir = 0; q4ir < norb4ir; q4ir++ ){
+          oneRDMFile_aa << fmt::ff((_oneel[aa].get()->get(p4ir, q4ir, ir)+_oneel[aa].get()->get(q4ir, p4ir, ir))/2,15,8) << ",";
+          oneRDMFile_bb << fmt::ff((_oneel[bb].get()->get(p4ir, q4ir, ir) + _oneel[bb].get()->get(q4ir, p4ir, ir))/2,15,8) << ",";
+          counter += 1;
+          if( counter%5 == 0 || q4ir == (norb4ir - 1)){
+            oneRDMFile_aa << std::endl;
+            oneRDMFile_bb << std::endl;
+            counter = 0;
+          }
+        }
+      }
+    }
+    oneRDMFile_aa << "END_DATA," << std::endl;
+    oneRDMFile_bb << "END_DATA," << std::endl;
+    oneRDMFile_aa.close();
+    oneRDMFile_bb.close();
+  }
+}
 } //namespace HamDump
+

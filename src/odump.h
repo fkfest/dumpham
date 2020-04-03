@@ -6,6 +6,7 @@
 #include <iomanip>
 #include "pgsym.h"
 #include "integs.h"
+#include "refdet.h"
 #include "globals.h"
 #include "utilities.h"
 #include "inpline.h"

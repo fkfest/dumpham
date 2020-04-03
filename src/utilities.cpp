@@ -87,3 +87,12 @@ std::string uppercase(std::string s) {
                   );
     return s;
 }
+
+namespace fmt {
+std::string ff(double num,int width, int prec )
+{
+  std::ostringstream oss;
+  oss << std::setprecision(prec) << std::setw(width) << num;
+  return oss.str();
+} 
+}
