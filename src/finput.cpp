@@ -164,6 +164,13 @@ lui Finput::analyzecommand(lui ipos)
     ipos = IL::skip(_input,ipos,"{} ");
     lui ipos2 = IL::skipr(_input,ipos1,"{} ");
     Input::sPars["ham"]["out"] = _input.substr(ipos,ipos2-ipos);
+  } else if ( str == commands["hubbard"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} :");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    std::string hubdef = "hubbard,"+_input.substr(ipos,ipos2-ipos);
+    IL::changePars(hubdef, 0);
+    analyzehabham(); 
   }
   return ipos1;
 }
@@ -208,6 +215,32 @@ bool Finput::analyzeham(const std::string& inputfile)
   }
   _add = false;
   _scale = 1.0;
+  return true;
+}
+
+bool Finput::analyzehabham()
+{
+  std::string dim = Input::sPars["hubbard"]["dimension"];
+  int charge = Input::iPars["hubbard"]["charge"];
+  int ms2 = Input::iPars["hubbard"]["ms2"];
+  int pbc = Input::iPars["hubbard"]["pbc"];
+  double Upar = Input::fPars["hubbard"]["U"];
+  double tpar = Input::fPars["hubbard"]["t"];
+  double t1par = Input::fPars["hubbard"]["t1"];
+  std::vector<uint> dims;
+  lui ipos = 0,
+      ipend = dim.size();
+  while( (ipend = IL::endword(dim,ipos,"x*")) != ipos ){
+    uint x;
+    if (str2num<uint>(x,dim.substr(ipos,ipend-ipos),std::dec)) {
+      dims.push_back(x);
+    } else {
+      error("Dimensions in Hubbard are not integer:"+dim);
+    }
+    ipos=ipend;
+    if (ipos < dim.size() ) ++ipos;
+  }
+  _dump = std::unique_ptr<Hdump>(new Hdump(dims,charge,ms2,pbc,Upar,tpar,t1par));
   return true;
 }
 

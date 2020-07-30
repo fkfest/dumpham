@@ -33,6 +33,7 @@ public:
         uint sym_ = 0, bool uhf_ = false, bool simtra_ = false, bool dm_ = false) :
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_),
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_), _dm(dm_) { _rd = RefDet(_pgs); }
+  Hdump(std::vector<uint> dims, int charge, int ms2, int pbc, double Upar, double tpar, double t1par = 0.0);
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
   // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true)
@@ -170,6 +171,8 @@ public:
   void calc_Spin2(const Integ2ab& Overlap, bool alt = false);
   //store 1RDM in ASCII format
   void store1RDM(std::string filepname, std::string filename, bool uhf);
+  //gen integrals for Hubbard model
+  void gen_hubbard(const std::vector<uint>& dims, int pbc, double Upar, double tpar, double t1par);
 
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -484,6 +487,62 @@ public:
   Overlapdump(std::string ovdump, const PGSym& pgs, const FDPar& ncore, bool verbose = true);
   Integ2ab overlap;
 };
+
+/*!
+ * Hubbard Site 
+ */
+struct HubSite : public std::vector<int> {
+  HubSite() : std::vector<int>() {};
+  HubSite(const std::vector<uint>& dims, int pbc = 0) {
+    _dims = dims;
+    resize(dims.size(),0);
+    _pbc = pbc;
+  }
+  void zero() {
+    for (auto & i: *this) i = 0;
+  }
+  bool next() {
+    assert(_dims.size() == size());
+    
+    for ( uint id = 0; id < size(); ++id ) {
+      ++(*this)[id];
+      if ((*this)[id] < int(_dims[id]) )
+        return true;
+      else {
+        (*this)[id] = 0;
+      }
+    }
+    return false;
+  }
+  // square of the distance 
+  uint dist2(const HubSite& hs) const {
+    assert(hs.size() == size());
+    assert(_dims.size() == size());
+    uint dd = 0;
+    for ( uint i = 0; i < size(); ++i ) {
+      uint r = std::abs((*this)[i] - hs[i]);
+      if ( _pbc && r > _dims[i] - r ) 
+        r = _dims[i] - r;
+      dd += r*r;
+    }
+    return dd;
+  }
+  uint id() const {
+    assert(_dims.size() == size());
+    uint id = 0;
+    uint nn = 1;
+    for ( uint i = 0; i < size(); ++i ) {
+      id += (*this)[i]*nn;
+      nn *= _dims[i];
+    }
+    return id;
+  }
+  // dimensions of the Hubbard model
+  std::vector<uint> _dims;
+  // periodic boundary condition
+  int _pbc;
+};
+std::ostream & operator << (std::ostream& o, const HubSite& hs);
 
 } //namespace HamDump
 

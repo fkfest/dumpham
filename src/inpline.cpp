@@ -3,7 +3,7 @@
 std::string IL::key(const std::string& line, lui& ipos, const std::string& keyword)
 {
   do {
-    ipos = line.find(keyword);
+    ipos = line.substr(ipos).find(keyword)+ipos;
     if ( ipos != std::string::npos ){
       ipos += keyword.size();
       ipos = skip(line,ipos," ");
@@ -82,6 +82,7 @@ void IL::changePars(const std::string& str, lui ipos)
     atype = true;
   if ( !(stype || itype || ftype || atype) ) {
     // print a warning and return
+    _xout0("set: " << set << std::endl);
     _xout0("Unrecognized set: " << str << std::endl);
     return;
   }

@@ -43,6 +43,7 @@ set="syntax",type=a,name="comment",value={"%"}
 set="command",type=s,name="operator",value="op",desc="command for operator"
 set="command",type=s,name="fcidump",value="input",desc="command for FCIDUMP input"
 set="command",type=s,name="outfcidump",value="output",desc="command for FCIDUMP output"
+set="command",type=s,name="hubbard",value="hubbard",desc="command for Hubbard input"
 
 %DM
 set="dm",type=s,name="in",value="",desc="density matrix for alpha-alpha-alpha-alpha spins in form <xxx>aaaa<yy>"
@@ -53,3 +54,12 @@ set="dm",type=s,name="out1rdmmat",value="",desc="one-particle density matrix out
 %FM
 set="fm",type=s,name="outmat",value="",desc="fock matrix from density matrices in spin orbitals in matrix form"
 set="fm",type=s,name="ips",value="",desc="eigenvalues of the generalized fock matrix (EKT-IPs) as a diagonal matrix"
+
+%HUBBARD
+set="hubbard",type=s,name="dimension",value="10",desc="Dimension in form of 10 or 10x10 or 10x10x10"
+set="hubbard",type=f,name="U",value=1.0,desc="U parameter"
+set="hubbard",type=f,name="t",value=0.5,desc="t parameter"
+set="hubbard",type=f,name="t1",value=0.0,desc="next neighbour t parameter"
+set="hubbard",type=i,name="charge",value=0,desc="charge wrt half filling"
+set="hubbard",type=i,name="ms2",value=-1,desc="ms"
+set="hubbard",type=i,name="pbc",value=0,desc="PBC"

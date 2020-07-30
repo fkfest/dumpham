@@ -63,6 +63,46 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   sanity_check();
 }
 
+Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, int pbc, double Upar, double tpar, double t1par)
+{
+  xout << "Hubbard model:";
+  for(auto d: dims ) 
+    xout << d << " ";
+  if ( charge != 0 ) xout << "charge=" << charge << " ";
+  if ( pbc != 0 ) xout << "PBC ";
+  xout << "U/t=" << Upar/tpar;
+  if ( std::abs(t1par) > Numbers::small ) {
+    xout << " next neighbour/t: " << t1par/tpar;
+  }
+  xout << std::endl;
+  
+  _norb = 1;
+  for (auto d: dims) _norb *= d;
+  if ( int(_norb) < charge ) error("Negative number of electrons!");
+  _nelec = _norb - charge;
+  if ( ms2 < 0 ) {
+    ms2 = _nelec%2;
+  }
+  _ms2 = ms2;
+  _sym = 0;
+  FDPar norbs;
+  norbs.push_back(_norb);
+  _pgs = PGSym(norbs,false);
+  _escal = 0.0;
+  
+  _osord = OrbOrder(_norb);
+  FDPar OCC(1,0);
+  check_input_norbs(OCC,"occ",true);
+  FDPar CLOSED(1,0);
+  check_input_norbs(CLOSED,"closed",true);
+  FDPar CORE(1,0);
+  check_input_norbs(CORE,"core",true);
+  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+  sanity_check();
+  
+  gen_hubbard(dims,pbc,Upar,tpar,t1par);
+}
+
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
 {
 #define CHECKSET(xx,mes) if ( hd1.xx != hd2.xx ) error("Mismatch in "+ std::string(mes)); xx=hd1.xx;
@@ -268,6 +308,36 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
 }
 
 
+
+void Hdump::gen_hubbard(const std::vector<uint>& dims, int pbc, double Upar, double tpar, double t1par)
+{
+  alloc_ints();
+  HubSite s1(dims,pbc),s2(dims,pbc);
+  uint next_site = 1;
+  uint nnext_site = 4;
+  if ( dims.size() > 1 ) {
+    nnext_site = 2; 
+  }
+  if ( std::abs(t1par) < Numbers::small ) {
+    nnext_site = 0;
+  }
+  
+  do {
+    do {
+      uint dd = s1.dist2(s2);
+      if ( dd == 0 ) {
+        // set U
+        uint p = s1.id();
+        set_twoel_spa(p,p,p,p,Upar);
+      } else if ( dd == next_site ) {
+        set_oneel_spa(s1.id(),s2.id(),-tpar);
+      } else if ( nnext_site && dd == nnext_site ) {
+        set_oneel_spa(s1.id(),s2.id(),-t1par);
+      }
+    } while ( s2.next() );
+    s2.zero();
+  } while ( s1.next() );
+}
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
 {
@@ -1073,7 +1143,7 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
       uint norbwc4ir = norb4ir + ncore()[ir];
       for ( int r = 0; r < ncore()[ir]; r++ ){
         for ( uint s = 0; s < norbwc4ir; s++ ){
-          if ( r == s ) oneRDMFile << fmt::ff(2.0,15,8) << ",";
+          if ( r == int(s) ) oneRDMFile << fmt::ff(2.0,15,8) << ",";
           else oneRDMFile << fmt::ff(0.0,15,8) << ",";
           if( counter%5 == 0 || s == (norbwc4ir - 1) ){
             oneRDMFile << std::endl;
@@ -1124,7 +1194,7 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
       uint norbwc4ir = norb4ir + ncore()[ir];
       for ( int r = 0; r < ncore()[ir]; r++ ){
         for ( uint s = 0; s < norbwc4ir; s++ ){
-          if ( r == s ) {
+          if ( r == int(s) ) {
             oneRDMFile_aa << fmt::ff(1.0,15,8) << ",";
             oneRDMFile_bb << fmt::ff(1.0,15,8) << ",";
           }
@@ -1164,6 +1234,16 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
     oneRDMFile_aa.close();
     oneRDMFile_bb.close();
   }
+}
+
+std::ostream & operator << (std::ostream& o, const HubSite& hs) {
+  o << "{";
+  for ( uint i = 0; i < hs.size(); ++i ) {
+    o << hs[i];
+    if ( i < hs.size()-1 ) o << "x";
+  }
+  o << "}";
+  return o;
 }
 } //namespace HamDump
 
