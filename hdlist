@@ -1,1 +1,1 @@
-hdump.cpp hdump.h refdet.cpp refdet.h integs.cpp integs.h pgsym.h hdtypes.h
+hdump.cpp hdump.h refdet.cpp refdet.h integs.cpp integs.h pgsym.h hdtypes.h periodic.h periodic.cpp

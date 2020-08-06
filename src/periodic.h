@@ -9,7 +9,7 @@
 #include "globals.h"
 #include "utilities.h"
 #endif
-
+namespace HamDump {
 // typedef std::vector<double> Coords;
 struct Coords : public std::vector<double> {
   Coords(uint ndim = 0, double val = 0.0) : std::vector<double>(ndim,val) {};
@@ -174,6 +174,6 @@ private:
   uint _nsites_in_supercell = 0;
 };
 
-
+} //namespace HamDump
 
 #endif

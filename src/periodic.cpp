@@ -2,6 +2,8 @@
 
 #include <fstream>
 
+namespace HamDump {
+  
 void UCell::set_default(uint ndims)
 {
   assert(size() == 0);
@@ -55,11 +57,12 @@ Periodic::Periodic(const UCell& ucell, const Lattice& lat,
   _ncells = ncells;
   _pbcs = pbcs;
   check_boundaries();
+#ifndef MOLPRO
   std::string xyzfile = Input::sPars["periodic"]["xyzout"];
   if ( !xyzfile.empty() ) {
     xyz_supercell(xyzfile);
   }
-  
+#endif
 }
 
 void Periodic::check_boundaries()
@@ -260,3 +263,5 @@ std::ostream & operator << (std::ostream& o, const Lattice& lat) {
   o << "}";
   return o;
 }
+
+} //namespace HamDump
