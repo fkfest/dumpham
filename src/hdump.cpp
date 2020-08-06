@@ -63,16 +63,35 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   sanity_check();
 }
 
-Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, int pbc, double Upar, double tpar, double t1par)
+Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar)
 {
+  assert(dims.size() == pbcs.size());
   xout << "Hubbard model:";
-  for(auto d: dims ) 
-    xout << d << " ";
-  if ( charge != 0 ) xout << "charge=" << charge << " ";
-  if ( pbc != 0 ) xout << "PBC ";
-  xout << "U/t=" << Upar/tpar;
-  if ( std::abs(t1par) > Numbers::small ) {
-    xout << " next neighbour/t: " << t1par/tpar;
+  for(uint i = 0; i < dims.size(); ++i ) { 
+    xout << dims[i];
+    if ( i+1 < dims.size() ) xout << "x";
+  }
+  if ( charge != 0 ) xout << " charge=" << charge;
+  bool periodic = false;
+  for ( auto p: pbcs) if ( p != 0 ) periodic = true;
+  if ( periodic ) {
+    xout << " PBC:";
+    for ( auto p: pbcs) {
+      if ( p == 0 )
+        xout << "N";
+      else if ( p > 0 ) 
+        xout << "P";
+      else 
+        xout << "A";
+    }
+  }
+  if ( tpar.size() == 0 ) {
+    error("No t parameter given!");
+  }
+  xout << " U/t=" << Upar/tpar[0];
+  if ( tpar.size() > 1 ) {
+    xout << " next-neighbour-t: ";
+    for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
   }
   xout << std::endl;
   
@@ -100,7 +119,62 @@ Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, int pbc, double Upar, 
   _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
   sanity_check();
   
-  gen_hubbard(dims,pbc,Upar,tpar,t1par);
+  gen_hubbard(dims,pbcs,Upar,tpar);
+}
+
+Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar)
+{
+  xout << "Hubbard model:";
+  for(uint i = 0; i < pers.ncells().size(); ++i ) { 
+    xout << pers.ncells()[i];
+    if ( i+1 < pers.ncells().size() ) xout << "x";
+  }
+  if ( charge != 0 ) xout << " charge=" << charge;
+  if ( pers.periodic() ) {
+    xout << " PBC:";
+    for ( auto p: pers.pbcs()) {
+      if ( p == 0 )
+        xout << "N";
+      else if ( p > 0 ) 
+        xout << "P";
+      else 
+        xout << "A";
+    }
+  }
+  if ( tpar.size() == 0 ) {
+    error("No t parameter given!");
+  }
+  xout << " U/t=" << Upar/tpar[0];
+  if ( tpar.size() > 1 ) {
+    xout << " next-neighbour-t: ";
+    for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
+  }
+  xout << std::endl;
+  
+  _norb = pers.nsites_in_supercell();
+  if ( int(_norb) < charge ) error("Negative number of electrons!");
+  _nelec = _norb - charge;
+  if ( ms2 < 0 ) {
+    ms2 = _nelec%2;
+  }
+  _ms2 = ms2;
+  _sym = 0;
+  FDPar norbs;
+  norbs.push_back(_norb);
+  _pgs = PGSym(norbs,false);
+  _escal = 0.0;
+  
+  _osord = OrbOrder(_norb);
+  FDPar OCC(1,0);
+  check_input_norbs(OCC,"occ",true);
+  FDPar CLOSED(1,0);
+  check_input_norbs(CLOSED,"closed",true);
+  FDPar CORE(1,0);
+  check_input_norbs(CORE,"core",true);
+  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+  sanity_check();
+  
+  gen_hubbard(pers,Upar,tpar);
 }
 
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
@@ -309,17 +383,49 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
 
 
 
-void Hdump::gen_hubbard(const std::vector<uint>& dims, int pbc, double Upar, double tpar, double t1par)
+void Hdump::gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, 
+                        double Upar, const std::vector<double>& tpar)
 {
   alloc_ints();
-  HubSite s1(dims,pbc),s2(dims,pbc);
-  uint next_site = 1;
-  uint nnext_site = 4;
-  if ( dims.size() > 1 ) {
-    nnext_site = 2; 
+  HubSite s1(dims,pbcs),s2(dims,pbcs);
+  for (auto p: pbcs) {
+    if ( p < 0 ) error("Antiperiodic boundaries not implemented!");
   }
-  if ( std::abs(t1par) < Numbers::small ) {
-    nnext_site = 0;
+#ifndef MOLPRO
+  if ( Input::iPars["hubbard"]["print"] > 0 ) {
+    // print geometry
+    xout << "Geometry: ";
+    do {
+      xout << s1;
+    } while (s1.next());
+    xout << std::endl;
+    s1.zero();
+  }
+#endif
+ // squares of distances to neighbours
+  std::vector<uint> next_site;
+  for ( uint i = 1; i < tpar.size()+1; ++i ) {
+    next_site.push_back(i*i);
+  }
+  if ( tpar.size() > 1 ) {
+    uint maxdd = tpar.size()*tpar.size();
+    std::vector<bool> distances(maxdd,false);
+    do {
+      do {
+        uint dd = s1.dist2(s2);
+        if (dd < maxdd) distances[dd] = true;
+      } while ( s2.next() );
+      s2.zero();
+    } while ( s1.next() );
+    s1.zero(); s2.zero();
+    // set distances to neighbours
+    uint nn = 0;
+    for ( uint i = 1; i < maxdd && nn < tpar.size(); ++i ) {
+      if (distances[i]) {
+        next_site[nn] = i;
+        ++nn;
+      }
+    }
   }
   
   do {
@@ -329,14 +435,64 @@ void Hdump::gen_hubbard(const std::vector<uint>& dims, int pbc, double Upar, dou
         // set U
         uint p = s1.id();
         set_twoel_spa(p,p,p,p,Upar);
-      } else if ( dd == next_site ) {
-        set_oneel_spa(s1.id(),s2.id(),-tpar);
-      } else if ( nnext_site && dd == nnext_site ) {
-        set_oneel_spa(s1.id(),s2.id(),-t1par);
+      } else {
+        for ( uint i = 0; i < tpar.size(); ++i ) {
+          if ( dd == next_site[i] ) {
+            set_oneel_spa(s1.id(),s2.id(),-tpar[i]);
+            break;
+          }
+        }
       }
     } while ( s2.next() );
     s2.zero();
   } while ( s1.next() );
+}
+
+void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar)
+{
+#ifdef MOLPRO
+  double tol = 1.e-6;
+#else
+  double tol = Input::fPars["periodic"]["thrdist"];
+#endif
+  alloc_ints();
+  PSite s1(pers.ndim()),s2(pers.ndim());
+  if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
+#ifndef MOLPRO
+  if ( Input::iPars["hubbard"]["print"] > 0 ) {
+    // print geometry
+    xout << "Geometry: ";
+    do {
+      xout << pers.site_coords(s1);
+    } while (pers.next(s1));
+    xout << std::endl;
+    s1.zero();
+  }
+#endif
+  // squares of distances to neighbours
+  std::vector<double> dist2_neighbours = pers.dist2neighbours(tpar.size());
+  uint p = 0;
+  do {
+    uint q = 0;
+    do {
+      double dd = pers.dist2(s1,s2);
+      if ( dd < tol ) {
+        assert( p == q );
+        // set U
+        set_twoel_spa(p,p,p,p,Upar);
+      } else {
+        for ( uint i = 0; i < tpar.size(); ++i ) {
+          if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
+            set_oneel_spa(p,q,-tpar[i]);
+            break;
+          }
+        }
+      }
+      ++q;
+    } while ( pers.next(s2) );
+    s2.zero();
+    ++p;
+  } while ( pers.next(s1) );
 }
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
@@ -1240,7 +1396,7 @@ std::ostream & operator << (std::ostream& o, const HubSite& hs) {
   o << "{";
   for ( uint i = 0; i < hs.size(); ++i ) {
     o << hs[i];
-    if ( i < hs.size()-1 ) o << "x";
+    if ( i < hs.size()-1 ) o << ",";
   }
   o << "}";
   return o;

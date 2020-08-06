@@ -128,8 +128,8 @@ RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* n
   nocc[alpha].resize(pgs.nIrreps());
   nocc[beta].resize(pgs.nIrreps());
   for (uint ir = 0; ir < pgs.nIrreps(); ++ir ) {
-      assert(ita+nocca[ir]-occorba.begin() <= occorba.size());
-      assert(itb+noccb[ir]-occorbb.begin() <= occorbb.size());
+      assert(ita+nocca[ir]-occorba.begin() <= int(occorba.size()));
+      assert(itb+noccb[ir]-occorbb.begin() <= int(occorbb.size()));
       std::vector<uint> occo(nocca[ir]+noccb[ir]);
       std::vector<uint>::iterator last;
       last = std::set_union(ita,ita+nocca[ir],itb,itb+noccb[ir],occo.begin());

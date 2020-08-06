@@ -26,14 +26,6 @@ typedef std::map< std::string, TfPar > TfParSet;
 typedef std::map< std::string, TaPar > TaParSet;
 
 
-namespace Numbers
-{
-  // "zero"
-  static const double verysmall=1.e-16;
-  static const double small=1.e-10;
-  static const int big=1000;
-}
-
 class Return{
 public:
   enum Vals{

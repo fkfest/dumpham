@@ -220,27 +220,86 @@ bool Finput::analyzeham(const std::string& inputfile)
 
 bool Finput::analyzehabham()
 {
-  std::string dim = Input::sPars["hubbard"]["dimension"];
+  const TParArray& dim = Input::aPars["hubbard"]["dimension"];
   int charge = Input::iPars["hubbard"]["charge"];
   int ms2 = Input::iPars["hubbard"]["ms2"];
-  int pbc = Input::iPars["hubbard"]["pbc"];
+  TParArray pbc = Input::aPars["hubbard"]["pbc"];
+//   int pbc = Input::iPars["hubbard"]["pbc"];
   double Upar = Input::fPars["hubbard"]["U"];
-  double tpar = Input::fPars["hubbard"]["t"];
-  double t1par = Input::fPars["hubbard"]["t1"];
+  const TParArray& tparsarray = Input::aPars["hubbard"]["t"];
+  const TParArray& ucell_str = Input::aPars["hubbard"]["ucell"];
+  const TParArray& lat_str = Input::aPars["hubbard"]["lat"];
+  
+  // dimensions
   std::vector<uint> dims;
-  lui ipos = 0,
-      ipend = dim.size();
-  while( (ipend = IL::endword(dim,ipos,"x*")) != ipos ){
+  for (auto d: dim) {
     uint x;
-    if (str2num<uint>(x,dim.substr(ipos,ipend-ipos),std::dec)) {
+    if (str2num<uint>(x,d,std::dec)) {
       dims.push_back(x);
     } else {
-      error("Dimensions in Hubbard are not integer:"+dim);
+      error("Dimensions in Hubbard are not integer:"+d);
     }
-    ipos=ipend;
-    if (ipos < dim.size() ) ++ipos;
   }
-  _dump = std::unique_ptr<Hdump>(new Hdump(dims,charge,ms2,pbc,Upar,tpar,t1par));
+  // PBC
+  if ( pbc.size() == 0 ) pbc.push_back("0");
+  if ( pbc.size() != dim.size() && pbc.size() != 1 ) 
+    error("Define PBC-type for each dimension!");
+  pbc.resize(dim.size(), pbc.front());
+  std::vector<int> pbcs;
+  for (auto p: pbc) {
+    int x;
+    if (str2num<int>(x,p,std::dec)) {
+      pbcs.push_back(x);
+    } else {
+      error("PBC is not integer:"+p);
+    }
+  }
+  // hopping
+  std::vector<double> tpars;
+  for (auto tt: tparsarray) {
+    double x;
+    if (!str2num<double>(x,tt,std::dec))
+      error("t parameter is not float in "+tt);
+    tpars.push_back(x);
+  }
+  
+  if ( Input::iPars["hubbard"]["simple"] ) {
+    _dump = std::unique_ptr<Hdump>(new Hdump(dims,charge,ms2,pbcs,Upar,tpars));
+  } else {
+    // unit cell
+    UCell ucell;
+    for (auto site: ucell_str) {
+      TParArray coord_str = IL::parray(site);
+      double x;
+      Coords coords;
+      for ( auto c: coord_str) {
+        if (!str2num<double>(x,c,std::dec))
+          error("coord in ucell not float "+c);
+        coords.push_back(x);
+      }
+      ucell.add(coords);
+    }
+    if ( ucell.nsites() == 0 ) ucell.set_default(dims.size());
+//    xout << "Unit cell: " << ucell << std::endl;
+    // lattice vectors
+    Lattice lat;
+    for (auto lv: lat_str) {
+      TParArray coord_str = IL::parray(lv);
+      double x;
+      Coords coords;
+      for ( auto c: coord_str) {
+        if (!str2num<double>(x,c,std::dec))
+          error("coord in lat not float "+c);
+        coords.push_back(x);
+      }
+      lat.add(coords);
+    }
+    if ( lat.ndim() == 0 ) lat.set_default(dims.size());
+//    xout << "Lattice: " << lat << std::endl;
+  
+    Periodic persym(ucell,lat,dims,pbcs);
+    _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,tpars));
+  }
   return true;
 }
 

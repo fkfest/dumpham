@@ -56,10 +56,17 @@ set="fm",type=s,name="outmat",value="",desc="fock matrix from density matrices i
 set="fm",type=s,name="ips",value="",desc="eigenvalues of the generalized fock matrix (EKT-IPs) as a diagonal matrix"
 
 %HUBBARD
-set="hubbard",type=s,name="dimension",value="10",desc="Dimension in form of 10 or 10x10 or 10x10x10"
+set="hubbard",type=a,name="dimension",value={10},desc="Dimensions"
 set="hubbard",type=f,name="U",value=1.0,desc="U parameter"
-set="hubbard",type=f,name="t",value=0.5,desc="t parameter"
-set="hubbard",type=f,name="t1",value=0.0,desc="next neighbour t parameter"
+set="hubbard",type=a,name="t",value={0.5},desc="t parameters"
 set="hubbard",type=i,name="charge",value=0,desc="charge wrt half filling"
 set="hubbard",type=i,name="ms2",value=-1,desc="ms"
-set="hubbard",type=i,name="pbc",value=0,desc="PBC"
+set="hubbard",type=a,name="pbc",value={0},desc="PBC in each dimension"
+set="hubbard",type=i,name="print",value=0,desc="print geometry"
+set="hubbard",type=a,name="lat",value={},desc="lattice vectors"
+set="hubbard",type=a,name="ucell",value={},desc="unit cell defined in cartesian coordinates for each site. Last site is equivalent to the first"
+set="hubbard",type=i,name="simple",value=0,desc="Simple implementation, cubic lattice, trivial unit cell"
+
+%PERIODIC
+set="periodic",type=f,name="thrdist",value=1.e-6,desc="Threshold for square distance between two sites to be considered the same"
+set="periodic",type=s,name="xyzout",value="",desc="Save supercell coordinates in XYZ format"

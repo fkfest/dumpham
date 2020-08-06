@@ -13,6 +13,7 @@
 #include "odump.h"
 #include "density_mat.h"
 #include "fock_mat.h"
+#include "periodic.h"
 
 /*!
     Input analyzer 

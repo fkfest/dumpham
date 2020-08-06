@@ -19,6 +19,15 @@ struct SpinOrb {
   Spin spin = alpha;
 };
 
+namespace Numbers
+{
+  // "zero"
+  static const double verysmall=1.e-16;
+  static const double small=1.e-10;
+  static const int big=1000;
+}
+
+
 } //namespace HamDump
 
 #endif

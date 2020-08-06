@@ -17,6 +17,7 @@
 #include "pgsym.h"
 #include "integs.h"
 #include "refdet.h"
+#include "periodic.h"
 
 namespace HamDump {
 typedef std::vector<uint64_t> BlockIndices;
@@ -33,7 +34,8 @@ public:
         uint sym_ = 0, bool uhf_ = false, bool simtra_ = false, bool dm_ = false) :
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_),
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_), _dm(dm_) { _rd = RefDet(_pgs); }
-  Hdump(std::vector<uint> dims, int charge, int ms2, int pbc, double Upar, double tpar, double t1par = 0.0);
+  Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar);
+  Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar);
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
   // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true)
@@ -172,7 +174,8 @@ public:
   //store 1RDM in ASCII format
   void store1RDM(std::string filepname, std::string filename, bool uhf);
   //gen integrals for Hubbard model
-  void gen_hubbard(const std::vector<uint>& dims, int pbc, double Upar, double tpar, double t1par);
+  void gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, double Upar, const std::vector<double>& tpar);
+  void gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar);
 
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -493,10 +496,11 @@ public:
  */
 struct HubSite : public std::vector<int> {
   HubSite() : std::vector<int>() {};
-  HubSite(const std::vector<uint>& dims, int pbc = 0) {
+  HubSite(const std::vector<uint>& dims, const std::vector<int>& pbcs) {
     _dims = dims;
     resize(dims.size(),0);
-    _pbc = pbc;
+    _pbcs = pbcs;
+    assert(_dims.size() == _pbcs.size());
   }
   void zero() {
     for (auto & i: *this) i = 0;
@@ -518,10 +522,11 @@ struct HubSite : public std::vector<int> {
   uint dist2(const HubSite& hs) const {
     assert(hs.size() == size());
     assert(_dims.size() == size());
+    assert(_dims.size() == _pbcs.size());
     uint dd = 0;
     for ( uint i = 0; i < size(); ++i ) {
       uint r = std::abs((*this)[i] - hs[i]);
-      if ( _pbc && r > _dims[i] - r ) 
+      if ( _pbcs[i] && r > _dims[i] - r ) 
         r = _dims[i] - r;
       dd += r*r;
     }
@@ -540,7 +545,7 @@ struct HubSite : public std::vector<int> {
   // dimensions of the Hubbard model
   std::vector<uint> _dims;
   // periodic boundary condition
-  int _pbc;
+  std::vector<int> _pbcs;
 };
 std::ostream & operator << (std::ostream& o, const HubSite& hs);
 
