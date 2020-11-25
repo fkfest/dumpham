@@ -3,10 +3,14 @@
 Finput::Finput(bool ham) : 
 _ham(ham){}
 
-Finput::Finput(std::string paramspath) :
+Finput::Finput(std::string paramspath, const std::vector<std::string>& cmd_inps) :
 _ham(false)
 {
   InitInpars(paramspath);
+  // set input params from cmd_inps
+  for (auto ps: cmd_inps) {
+    IL::changePars(ps, 0);
+  }
 }
 
 void Finput::InitInpars(std::string paramspath)

@@ -19,3 +19,11 @@ Dump various model Hamiltonians as FCIDUMP files.
   
 
         dumpham <input.dh>
+
+
+  *  the input parameters can be set from the command line (will be overwritten by the input file), e.g.,
+    
+  
+        dumpham -i "hubbard,U=2.0" -i "ham,out=hubbard.fcidump" hubbard.dh
+
+

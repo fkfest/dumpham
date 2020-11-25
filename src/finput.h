@@ -23,7 +23,7 @@ public:
   // constructor
   Finput ( bool ham = false );
   // constructor + init input-parameters
-  Finput( std::string paramspath );
+  Finput( std::string paramspath, const std::vector<std::string>& cmd_inps );
   // add string
   bool addline( const std::string& line );
   // get input
