@@ -67,6 +67,8 @@ public:
 //   Irrep totIrrep( uint orb1, uint orb2, uint orb3 ) { return product(_irrep4orb[orb1], totIrrep(orb2,orb3)); }
   Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4 ) const 
                 { return product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)); }
+  Irrep totIrrep( uint orb1, uint orb2, uint orb3, uint orb4, uint orb5, uint orb6 ) const
+                { return product(product(totIrrep(orb1,orb2), totIrrep(orb3,orb4)),totIrrep(orb5,orb6)); }
   // product of two irreps
   Irrep product(Irrep i, Irrep j) const { assert((i^j)< nIrreps()); return (i^j);}
   // return the original orbsym for fcidump

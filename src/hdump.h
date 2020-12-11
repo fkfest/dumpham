@@ -53,6 +53,8 @@ public:
   void set_occupationAB(const std::vector<uint>& occorba, const uint* nocca,
                         const std::vector<uint>& occorbb, const uint* noccb);
   void read_dump();
+  // for 3 body integrals
+  void read_3body_dump();
   void store(std::string fcidump);
   void alloc_ints();
   // import integrals from hd. If add is true: add to the current integrals, otherwise the integrals are allocated
@@ -116,6 +118,13 @@ public:
           const OrbOrder& o1 = _rd.ref[spin4el[0][xxxx]];
           const OrbOrder& o2 = _rd.ref[spin4el[1][xxxx]];
           (_twoel[xxxx].get())->set(o1[p],o1[q],o2[r],o2[s],val);}
+  // in spatial orbitals (hdump order), PG symmetry is handled outside
+  inline double threeel_spa(uint p, uint q, uint r, uint s, uint t, uint u, twotype xxxx = aaaa) const {
+          assert(!_uhf);
+          const OrbOrder& o1 = _rd.ref[alpha];
+          const OrbOrder& o2 = _rd.ref[alpha];
+          const OrbOrder& o3 = _rd.ref[alpha];
+          return (_threeel[_uhf?xxxx:aaaa].get())->get(o1[p],o1[q],o2[r],o2[s],o3[t],o3[u]);}
   // in spin orbitals, PG symmetry is handled outside
   inline double oneel_spi(uint p, uint q) const;
   // in spin orbitals, PG symmetry is handled outside
@@ -124,6 +133,8 @@ public:
   inline double twoel_spi(uint p, uint q, uint r, uint s) const;
   // in spin orbitals, PG symmetry is handled outside
   inline void set_twoel_spi(uint p, uint q, uint r, uint s, double val);
+  // in spin orbitals, PG symmetry is handled outside
+  inline double threeel_spi(uint p, uint q, uint r, uint s, uint t, uint u) const;
   // in spatial orbitals (hdump order)
   double oneel_spa_pgs(uint p, uint q, onetype xx = aa) const {
           assert( (_uhf?xx:aa) < _oneel.size() );
@@ -219,10 +230,12 @@ private:
   double spinsum_1DM(uint p, uint q, Irrep ir);
   // check for nelec, ms2, norb, occ, clos, core...
   void sanity_check() const;
-  // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
+  // Two-electron integrals (one set for rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
-  // One-electron integrals (one set for cs rhf, otherwise alpha and beta)
+  // One-electron integrals (one set for rhf, otherwise alpha and beta)
   std::vector< std::unique_ptr<BaseTensors> > _oneel;
+  // Three-electron integrals (one set for rhf, otherwise aaa, aab, abb, bbb)
+  std::vector< std::unique_ptr<BaseTensors> > _threeel;
   // point group symmetry
   PGSym _pgs;
   // Scalar
@@ -240,6 +253,9 @@ private:
   bool _uhf = false;
   // doesn't have the bra-ket symmetry
   bool _simtra = false;
+  // three-body integrals
+  bool _3body = false;
+  std::string _3body_file;
   // density matrix instead of integrals
   bool _dm = false;
   // reference determinant
@@ -284,6 +300,22 @@ inline double Hdump::twoel_spi(uint p, uint q, uint r, uint s) const {
       return -(_twoel[aabb].get())->get(pso.orb,sso.orb,rso.orb,qso.orb);
     else
       return -(_twoel[aabb].get())->get(rso.orb,qso.orb,pso.orb,sso.orb);
+  }
+  return 0.0;
+}
+
+inline double Hdump::threeel_spi(uint p, uint q, uint r, uint s, uint t, uint u) const {
+  assert( p < _rd.refso.size() && q < _rd.refso.size() && r < _rd.refso.size() && s < _rd.refso.size() && t < _rd.refso.size() && u < _rd.refso.size() );
+  assert( !_dm && !_uhf );
+  const SpinOrb
+    & pso = _rd.refso[p],
+    & qso = _rd.refso[q],
+    & rso = _rd.refso[r],
+    & sso = _rd.refso[s],
+    & tso = _rd.refso[t],
+    & uso = _rd.refso[u];
+  if (pso.spin == qso.spin && rso.spin == sso.spin && tso.spin == uso.spin) {
+    return (_threeel[aa].get())->get(pso.orb,qso.orb,rso.orb,sso.orb,tso.orb,uso.orb);
   }
   return 0.0;
 }
@@ -388,8 +420,29 @@ inline void Hdump::get_block(double* pData, const BlockIndices& start, const Blo
         }
       }
     }
-  } else {
-    error("Number of indices is neither 2 nor 4","Hdump::get_block");
+  } else if (start.size() == 6) {
+    // (pq|rs|tu)
+    uint64_t indx[6];
+    for ( indx[5] = start[5]; indx[5] < end[5]; ++indx[5] ) {
+      for ( indx[4] = start[4]; indx[4] < end[4]; ++indx[4] ) {
+        for ( indx[3] = start[3]; indx[3] < end[3]; ++indx[3] ) {
+          for ( indx[2] = start[2]; indx[2] < end[2]; ++indx[2] ) {
+            for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+              for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+                if (spinorb)
+                  *p_Data = threeel_spi(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],indx[order[4]],indx[order[5]]);
+                else
+                  *p_Data = threeel_spa(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],indx[order[4]],indx[order[5]],aaaa);
+                ++p_Data;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  else {
+    error("Number of indices is neither 2 nor 4 nor 6","Hdump::get_block");
   }
 }
 inline void Hdump::set_block(double* pData, const BlockIndices& start, const BlockIndices& end,

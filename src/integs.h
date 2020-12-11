@@ -15,9 +15,11 @@ namespace HamDump {
 #ifdef _DEBUG
 #define WARNRED2(p,q) if(redunwarn) warning("Redundant entry in FCIDUMP: "+ std::to_string(p) + " " + std::to_string(q) );
 #define WARNRED4(p,q,r,s) if(redunwarn) warning("Redundant entry in FCIDUMP: "+std::to_string(p)+" "+std::to_string(q)+" "+std::to_string(r)+" "+std::to_string(s) );
+#define WARNRED6(p,q,r,s,t,u) if(redunwarn) warning("Redundant entry in FCIDUMP: "+std::to_string(p)+" "+std::to_string(q)+" "+std::to_string(r)+" "+std::to_string(s)+" "+std::to_string(t)+" "+std::to_string(u) );
 #else
 #define WARNRED2(p,q)
 #define WARNRED4(p,q,r,s)
+#define WARNRED6(p,q,r,s,t,u)
 #endif
 
 #ifdef MOLPRO
@@ -44,6 +46,8 @@ public:
   void set( uint p, uint q, Irrep ir, double val ) { _data[index(p,q,ir)] = val; }
   // set (pq|rs) value
   void set( uint p, uint q, uint r, uint s, double val ) { _data[index(p,q,r,s)] = val; }
+  // set (pq|rs|tu) value
+  void set( uint p, uint q, uint r, uint s, uint t, uint u, double val ) { _data[index(p,q,r,s,t,u)] = val; }
   // set value using the tuple index. Note that in most of the tensors(p,q,..) p is slow running!
   double get( BlkIdx idx ) { assert(idx < _data.size()); return _data[idx]; }
   // get (pq) value
@@ -52,6 +56,8 @@ public:
   double get( uint p, uint q, Irrep ir ) const { return _data[index(p,q,ir)]; }
   // get (pq|rs) value
   double get( uint p, uint q, uint r, uint s ) const { return _data[index(p,q,r,s)]; }
+  // get (pq|rs|tu) value
+  double get( uint p, uint q, uint r, uint s, uint t, uint u ) const { return _data[index(p,q,r,s,t,u)]; }
   // return (pq) value with point-group symmetry handling
   double get_with_pgs( uint p, uint q ) const {
     if ( p_pgs->totIrrep(p,q) == 0 ) return get(p,q);
@@ -62,12 +68,19 @@ public:
     if ( p_pgs->totIrrep(p,q,r,s) == 0 ) return get(p,q,r,s);
     else return 0.0;
   }
+  // return (pq|rs|tu) value with point-group symmetry handling
+  double get_with_pgs( uint p, uint q, uint r, uint s, uint t, uint u) const {
+    if ( p_pgs->totIrrep(p,q,r,s,t,u) == 0 ) return get(p,q,r,s,t,u);
+    else return 0.0;
+  }
   virtual inline BlkIdx index( uint p, uint q ) const 
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;return 0;};
   virtual inline BlkIdx index( uint p, uint q, Irrep ir ) const 
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)ir;return 0;};
   virtual inline BlkIdx index( uint p, uint q, uint r, uint s ) const 
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return 0;}
+  virtual inline BlkIdx index( uint p, uint q, uint r, uint s, uint t, uint u ) const
+          { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)t;(void)u;return 0;}
   virtual inline bool next_indices( uint& p, uint& q ) const 
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;return false;};
   virtual inline bool next_indices_nosym( uint& p, uint& q ) const 
@@ -76,7 +89,11 @@ public:
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)ir;return false;};
   virtual inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const 
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return false;};
-          
+  virtual inline bool next_indices( uint& p, uint& q, uint& r, uint& s, uint& t, uint& u, Irrep& ir ) const
+          {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)t;(void)u;(void)ir;return false;};
+  virtual inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s, uint& t, uint& u) const
+          {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)t;(void)u;return false;};
+
   const PGSym * pgs() const {return p_pgs;}
 #ifdef _DEBUG
   bool redunwarn = false;
@@ -194,6 +211,23 @@ public:
   inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const;
   // iterate to next index without symmetry
   inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
+};
+
+/*!
+ * Class for (pq|rs|tu) with permutational (triangular) and group symmetry
+ * (pq|rs|tu)=(qp|rs|tu)=(pq|sr|tu)=(pq|rs|ut)=(qp|sr|tu)=....=(rs|pq|tu)=...
+ */
+class Integ6 : public BaseTensors {
+public:
+  Integ6() : BaseTensors(6) {};
+  Integ6(const PGSym& pgs);
+  // index of p,q,r,s,t,u value
+  inline BlkIdx index( uint p, uint q, uint r, uint s, uint t, uint u ) const;
+  // iterate to next index
+  inline bool next_indices( uint& p, uint& q, uint& r, uint& s, uint& t, uint& u,
+                            Irrep& irpq, Irrep& irrs ) const;
+  // iterate to next index without symmetry
+  inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s, uint& t, uint& u ) const;
 };
 
 // inline functions
@@ -543,8 +577,133 @@ inline bool Integ4stab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) c
   return false;
 }
 
+inline BlkIdx Integ6::index(uint p, uint q, uint r, uint s, uint t, uint u ) const
+{
+  if ( p < q ) {
+    WARNRED6(p,q,r,s,t,u)
+    std::swap(p,q);
+  }
+  if ( r < s ) {
+    WARNRED6(p,q,r,s,t,u)
+    std::swap(r,s);
+  }
+  if ( t < u ) {
+    WARNRED6(p,q,r,s,t,u)
+    std::swap(t,u);
+  }
+  if ( p*(p+1)/2+q < r*(r+1)/2+s ){
+    WARNRED6(p,q,r,s,t,u)
+    std::swap(p,r);
+    std::swap(q,s);
+  }
+  if ( r*(r+1)/2+s < t*(t+1)/2+u ){
+    WARNRED6(p,q,r,s,t,u)
+    std::swap(r,t);
+    std::swap(s,u);
+    if ( p*(p+1)/2+q < r*(r+1)/2+s ){
+      std::swap(p,r);
+      std::swap(q,s);
+    }
+  }
+
+  Irrep pir = p_pgs->irrep(p),
+        qir = p_pgs->irrep(q),
+        rir = p_pgs->irrep(r),
+        sir = p_pgs->irrep(s),
+        tir = p_pgs->irrep(t),
+        uir = p_pgs->irrep(u);
+  uint nIrreps = p_pgs->nIrreps();
+  BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*(sir+nIrreps*(tir+nIrreps*uir))))];
+  // indices relative to the block
+  BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
+         qb = q - p_pgs->_firstorb4irrep[qir],
+         rb = r - p_pgs->_firstorb4irrep[rir],
+         sb = s - p_pgs->_firstorb4irrep[sir],
+         tb = t - p_pgs->_firstorb4irrep[tir],
+         ub = u - p_pgs->_firstorb4irrep[uir];
+  BlkIdx pqb, rsb, tub, lenrs, lentu;
+  if ( pir == qir ) {
+    // triangular index
+    pqb = pb*(pb+1)/2+qb;
+  } else {
+    pqb = pb*p_pgs->_norb4irrep[qir]+qb;
+  }
+  if ( rir == sir ) {
+    // triangular index
+    rsb = rb*(rb+1)/2+sb;
+    lenrs = p_pgs->_norb4irrep[rir]*(p_pgs->_norb4irrep[rir]+1)/2;
+  } else {
+    rsb = rb*p_pgs->_norb4irrep[sir]+sb;
+    lenrs = p_pgs->_norb4irrep[rir]*p_pgs->_norb4irrep[sir];
+  }
+  if ( tir == uir ) {
+    // triangular index
+    tub = tb*(tb+1)/2+ub;
+    lentu = p_pgs->_norb4irrep[tir]*(p_pgs->_norb4irrep[tir]+1)/2;
+  } else {
+    tub = tb*p_pgs->_norb4irrep[uir]+ub;
+    lentu = p_pgs->_norb4irrep[tir]*p_pgs->_norb4irrep[uir];
+  }
+  if ( pir == rir ) {
+    // triangular index
+    if ( pir == tir ) {
+      return pqb*(pqb+1)*(pqb+2)/6 + rsb*(rsb+1)/2 + tub + blk_idx;
+    } else {
+      return (pqb*(pqb+1)/2 + rsb)*lentu + tub + blk_idx;
+    }
+  } else if ( rir == tir ) {
+      return pqb*(lenrs*(lenrs-1)/2+lentu) + rsb*(rsb+1)/2 + tub + blk_idx;
+  } else {
+    return (pqb*lenrs + rsb)*lentu + tub + blk_idx;
+  }
+}
+inline bool Integ6::next_indices(uint& p, uint& q, uint& r, uint& s, uint& t, uint& u, 
+                                 Irrep& irpq, Irrep& irrs) const
+{
+  ++u;
+  do { // irpq
+    do { // p
+      do { // q
+        if ( p_pgs->totIrrep(p,q) == irpq ) do { // irrs
+          do { // r
+            do { // s
+              if ( p_pgs->totIrrep(r,s) == irrs && (r+1)*r/2 + s <= (p+1)*p/2 + q ) do { // t
+                for ( ; u <= t; ++u ) {
+                  if ( p_pgs->totIrrep(t,u) == p_pgs->product(irpq,irrs) && 
+                       (t+1)*t/2 + u <= (r+1)*r/2 + s ) return true;
+                } u = 0;
+              ++t; } while ( t <= r ); t = 0;
+            ++s; } while ( s <= r ); s = 0;
+          ++r; } while ( r <= p ); r = 0;
+        ++irrs; } while ( irrs < p_pgs->nIrreps() ); irrs = 0;
+      ++q; } while ( q <= p ); q = 0;
+    ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
+  ++irpq; } while ( irpq < p_pgs->nIrreps() );
+  return false;
+}
+
+inline bool Integ6::next_indices_nosym(uint& p, uint& q, uint& r, uint& s, uint& t, uint& u) const
+{
+  ++u;
+  do { // p
+    do { // q
+      do { // r
+        do { // s
+          if ( (r+1)*r/2 + s <= (p+1)*p/2 + q ) do { // t
+            for ( ; u <= t; ++u ) {
+              if ( (t+1)*t/2 + u <= (r+1)*r/2 + s ) return true;
+            } u = 0;
+          ++t; } while ( r <= p ); r = 0;
+        ++s; } while ( s <= r ); s = 0;
+      ++r; } while ( r <= p ); r = 0;
+    ++q; } while ( q <= p ); q = 0;
+  ++p; } while ( p < p_pgs->ntotorbs());
+  return false;
+}
+
 #undef WARNRED2
 #undef WARNRED4
+#undef WARNRED6
 } // namespace HamDump
 #endif
 

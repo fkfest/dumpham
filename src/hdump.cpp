@@ -41,6 +41,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   check_input_norbs(CORE,"core",verbose);
 
   FDPar ST = _dump.parameter("ST");
+  FDPar ThreeBody = _dump.parameter("III");
   FDPar DM = _dump.parameter("DM");
 
   int nn = NORB[0];
@@ -59,7 +60,19 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
 
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
+  _3body = bool(ThreeBody[0]);
   _dm = bool(DM[0]);
+
+  if ( _3body ) {
+    // name of the 3 body file
+    if ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ) {
+      _3body_file=fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
+      xout << "Three body integrals will be read from " << _3body_file << std::endl;
+    } else {
+      error("Cannot generate filename for 3body terms, use *.FCIDUMP format for fcidump","hdump.cpp");
+    }
+  }
+
   sanity_check();
 }
 
@@ -136,6 +149,14 @@ void Hdump::alloc_ints()
       _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
     }
   }
+  if (_3body) {
+      xout << "allocate 3body" << std::endl;
+      // atm only symmetric 3-body integrals are used
+      _threeel.emplace_back(new Integ6(_pgs));
+      if ( _uhf ) {
+          error("UHF 3-body not implemented!","hdump.cpp");
+      }
+  }
 
 #ifdef _DEBUG
   if (_simtra) {
@@ -156,6 +177,19 @@ void Hdump::alloc_ints()
     }
   }
 //   check_addressing_integrals();
+  if (_3body) {
+    Irrep isym = 0, jsym = 0;
+    uint i,j,k,l,m,n;
+    i=j=k=l=m=n=0;
+    Integ6 * pInt = dynamic_cast<Integ6*>(_threeel[aa].get());
+    assert( pInt );
+    BlkIdx indxRef = 0;
+    do {
+      BlkIdx indxD = pInt->index(i,j,k,l,m,n);
+      if (indxD != indxRef ) xout << "indx " << indxD << ":" << i << " " << j << " " << k << " " << l << " " << m << " " << n << "(" << isym << "," << jsym << ")" << std::endl;
+      ++indxRef;
+    } while (pInt->next_indices(i,j,k,l,m,n,isym,jsym));
+  }
 #endif
 }
 
@@ -219,7 +253,27 @@ void Hdump::read_dump()
     }
 
   } while (type != FCIdump::endOfFile);
+  if ( _3body ) {
+    read_3body_dump();
+  }
 }
+void Hdump::read_3body_dump()
+{
+  int i,j,k,l,m,n;
+  double value;
+  std::ifstream ftcdump;
+  ftcdump.open(_3body_file.c_str());
+  if (!ftcdump.is_open()) error("Cannot open TCDUMP file "+_3body_file,"hdump.cpp");
+  Integ6 * pInt = dynamic_cast<Integ6*>(_threeel[aa].get());
+  assert( pInt );
+  // order on TCDUMP: ikmjln == <ikm|jln> == (ij|kl|mn)
+  while (ftcdump >> value >> i >> k >> m >> j >> l >> n) {
+    //xout << value << "(" << i << " " << j << "|" << k << " " << l << "|" << m << " " << n << ")" << std::endl;
+    pInt->set(i-1,j-1,k-1,l-1,m-1,n-1,value);
+  }
+  ftcdump.close();
+}
+
 template<typename T>
 void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype)
 {
