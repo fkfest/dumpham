@@ -55,6 +55,7 @@ public:
   void read_dump();
   // for 3 body integrals
   void read_3body_dump();
+  void writeIntegral_3body(int i, int j, int k, int l, int m, int n, double value, std::ofstream& outputStream) const;
   void store(std::string fcidump);
   void alloc_ints();
   // import integrals from hd. If add is true: add to the current integrals, otherwise the integrals are allocated
@@ -192,12 +193,16 @@ private:
   void skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype );
   template<typename I2, typename I4aa, typename I4ab>
   void store_with_symmetry( I2 * pI2, I4aa * pI4aa, I4ab * pI4ab ) const;
+  template<typename I6>
+  void store_with_symmetry( I6 * pI6 ) const;
   template<typename I2, typename I4aa, typename I4ab>
   void store_without_symmetry( I2 * pI2, I4aa * pI4aa, I4ab * pI4ab ) const;
   template<typename T>
   void storerec2_sym(const T * pInt) const;
   template<typename T>
   void storerec4_sym(const T * pInt) const;
+  template<typename T>
+  void storerec6_sym(const T * pInt) const;
   template<typename T>
   void storerec2_nosym(const T * pInt) const;
   template<typename T>

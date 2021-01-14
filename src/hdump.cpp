@@ -62,15 +62,15 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _simtra = bool(ST[0]);
   _3body = bool(ThreeBody[0]);
   _dm = bool(DM[0]);
-
   if ( _3body ) {
     // name of the 3 body file
-    if ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ) {
-      _3body_file=fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
+    if ( fcidump == "FCIDUMP" ) _3body_file = "TCDUMP";
+    else if ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ) {
+      _3body_file = fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
       xout << "Three body integrals will be read from " << _3body_file << std::endl;
-    } else {
+    } 
+    else
       error("Cannot generate filename for 3body terms, use *.FCIDUMP format for fcidump","hdump.cpp");
-    }
   }
 
   sanity_check();
@@ -274,6 +274,25 @@ void Hdump::read_3body_dump()
   ftcdump.close();
 }
 
+void Hdump::writeIntegral_3body(int p, int q, int r, int s, int t, int u, double value, std::ofstream& outputStream) const
+{
+  //H2- vdz rhf
+  //zero (ij|kl|mn)
+  //if ( (i==1||i==2) && (j==1||j==2) && (k==1||k==2) && (l==1||l==2) && (m==1||m==2) && (n==1||n==2) ) value = 0.0e-12;
+  //zero all except (ij|kl|mn)
+  //if ( (p>2) || (q>2) || (r>2) || (s>2) || (t>2) || (u>2) ) value = 0.0e-12;
+  //zero all except (ab|cd|ef)
+  if ( (p<3) || (q<3) || (r<3) || (s<3) || (t<3) || (u<3) ) value = 0.0e-12;
+  outputStream << std::setw(23) << value << " ";
+  outputStream << std::setw(3) << p<<" ";
+  outputStream << std::setw(3) << q<<" ";
+  outputStream << std::setw(3) << r<<" ";
+  outputStream << std::setw(3) << s<<" ";
+  outputStream << std::setw(3) << t<<" ";
+  outputStream << std::setw(3) << u << std::endl;
+}
+
+
 template<typename T>
 void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype)
 {
@@ -406,6 +425,11 @@ void Hdump::store(std::string fcidump)
       store_with_symmetry(pI2,pI4aa,pI4ab);
     }
   }
+  if (_3body) {
+    Integ6 * pI6 = 0;
+    //atm only symmetric 3-body integrals are used
+    store_with_symmetry(pI6);
+  }
 #ifndef MOLPRO
   _dump.close_outputfile();
   if ( ( nosym || _osord.reordered ) && !newfile ) {
@@ -439,6 +463,16 @@ void Hdump::store_with_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
   }
   _dump.writeIntegral(0,0,0,0,_escal);
 
+}
+
+template<typename I6>
+void Hdump::store_with_symmetry(I6* pI6) const
+{
+  pI6 = dynamic_cast<I6*>(_threeel[aa].get()); assert(pI6);
+  storerec6_sym(pI6);
+  if (_uhf) {
+    error("UHF 3-body not implemented!","hdump.cpp");
+  }
 }
 
 template<typename I2, typename I4aa, typename I4ab>
@@ -482,6 +516,28 @@ void Hdump::storerec2_sym(const T * pInt) const
   do {
     _dump.writeIntegral(i+1,j+1,0,0,pInt->get(i,j));
   } while (pInt->next_indices(i,j));
+}
+template<typename T>
+void Hdump::storerec6_sym(const T * pInt) const
+{
+  uint i = 0, j = 0, k = 0, l = 0, m = 0, n =0;
+  Irrep ijsym = 0;
+  Irrep klsym = 0;
+  std::ofstream outputStream;
+  outputStream<<std::scientific<<std::setprecision(15);
+  std::string outputFile = FileName(_3body_file,true)+"_NEW.TCDUMP";
+  outputStream.open(outputFile.c_str());
+  if ( (outputStream.rdstate() & std::ifstream::failbit ) != 0 ) {
+    outputStream.close();
+    error("Hdump::storerec6_sym failed to open "+ outputFile);
+  }
+  xout << "will be written to file " << outputFile << std::endl;
+  do {
+    //write out in physicist notation <ikm|jln>
+    writeIntegral_3body(i+1,k+1,m+1,j+1,l+1,n+1,pInt->get_with_pgs(i,j,k,l,m,n),outputStream);
+    //write out in chemist notation (ij|kl|mn)
+    //writeIntegral_3body(i+1,j+1,k+1,l+1,m+1,n+1,pInt->get_with_pgs(i,j,k,l,m,n),outputStream);
+  } while (pInt->next_indices(i,j,k,l,m,n,ijsym,klsym));
 }
 template<typename T>
 void Hdump::storerec4_nosym(const T * pInt) const
