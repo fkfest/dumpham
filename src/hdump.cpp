@@ -282,7 +282,7 @@ void Hdump::writeIntegral_3body(int p, int q, int r, int s, int t, int u, double
   //zero all except (ij|kl|mn)
   //if ( (p>2) || (q>2) || (r>2) || (s>2) || (t>2) || (u>2) ) value = 0.0e-12;
   //zero all except (ab|cd|ef)
-  if ( (p<3) || (q<3) || (r<3) || (s<3) || (t<3) || (u<3) ) value = 0.0e-12;
+  //if ( (p<3) || (q<3) || (r<3) || (s<3) || (t<3) || (u<3) ) value = 0.0e-12;
   outputStream << std::setw(23) << value << " ";
   outputStream << std::setw(3) << p<<" ";
   outputStream << std::setw(3) << q<<" ";
