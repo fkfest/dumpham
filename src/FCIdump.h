@@ -187,7 +187,7 @@ public:
    * \param value value
    */
   void modifyParameter(const std::string& key, const double& value);
-  
+
    /*!
      * \brief The file containing the FCIDUMP data
      */

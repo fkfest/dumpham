@@ -32,7 +32,7 @@ public:
   std::vector<double> _RDM2;
   std::vector<double> _RDM1;
 private:
-  
+
   uint _nsorb;
 };
 
@@ -52,14 +52,14 @@ Density matrix D^{a b}_{c d} = <a^+ b^+ d c>
   sign = -sign;
   }
   if(c>d){
-  cd = c * (c+1)/2 + d; 
+  cd = c * (c+1)/2 + d;
   }
   else{
   cd = d * (d+1)/2 + c;
   sign = -sign;
   }
   if(ab > cd){
-  abcd = ab * (ab +1)/2 + cd;  
+  abcd = ab * (ab +1)/2 + cd;
   }
   else{
   abcd = cd * (cd+1)/2 + ab;

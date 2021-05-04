@@ -3,7 +3,7 @@
 #include <fstream>
 
 namespace HamDump {
-  
+
 void UCell::set_default(uint ndims)
 {
   assert(size() == 0);
@@ -45,7 +45,7 @@ Coords Lattice::orthogvec2others( uint lv ) const
 }
 
 
-Periodic::Periodic(const UCell& ucell, const Lattice& lat, 
+Periodic::Periodic(const UCell& ucell, const Lattice& lat,
                  const std::vector<uint>& ncells, const std::vector<int>& pbcs)
 {
   assert( ncells.size() == pbcs.size() );
@@ -98,7 +98,7 @@ void Periodic::check_boundaries()
     // if site is on the boundary
     // check whether the site is non-unique
     // got through all combinations of lattices that apply
-    for ( uint nlat = 1; nlat <= bound.size(); ++nlat ) { 
+    for ( uint nlat = 1; nlat <= bound.size(); ++nlat ) {
       auto last = bound.begin()+nlat;
       do {
         ps.zero(false);
@@ -141,7 +141,7 @@ Coords Periodic::site_coords ( const PSite& isite ) const
 
 double Periodic::dist2(const PSite& ps1, const PSite& ps2) const
 {
-  Coords 
+  Coords
     cps1 = site_coords(ps1),
     cps2 = site_coords(ps2);
   double dd = cps1.dist2(cps2);
@@ -151,7 +151,7 @@ double Periodic::dist2(const PSite& ps1, const PSite& ps2) const
   for ( uint idim = 0; idim < _lat.ndim(); ++idim ) {
     if ( _pbcs[idim] != 0 ) perdims.push_back(idim);
   }
-  for ( uint nlat = 1; nlat <= perdims.size(); ++nlat ) { 
+  for ( uint nlat = 1; nlat <= perdims.size(); ++nlat ) {
     auto last = perdims.begin()+nlat;
     do {
       for ( uint signs = 0; signs < (1u << nlat); ++signs ) {
@@ -168,7 +168,7 @@ double Periodic::dist2(const PSite& ps1, const PSite& ps2) const
       }
     } while ( next_combination(perdims.begin(),last,perdims.end()) );
   }
-  return dd; 
+  return dd;
 }
 
 

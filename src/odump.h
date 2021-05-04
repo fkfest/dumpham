@@ -14,7 +14,7 @@
 using namespace HamDump;
 
 /*!
- *  Occupation vector for an irrep, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals} 
+ *  Occupation vector for an irrep, i.e., list of orbital indices corresponding to {doubly occupied orbitals, singly occupied orbitals}
  *  The orbital indices are zero based!
  */
 class Occupation4Irrep : public std::vector<int> {
@@ -51,7 +51,7 @@ std::ostream & operator << (std::ostream & o, Occupation const & occ);
     Orbitals dump with point-group symmetry, C(AO,MO)
 */
 class Odump {
-public:  
+public:
   Odump() : p_pgs(0) {}
   // construct a unity matrix for each symmetry block of orbitals
   // orbitals can be swapped according to the occupation vector
@@ -63,20 +63,20 @@ public:
   // store orbitals in file orbdump (comma-separated)
   void store(std::string orbdump);
   // return orbital index without core. orb_with_core has to be a valence orbital!
-  uint rmcore( uint orb_with_core ) const 
+  uint rmcore( uint orb_with_core ) const
         { assert( _ncoreaccu.size() == p_pgs->nIrreps() );
           uint ncor = _ncoreaccu[p_pgs->irrep(orb_with_core)];
           assert( ncor <= orb_with_core );
           return orb_with_core - ncor; }
   // is the input orbital core?
-  bool is_core(uint imo) const 
+  bool is_core(uint imo) const
         { assert( _ncore.size() == p_pgs->nIrreps() );
           Irrep ir = p_pgs->irrep(imo);
           return ( int(imo) < p_pgs->_firstorb4irrep[ir]+_ncore[ir] );}
-  // return value c(iao,imo). imo runs over all orbitals including core. 
+  // return value c(iao,imo). imo runs over all orbitals including core.
   // the point group symmetry has to be taken care outside
   double get(uint iao, uint imo) const { return _orbs.get(iao,imo); }
-  // return value c(iao,imo). imo runs over all orbitals including core. 
+  // return value c(iao,imo). imo runs over all orbitals including core.
   // resolves the point group symmetry
   double get_with_pgs(uint iao, uint imo) const { return _orbs.get_with_pgs(iao,imo); }
   // guess Basis-occupation vector from orbital coefficients (without core orbitals!)

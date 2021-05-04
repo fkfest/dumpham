@@ -3,7 +3,7 @@
 
 namespace HamDump {
 
-OrbOrder::OrbOrder(const FDPar& ORBSYM) : std::vector<std::size_t>(ORBSYM.size()) 
+OrbOrder::OrbOrder(const FDPar& ORBSYM) : std::vector<std::size_t>(ORBSYM.size())
 {
   std::vector<std::size_t> oldorder(ORBSYM.size());
   std::iota(oldorder.begin(),oldorder.end(),0);
@@ -12,8 +12,8 @@ OrbOrder::OrbOrder(const FDPar& ORBSYM) : std::vector<std::size_t>(ORBSYM.size()
   if (nSwaps > 0) {
     reordered = true;
     xout << "The orbitals in the fcidump will be reordered according to the symmetries" << std::endl;
-    xout << "ORBSYMORDER="; 
-    for ( const auto& s: (*this)) xout << s << ","; 
+    xout << "ORBSYMORDER=";
+    for ( const auto& s: (*this)) xout << s << ",";
     xout<<std::endl;
   }
 }
@@ -41,7 +41,7 @@ OrbOrder::OrbOrder(const std::vector<uint>& occorb, const uint* nocc, const PGSy
     }
   }
   for ( uint i = 0; i < size() && !reordered; ++i ) {
-    reordered = ((*this)[i] != i );       
+    reordered = ((*this)[i] != i );
   }
 }
 
@@ -49,7 +49,7 @@ std::ostream & operator << (std::ostream& o, const OrbOrder& oo) {
   std::size_t lastorb = oo.size()+100;
   bool print = false;
   for ( auto orb: oo ) {
-    if ( orb != lastorb + 1 ) { 
+    if ( orb != lastorb + 1 ) {
       if (print) o << lastorb << " ";
       o << orb << " ";
       print = false;
@@ -61,7 +61,7 @@ std::ostream & operator << (std::ostream& o, const OrbOrder& oo) {
   }
   if (print ) o << lastorb;
 //   for ( auto orb: oo ) o << " " << orb;
-  if ( oo.reordered ) 
+  if ( oo.reordered )
     o << "(REORDERED)";
   else
     o << "(UNITY)";
@@ -75,7 +75,7 @@ RefDet::RefDet(const PGSym& pgs)
   ref[beta] = ref[alpha];
   gen_refso();
 }
-RefDet::RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_, 
+RefDet::RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
          const FDPar& core_, bool wcore)
 {
   p_pgs = &pgs;
@@ -113,11 +113,11 @@ RefDet::RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
   // all open-shell electrons are alpha here
   nocc[alpha] = occ;
   nocc[beta] = clos;
-  
+
   gen_refso();
   print();
 }
-RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca, 
+RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca,
          const std::vector<uint>& occorbb, const uint* noccb)
 {
   p_pgs = &pgs;
@@ -143,15 +143,15 @@ RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* n
   assert( ita == occorba.end() && itb == occorbb.end() );
   ref[alpha] = OrbOrder(occorba, nocca, pgs);
   ref[beta] = OrbOrder(occorbb, noccb, pgs);
-  
+
   gen_refso();
   print(1);
 }
 
-bool RefDet::operator==(const RefDet& rd) const 
+bool RefDet::operator==(const RefDet& rd) const
 {
   return occ == rd.occ && clos == rd.clos && core == rd.core &&
-         nocc[alpha] == rd.nocc[alpha] && nocc[beta] == rd.nocc[beta] && 
+         nocc[alpha] == rd.nocc[alpha] && nocc[beta] == rd.nocc[beta] &&
          ref[alpha] == rd.ref[alpha] && ref[beta] == rd.ref[beta] &&
          pgs_wcore == rd.pgs_wcore;
 }
@@ -169,17 +169,17 @@ void RefDet::set_ncore(const FDPar& core_)
 
 FDPar RefDet::nclos_wcore() const
 {
-  FDPar clco(clos); 
+  FDPar clco(clos);
   add_or_subtract_core(clco,"CLOSED",true);
-  return clco; 
+  return clco;
 }
 FDPar RefDet::nocc_wcore() const
 {
-  FDPar occo(occ); 
+  FDPar occo(occ);
   add_or_subtract_core(occo,"OCC",true);
-  return occo; 
+  return occo;
 }
-void RefDet::add_or_subtract_core(FDPar& orb, const std::string& kind, bool add) const 
+void RefDet::add_or_subtract_core(FDPar& orb, const std::string& kind, bool add) const
 {
   for ( uint io = 0; io < std::min(orb.size(),core.size()); ++io ) {
     if ( add ) {
@@ -203,14 +203,14 @@ void RefDet::add_or_subtract_core(FDPar& orb, const std::string& kind, bool add)
 void RefDet::gen_refso()
 {
   // order of spin orbitals
-  int isoord; 
+  int isoord;
   #ifndef MOLPRO
   isoord = Input::iPars["orbs"]["soorder"];
   #else
   // spin-blocked order for molpro
   isoord = 1;
   #endif
-  uint norb = p_pgs->ntotorbs(); 
+  uint norb = p_pgs->ntotorbs();
   assert( ref[alpha].size() == norb && ref[beta].size() == norb );
   refso.clear();
   refso.reserve(2*norb);
@@ -290,9 +290,9 @@ void RefDet::sanity_check(uint nelec, uint ms2) const
     if ( na - nb != ms2 ) {
       error("MS2 is not equal #ALPHA-#BETA!");
     }
-      
+
   }
-  
+
 }
 
 void RefDet::print(int verbosity) const
@@ -311,4 +311,4 @@ void RefDet::print(int verbosity) const
   }
 }
 
-} //namespace HamDump 
+} //namespace HamDump

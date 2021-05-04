@@ -16,7 +16,7 @@
 #include "periodic.h"
 
 /*!
-    Input analyzer 
+    Input analyzer
 */
 class Finput {
 public:
@@ -39,9 +39,9 @@ public:
   // return input lines
   const std::vector<std::string> & inlines() const { return _inlines;};
   const std::vector<std::string> & inham() const { return _inham;};
-  
+
 private:
-  // initialyse default input-parameters 
+  // initialyse default input-parameters
   void InitInpars(std::string paramspath);
   // analyze command from the input line after backslash at ipos-1
   lui analyzecommand(lui ipos);

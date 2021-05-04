@@ -492,7 +492,7 @@ public:
 };
 
 /*!
- * Hubbard Site 
+ * Hubbard Site
  */
 struct HubSite : public std::vector<int> {
   HubSite() : std::vector<int>() {};
@@ -507,7 +507,7 @@ struct HubSite : public std::vector<int> {
   }
   bool next() {
     assert(_dims.size() == size());
-    
+
     for ( uint id = 0; id < size(); ++id ) {
       ++(*this)[id];
       if ((*this)[id] < int(_dims[id]) )
@@ -518,7 +518,7 @@ struct HubSite : public std::vector<int> {
     }
     return false;
   }
-  // square of the distance 
+  // square of the distance
   uint dist2(const HubSite& hs) const {
     assert(hs.size() == size());
     assert(_dims.size() == size());
@@ -526,7 +526,7 @@ struct HubSite : public std::vector<int> {
     uint dd = 0;
     for ( uint i = 0; i < size(); ++i ) {
       uint r = std::abs((*this)[i] - hs[i]);
-      if ( _pbcs[i] && r > _dims[i] - r ) 
+      if ( _pbcs[i] && r > _dims[i] - r )
         r = _dims[i] - r;
       dd += r*r;
     }

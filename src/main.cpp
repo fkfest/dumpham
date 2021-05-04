@@ -1,5 +1,5 @@
 #include <string>
-#include <cstring> 
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
   bool orbdump = false;
   bool use_pgs = false;
   int warning_level = -1;
-  // handle options  
+  // handle options
   while ( args.nextoption() ) {
     if ( args.check(ArgOpt("Verbosity level","v","-verbose" ))) {
       if ( args.optarg(arg) && str2num<int>(Input::verbose,arg,std::dec)){
@@ -71,18 +71,18 @@ int main(int argc, char **argv)
       error("Unknown parameter -"+args.get_current_option());
     }
   }
-  
+
   if ( !args.nextremaining(arg) ) error("Please provide an input file or -h option!");
   inputfile=arg;
   if ( args.nextremaining(arg) ) {
     outputfile=arg;
-  } else 
+  } else
     outputfile = FileName(inputfile,true)+"_NEW.FCIDUMP";
   if ( orbdump && args.nextremaining(arg) ) {
     orboutputfile=arg;
-  } else if ( orbdump ) 
+  } else if ( orbdump )
     orboutputfile = FileName(inputfile,true)+"_NEW.ORBDUMP";
-  
+
   // read input
   Finput finput(exePath, cmd_input_pars);
   if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
   if (fcidump) {
     if ( use_pgs ) {
       Input::iPars["ham"]["nosym"] = 0;
-    } else { 
+    } else {
       // de-symmetrize FCIDUMP
       Input::iPars["ham"]["nosym"] = 1;
     }

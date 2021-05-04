@@ -11,7 +11,7 @@ DMdump::DMdump(uint norb, const Occupation& occ)
   _RDM1.resize(nelem1d,0);
   uint nelem2d = onei(maxid,maxid,maxid,maxid,sign)+1;
   _RDM2.resize(nelem2d,0);
-  for(uint i = 0; i < nelec; i++)  
+  for(uint i = 0; i < nelec; i++)
     xout << spinocc[i] << " " ;
   xout << std::endl;
 //HF-RDM1
@@ -36,7 +36,7 @@ DMdump::DMdump(uint norb, const Occupation& occ)
     }
   }
 
-// Construct RDM1 from constructed HFRDM2 
+// Construct RDM1 from constructed HFRDM2
 //       uint ac, abcd;
 //       _RDM1.clear();
 //       _RDM1.resize(nelem1d,0);
@@ -59,7 +59,7 @@ DMdump::DMdump(uint norb, const Occupation& occ)
 
 DMdump::DMdump(const std::string filename, uint norb, uint nelec)
 {
- 
+
   int sign;
   uint nelem;
   uint nelem_1d;
@@ -69,7 +69,7 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
   _RDM2.resize(nelem,0);
   xout << "nelem " << nelem << std::endl;
   nelem_1d = oneid(maxid,maxid)+1;
-  xout << "nelem_1d " << nelem_1d << std::endl; 
+  xout << "nelem_1d " << nelem_1d << std::endl;
   _RDM1.resize(nelem_1d,0);
   double Tr;
   int shell;
@@ -88,21 +88,21 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     f_baab = f_aaaa;
     f_baab.replace(f_baab.find(str),str.length(),"baab");
     f_baba = f_aaaa;
-    f_baba.replace(f_baba.find(str),str.length(),"baba"); 
+    f_baba.replace(f_baba.find(str),str.length(),"baba");
   } else {
     //for closed shell aaaa = bbbb, abab = baba, abba = baab
     f_bbbb = f_aaaa;
     f_baab = f_abba;
     f_baba = f_abab;
   }
-  
+
   read_2rdm(f_aaaa,alpha,alpha,alpha,alpha);
   read_2rdm(f_abab,alpha,beta,alpha,beta);
   read_2rdm(f_abba,alpha,beta,beta,alpha);
   read_2rdm(f_bbbb,beta,beta,beta,beta);
   read_2rdm(f_baba,beta,alpha,beta,alpha);
   read_2rdm(f_baab,beta,alpha,alpha,beta);
-    
+
   uint ac, abcd;
   //Construct RDM1
   for(uint a = 0; a < _nsorb; a++){
@@ -119,17 +119,17 @@ DMdump::DMdump(const std::string filename, uint norb, uint nelec)
     }
   }
 
-  //calculate trace of 1RDM 
+  //calculate trace of 1RDM
   Tr = 0.0;
   for(uint a = 0; a < _nsorb; a++){
     ac = oneid(a,a);
     Tr = Tr + _RDM1[ac];
   }
   //std::cout << typeid(Tr).name() << '\n';
-  std::cout << std::setprecision(16) << std::fixed << Tr << std::endl; 
+  std::cout << std::setprecision(16) << std::fixed << Tr << std::endl;
 
   store_rdm();
- 
+
 }
 void DMdump::read_2rdm(std::string filename, Spin sa, Spin sb, Spin sc, Spin sd)
 {
@@ -151,7 +151,7 @@ void DMdump::read_2rdm(std::string filename, Spin sa, Spin sb, Spin sc, Spin sd)
     abcd = onei(a,b,c,d,sign);
     assert(abcd < _RDM2.size());
 #ifdef _DEBUG
-    if (std::abs(_RDM2[abcd]) > 1.e-10 && std::abs(_RDM2[abcd]-S * sign) > 1.e-10) 
+    if (std::abs(_RDM2[abcd]) > 1.e-10 && std::abs(_RDM2[abcd]-S * sign) > 1.e-10)
       xout << _RDM2[abcd] << " " << S * sign << " " << a << " " << b << " " << c << " " << d << std::endl;
 #endif
     _RDM2[abcd] = S * sign;
@@ -179,8 +179,8 @@ void DMdump::store_rdm() const
         for(uint c=0; c<=_nsorb-1; c++){
           for(uint d=0; d<=_nsorb-1; d++){
             abcd = onei(a,b,c,d,sign);
-            outFile << std::setw(15) << sign*_RDM2[abcd] 
-                    << std::setw(4) << a << std::setw(4) << b << std::setw(4) 
+            outFile << std::setw(15) << sign*_RDM2[abcd]
+                    << std::setw(4) << a << std::setw(4) << b << std::setw(4)
                     << c << std::setw(4) << d << std::endl;
           }
         }
@@ -202,7 +202,7 @@ void DMdump::store_rdm() const
         outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac];
       }
     }
-    outFile.close(); 
+    outFile.close();
   }
 
   if ( out1rdm != "" ) {
@@ -215,11 +215,11 @@ void DMdump::store_rdm() const
     for(uint a=0; a<=_nsorb-1; a++){
       for(uint c=0; c <=_nsorb-1; c++){
         ac = oneid(a,c);
-        outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac] 
+        outFile << std::setw(15) << std::left << std::fixed << _RDM1[ac]
                 << std::setw(4) << a << std::setw(4) << c << std::endl;
       }
     }
-    outFile.close(); 
+    outFile.close();
   }
 }
 
@@ -230,7 +230,7 @@ bool DMdump::nextdm(std::ifstream& inFile, int& i, int& j, int& k, int& l, doubl
   }
   else{
   inFile.close();
-  return false;  
+  return false;
   }
  }
- 
+

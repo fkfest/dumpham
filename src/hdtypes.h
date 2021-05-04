@@ -1,4 +1,4 @@
-#ifndef HDTYPES_H 
+#ifndef HDTYPES_H
 #define HDTYPES_H
 #include <vector>
 namespace HamDump {

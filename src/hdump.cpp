@@ -67,7 +67,7 @@ Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs,
 {
   assert(dims.size() == pbcs.size());
   xout << "Hubbard model:";
-  for(uint i = 0; i < dims.size(); ++i ) { 
+  for(uint i = 0; i < dims.size(); ++i ) {
     xout << dims[i];
     if ( i+1 < dims.size() ) xout << "x";
   }
@@ -79,9 +79,9 @@ Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs,
     for ( auto p: pbcs) {
       if ( p == 0 )
         xout << "N";
-      else if ( p > 0 ) 
+      else if ( p > 0 )
         xout << "P";
-      else 
+      else
         xout << "A";
     }
   }
@@ -94,7 +94,7 @@ Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs,
     for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
   }
   xout << std::endl;
-  
+
   _norb = 1;
   for (auto d: dims) _norb *= d;
   if ( int(_norb) < charge ) error("Negative number of electrons!");
@@ -108,7 +108,7 @@ Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs,
   norbs.push_back(_norb);
   _pgs = PGSym(norbs,false);
   _escal = 0.0;
-  
+
   _osord = OrbOrder(_norb);
   FDPar OCC(1,0);
   check_input_norbs(OCC,"occ",true);
@@ -118,14 +118,14 @@ Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs,
   check_input_norbs(CORE,"core",true);
   _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
   sanity_check();
-  
+
   gen_hubbard(dims,pbcs,Upar,tpar);
 }
 
 Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar)
 {
   xout << "Hubbard model:";
-  for(uint i = 0; i < pers.ncells().size(); ++i ) { 
+  for(uint i = 0; i < pers.ncells().size(); ++i ) {
     xout << pers.ncells()[i];
     if ( i+1 < pers.ncells().size() ) xout << "x";
   }
@@ -135,9 +135,9 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::
     for ( auto p: pers.pbcs()) {
       if ( p == 0 )
         xout << "N";
-      else if ( p > 0 ) 
+      else if ( p > 0 )
         xout << "P";
-      else 
+      else
         xout << "A";
     }
   }
@@ -150,7 +150,7 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::
     for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
   }
   xout << std::endl;
-  
+
   _norb = pers.nsites_in_supercell();
   if ( int(_norb) < charge ) error("Negative number of electrons!");
   _nelec = _norb - charge;
@@ -163,7 +163,7 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::
   norbs.push_back(_norb);
   _pgs = PGSym(norbs,false);
   _escal = 0.0;
-  
+
   _osord = OrbOrder(_norb);
   FDPar OCC(1,0);
   check_input_norbs(OCC,"occ",true);
@@ -173,7 +173,7 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::
   check_input_norbs(CORE,"core",true);
   _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
   sanity_check();
-  
+
   gen_hubbard(pers,Upar,tpar);
 }
 
@@ -383,7 +383,7 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
 
 
 
-void Hdump::gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, 
+void Hdump::gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs,
                         double Upar, const std::vector<double>& tpar)
 {
   alloc_ints();
@@ -427,7 +427,7 @@ void Hdump::gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& p
       }
     }
   }
-  
+
   do {
     do {
       uint dd = s1.dist2(s2);
