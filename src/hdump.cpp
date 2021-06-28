@@ -826,6 +826,37 @@ void Hdump::scale(double scal)
   error("Not implemented!");
 }
 
+void Hdump::addS2(double scal)
+{
+  if (!_uhf) error("Use UHF FCIDUMPs to add S^2");
+  assert(allocated());
+  xout << "RESTRICTED ORBITALS ASSUMED!" << std::endl;
+  Overlapdump Overlap(_pgs);
+  auto ovrlp = Overlap.overlap;
+  uint p = 0, q = 0, s = 0, r = 0;
+  // 1-body
+  do {
+    BlkIdx indxD = _oneel[bb].get()->index(p,s);
+    double val = 0.0;
+    for ( uint q = 0; q < _norb; ++q ) {
+      val += ovrlp.get_with_pgs(q,p) * ovrlp.get_with_pgs(q,s);
+    }
+    val *= scal;
+    val += _oneel[bb].get()->get(indxD);
+    _oneel[bb].get()->set(indxD,val);
+  } while ( _oneel[bb].get()->next_indices(p,s) );
+  
+  // 2-body 
+  p = q = r = s = 0;
+  Irrep isym = 0;
+  auto pInt = _twoel[aabb].get();
+  do {
+    BlkIdx indxD = pInt->index(p,q,r,s);
+    double val = -scal * ovrlp.get_with_pgs(p,s)*ovrlp.get_with_pgs(q,r);
+    val += pInt->get(indxD);
+    pInt->set(indxD, val);
+  } while ( pInt->next_indices(p,q,r,s,isym) );
+}
 
 void Hdump::check_addressing_integrals() const
 {
@@ -1238,6 +1269,15 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
 //     }
 
   }
+}
+
+Overlapdump::Overlapdump(const PGSym& pgs)
+{
+  overlap = Integ2ab(pgs);
+  uint p = 0, q = 0;
+  do {
+    if ( p == q ) overlap.set(p,q,1.0);
+  } while ( overlap.next_indices(p,q));
 }
 
 void Hdump::calc_Spin2(const Integ2ab& Overlap, bool alt){

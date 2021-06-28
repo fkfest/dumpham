@@ -13,6 +13,9 @@ set="ham",type=i,name="nosym",value=1,desc="ouput fcidump without point-group sy
 set="ham",type=i,name="redunwarning",value=1,desc="warning for redundant entries in fcidump input"
 set="ham",type=i,name="simtrasym",value=0,desc="<0: transform to bra-ket symmetric (symmetrize), >0: transform to similarity-transformed form"
 
+%EXTERNAL PERTURBATION
+set="pert",type=f,name="S2",value=0.0,desc="add S^2 (scaled by given value) to the Hamiltonian"
+
 %ORBITALS
 set="orbs",type=s,name="out",value="",desc="orbdump file"
 set="orbs",type=a,name="occvec",value={},desc="list of occupied orbitals"
@@ -27,6 +30,8 @@ set="orbs",type=a,name="del",value={},desc="delete specified orbitals from dump 
 set="orbs",type=s,name="ektorb",value="",desc="orbdump file for EKT orbitals"
 set="orbs",type=s,name="dysorb",value="",desc="orbdump file for Dyson orbitals"
 set="orbs",type=i,name="soorder",value=0,desc="order of spin-orbitals: 0. alternating alpha/beta, 1. alpha(occ)-beta(occ)-alpha(virt)-beta(virt)"
+set="orbs",type=s,name="occa",value="",desc="occupied alpha orbitals in the format -2.1+2.2-5.2+1.3"
+set="orbs",type=s,name="occb",value="",desc="occupied beta orbitals in the format -2.1+2.2-5.2+1.3"
 
 %SYNTAX
 set="syntax",type=s,name="brackets",value="(){}[]<>",desc="brackets"

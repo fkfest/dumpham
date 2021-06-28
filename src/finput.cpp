@@ -179,6 +179,34 @@ lui Finput::analyzecommand(lui ipos)
   return ipos1;
 }
 
+/*
+uint string2orbs(std::vector<uint>& orbs, std::vector<uint>& norbs, std::string orbstr, 
+                 const std::vector<uint>& ntotorbs4sym)
+{
+  IL::delbrack(orbstr);
+  bool opposite = false;
+  std::size_t indhat = orbstr.find('^');
+  if (indhat != std::string::npos ) {
+    // reverse meaning of the list
+    opposite = true;
+    if ( indhat != 0 ) error("USE ^ AS THE FIRST CHARACTER in OCCA/OCCB"); 
+    orbstr=orbstr.substr(1);
+  }
+  if ( orbstr.find_first_not_of("1234567890.+- ") != std::string::npos ) {
+    error("USE ONLY ^1234567890.+- in OCCA/OCCB");
+  }
+  uint norbtot = 0;
+  std::vector<uint> orboff;
+  for ( auto no4s: ntotorbs4sym ) {
+    orboff.push_back(norbtot);
+    norbtot += no4s;
+  }
+  std::vector<uint> orbsmask(norbtot,0);
+  
+  
+}
+*/
+
 bool Finput::analyzeham(const std::string& inputfile)
 {
 //   xout << "analyzeham " << _input << std::endl;
@@ -216,6 +244,19 @@ bool Finput::analyzeham(const std::string& inputfile)
     if (scale()) dump.scale(_scale);
     // add to the old dump
     _dump->add(dump);
+  }
+  
+  const std::string& occa = Input::sPars["orbs"]["occa"];
+  const std::string& occb = Input::sPars["orbs"]["occb"];
+  if ( !occa.empty() || !occb.empty() ) {
+    // set refdet using occa and occb
+    error("Not implemented yet!"); 
+  }
+  
+  double addS2 = Input::fPars["pert"]["S2"];
+  if ( addS2 < -Numbers::small || addS2 > Numbers::small ) {
+    // add S^2 
+    _dump->addS2(addS2);
   }
   _add = false;
   _scale = 1.0;

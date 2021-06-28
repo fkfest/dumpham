@@ -176,6 +176,8 @@ public:
   //gen integrals for Hubbard model
   void gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, double Upar, const std::vector<double>& tpar);
   void gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar);
+  // add scal*S^2 to the Hamiltonian
+  void addS2(double scal = 1.0);
 
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -488,6 +490,8 @@ public:
   Overlapdump() {};
   // construct from file
   Overlapdump(std::string ovdump, const PGSym& pgs, const FDPar& ncore, bool verbose = true);
+  // construct unity matrix (for restricted orbitals)
+  Overlapdump(const PGSym& pgs);
   Integ2ab overlap;
 };
 
