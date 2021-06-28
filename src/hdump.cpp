@@ -829,6 +829,7 @@ void Hdump::scale(double scal)
 void Hdump::addS2(double scal)
 {
   if (!_uhf) error("Use UHF FCIDUMPs to add S^2");
+  if (!_simtra) error("Use ST FCIDUMP to add S^2");
   assert(allocated());
   xout << "RESTRICTED ORBITALS ASSUMED!" << std::endl;
   Overlapdump Overlap(_pgs);
