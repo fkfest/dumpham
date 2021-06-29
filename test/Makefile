@@ -1,6 +1,6 @@
 # program name
 MAIN = ../dumpham
-OBJ = readdump adddump symuhfdump rdm hubbard hubbardcry
+OBJ = readdump adddump symuhfdump rdm hubbard hubbardcry adds2
 
 test : $(OBJ)
 
