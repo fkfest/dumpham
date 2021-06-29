@@ -276,6 +276,9 @@ void Hdump::read_3body_dump()
 
 void Hdump::writeIntegral_3body(int p, int q, int r, int s, int t, int u, double value, std::ofstream& outputStream) const
 {
+  //integrals will be written in the order given to the function
+  //to write a standard tcdump make sure to call with physicist notation
+
   //H2- vdz rhf
   //zero (ij|kl|mn)
   //if ( (i==1||i==2) && (j==1||j==2) && (k==1||k==2) && (l==1||l==2) && (m==1||m==2) && (n==1||n==2) ) value = 0.0e-12;
@@ -283,6 +286,10 @@ void Hdump::writeIntegral_3body(int p, int q, int r, int s, int t, int u, double
   //if ( (p>2) || (q>2) || (r>2) || (s>2) || (t>2) || (u>2) ) value = 0.0e-12;
   //zero all except (ab|cd|ef)
   //if ( (p<3) || (q<3) || (r<3) || (s<3) || (t<3) || (u<3) ) value = 0.0e-12;
+  //zero all except (ai|jk|lm)
+  //if ( (p<3) || (q>2) || (r>2) || (s>2) || (t>2) || (u>2) ) value = 0.0e-12;
+  //zero all except (ab|cd|ij) -> here <aci|bdj>
+  //if ( (p<3) || (q<3) || (r>2) || (s<3) || (t<3) || (u>2) ) value = 0.0e-12;
   outputStream << std::setw(23) << value << " ";
   outputStream << std::setw(3) << p<<" ";
   outputStream << std::setw(3) << q<<" ";
