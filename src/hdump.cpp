@@ -819,11 +819,58 @@ void Hdump::import(const Hdump& hd, bool add)
     }
   }
 }
-
+template<typename T>
+void Hdump::scale_int4(T* pInt, double scal)
+{
+  uint i = 0, j = 0, k = 0, l = 0;
+  Irrep isym = 0;
+  do {
+    BlkIdx indxD = pInt->index(i,j,k,l);
+    pInt->set(indxD, pInt->get(indxD)*scal);
+  } while (pInt->next_indices(i,j,k,l,isym));
+}
+template<typename T>
+void Hdump::scale_int2(T* pInt, double scal)
+{
+  uint i = 0, j = 0;
+  do {
+    BlkIdx indxD = pInt->index(i,j);
+    pInt->set(indxD, pInt->get(indxD)*scal);
+  } while (pInt->next_indices(i,j));
+}
+template<typename SI2, typename SI4aa, typename SI4ab>
+void Hdump::scale_ints( SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, double scal)
+{
+  pSI4aa = dynamic_cast<SI4aa*>(_twoel[aaaa].get()); assert(pSI4aa);
+  scale_int4(pSI4aa,scal);
+  pSI2 = dynamic_cast<SI2*>(_oneel[aa].get()); assert(pSI2);
+  scale_int2(pSI2,scal);
+  if ( _uhf ) {
+    pSI4aa = dynamic_cast<SI4aa*>(_twoel[bbbb].get()); assert(pSI4aa);
+    scale_int4(pSI4aa,scal);
+    pSI4ab = dynamic_cast<SI4ab*>(_twoel[aabb].get()); assert(pSI4ab);
+    scale_int4(pSI4ab,scal);
+    pSI2 = dynamic_cast<SI2*>(_oneel[bb].get()); assert(pSI2);
+    scale_int2(pSI2,scal);
+  }
+  
+  _escal *= scal;
+}
 void Hdump::scale(double scal)
 {
-  (void) scal;
-  error("Not implemented!");
+  if ( _simtra ) {
+    // expand the permutation symmetry
+    Integ4st * pSI4aa = 0;
+    Integ4stab * pSI4ab = 0;
+    Integ2st * pSI2 = 0;
+    scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+  } else {
+    // create the permutation symmetry
+    Integ4 * pSI4aa = 0;
+    Integ4ab * pSI4ab = 0;
+    Integ2 * pSI2 = 0;
+    scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+  }
 }
 
 void Hdump::addS2(double scal)

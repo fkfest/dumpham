@@ -218,6 +218,15 @@ private:
   // add antisymmetrized product of 1RDM pD1 and pD11 to 2RDM pD2
   template<typename T, typename U, typename V>
   void add1RDMto2RDM( T * pD2, const U * pD1, const V * pD11, double fact, bool exchange);
+  // scale integrals
+  template<typename SI2, typename SI4aa, typename SI4ab>
+  void scale_ints( SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, double scal);
+  // scale 4-index integrals
+  template<typename T>
+  void scale_int4( T * pInt, double scal);
+  // scale 2-index integrals
+  template<typename T>
+  void scale_int2( T * pInt, double scal);
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;
