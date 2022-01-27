@@ -1,12 +1,16 @@
 #include "finput.h"
 
-Finput::Finput(bool ham) : 
+Finput::Finput(bool ham) :
 _ham(ham){}
 
-Finput::Finput(std::string paramspath) :
+Finput::Finput(std::string paramspath, const std::vector<std::string>& cmd_inps) :
 _ham(false)
 {
   InitInpars(paramspath);
+  // set input params from cmd_inps
+  for (auto ps: cmd_inps) {
+    IL::changePars(ps, 0);
+  }
 }
 
 void Finput::InitInpars(std::string paramspath)
@@ -15,7 +19,7 @@ void Finput::InitInpars(std::string paramspath)
   std::ifstream finp;
   finp.open(finp_file.c_str());
   if (finp.is_open()) {
-    std::string 
+    std::string
       line, type, set, name;
     while (finp.good()) {
       std::getline (finp,line);
@@ -35,9 +39,9 @@ void Finput::InitInpars(std::string paramspath)
             error("integer parameter is not integer :"+line);
           Input::iPars[set][name] = x;
         } else if ( type[0] == 'f' ){
-          double x; 
+          double x;
           if (!str2num<double>(x,IL::key(line,"value"),std::dec))
-            error("float parameter is not float :"+line); 
+            error("float parameter is not float :"+line);
           Input::fPars[set][name] = x;
         } else if ( type[0] == 'a' ){
           Input::aPars[set][name] = IL::parray(IL::key(line,"value"));
@@ -94,7 +98,7 @@ bool Finput::addline(const std::string& line)
     _ham=false;
     analyzeline();
     _input="";
-    process_dump(*_dump);  
+    process_dump(*_dump);
     newham = true;
   } else if (InSet(linesp.substr(ipos,ipend-ipos), newcs)) {// newcommand
     ipos = IL::addnewcom(linesp,ipend);
@@ -164,9 +168,44 @@ lui Finput::analyzecommand(lui ipos)
     ipos = IL::skip(_input,ipos,"{} ");
     lui ipos2 = IL::skipr(_input,ipos1,"{} ");
     Input::sPars["ham"]["out"] = _input.substr(ipos,ipos2-ipos);
+  } else if ( str == commands["hubbard"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} :");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    std::string hubdef = "hubbard,"+_input.substr(ipos,ipos2-ipos);
+    IL::changePars(hubdef, 0);
+    analyzehabham();
   }
   return ipos1;
 }
+
+/*
+uint string2orbs(std::vector<uint>& orbs, std::vector<uint>& norbs, std::string orbstr, 
+                 const std::vector<uint>& ntotorbs4sym)
+{
+  IL::delbrack(orbstr);
+  bool opposite = false;
+  std::size_t indhat = orbstr.find('^');
+  if (indhat != std::string::npos ) {
+    // reverse meaning of the list
+    opposite = true;
+    if ( indhat != 0 ) error("USE ^ AS THE FIRST CHARACTER in OCCA/OCCB"); 
+    orbstr=orbstr.substr(1);
+  }
+  if ( orbstr.find_first_not_of("1234567890.+- ") != std::string::npos ) {
+    error("USE ONLY ^1234567890.+- in OCCA/OCCB");
+  }
+  uint norbtot = 0;
+  std::vector<uint> orboff;
+  for ( auto no4s: ntotorbs4sym ) {
+    orboff.push_back(norbtot);
+    norbtot += no4s;
+  }
+  std::vector<uint> orbsmask(norbtot,0);
+  
+  
+}
+*/
 
 bool Finput::analyzeham(const std::string& inputfile)
 {
@@ -177,8 +216,8 @@ bool Finput::analyzeham(const std::string& inputfile)
     error("Empty hamiltonian specification!");
   }
   xout << "inputfile: *" << inputfile << "*" << std::endl;
-  
-  if ( !_dump ) { 
+
+  if ( !_dump ) {
     _dump = std::unique_ptr<Hdump>(new Hdump(inputfile));
     _dump->read_dump();
     if (scale()) _dump->scale(_scale);
@@ -206,8 +245,106 @@ bool Finput::analyzeham(const std::string& inputfile)
     // add to the old dump
     _dump->add(dump);
   }
+  
+  const std::string& occa = Input::sPars["orbs"]["occa"];
+  const std::string& occb = Input::sPars["orbs"]["occb"];
+  if ( !occa.empty() || !occb.empty() ) {
+    // set refdet using occa and occb
+    error("Not implemented yet!"); 
+  }
+  
+  double addS2 = Input::fPars["pert"]["S2"];
+  if ( addS2 < -Numbers::small || addS2 > Numbers::small ) {
+    // add S^2 
+    _dump->addS2(addS2);
+  }
   _add = false;
   _scale = 1.0;
+  return true;
+}
+
+bool Finput::analyzehabham()
+{
+  const TParArray& dim = Input::aPars["hubbard"]["dimension"];
+  int charge = Input::iPars["hubbard"]["charge"];
+  int ms2 = Input::iPars["hubbard"]["ms2"];
+  TParArray pbc = Input::aPars["hubbard"]["pbc"];
+//   int pbc = Input::iPars["hubbard"]["pbc"];
+  double Upar = Input::fPars["hubbard"]["U"];
+  const TParArray& tparsarray = Input::aPars["hubbard"]["t"];
+  const TParArray& ucell_str = Input::aPars["hubbard"]["ucell"];
+  const TParArray& lat_str = Input::aPars["hubbard"]["lat"];
+
+  // dimensions
+  std::vector<uint> dims;
+  for (auto d: dim) {
+    uint x;
+    if (str2num<uint>(x,d,std::dec)) {
+      dims.push_back(x);
+    } else {
+      error("Dimensions in Hubbard are not integer:"+d);
+    }
+  }
+  // PBC
+  if ( pbc.size() == 0 ) pbc.push_back("0");
+  if ( pbc.size() != dim.size() && pbc.size() != 1 )
+    error("Define PBC-type for each dimension!");
+  pbc.resize(dim.size(), pbc.front());
+  std::vector<int> pbcs;
+  for (auto p: pbc) {
+    int x;
+    if (str2num<int>(x,p,std::dec)) {
+      pbcs.push_back(x);
+    } else {
+      error("PBC is not integer:"+p);
+    }
+  }
+  // hopping
+  std::vector<double> tpars;
+  for (auto tt: tparsarray) {
+    double x;
+    if (!str2num<double>(x,tt,std::dec))
+      error("t parameter is not float in "+tt);
+    tpars.push_back(x);
+  }
+
+  if ( Input::iPars["hubbard"]["simple"] ) {
+    _dump = std::unique_ptr<Hdump>(new Hdump(dims,charge,ms2,pbcs,Upar,tpars));
+  } else {
+    // unit cell
+    UCell ucell;
+    for (auto site: ucell_str) {
+      TParArray coord_str = IL::parray(site);
+      double x;
+      Coords coords;
+      for ( auto c: coord_str) {
+        if (!str2num<double>(x,c,std::dec))
+          error("coord in ucell not float "+c);
+        coords.push_back(x);
+      }
+      ucell.add(coords);
+    }
+    if ( ucell.nsites() == 0 ) ucell.set_default(dims.size());
+//    xout << "Unit cell: " << ucell << std::endl;
+    // lattice vectors
+    Lattice lat;
+    for (auto lv: lat_str) {
+      TParArray coord_str = IL::parray(lv);
+      double x;
+      Coords coords;
+      for ( auto c: coord_str) {
+        if (!str2num<double>(x,c,std::dec))
+          error("coord in lat not float "+c);
+        coords.push_back(x);
+      }
+      lat.add(coords);
+    }
+    if ( lat.ndim() == 0 ) lat.set_default(dims.size());
+//    xout << "Lattice: " << lat << std::endl;
+
+    Periodic persym(ucell,lat,dims,pbcs);
+    _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,tpars));
+  }
   return true;
 }
 
@@ -226,10 +363,10 @@ void Finput::process_dump(Hdump& dump)
   }
   if ( Input::iPars["output"]["fcinamtoupper"] > 0 )
     outputfile = uppercase(outputfile);
-  
+
   if ( outputfile != "" )
     dump.store(outputfile);
-  
+
   std::string  dmfile = Input::sPars["dm"]["in"];
   std::string  fmfile = Input::sPars["fm"]["outmat"];
   DMdump dmdump;

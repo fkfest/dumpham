@@ -17,6 +17,7 @@
 #include "pgsym.h"
 #include "integs.h"
 #include "refdet.h"
+#include "periodic.h"
 
 namespace HamDump {
 typedef std::vector<uint64_t> BlockIndices;
@@ -33,6 +34,8 @@ public:
         uint sym_ = 0, bool uhf_ = false, bool simtra_ = false, bool dm_ = false) :
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_),
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_), _dm(dm_) { _rd = RefDet(_pgs); }
+  Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar);
+  Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar);
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
   // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true)
@@ -182,6 +185,11 @@ public:
   void calc_Spin2(const Integ2ab& Overlap, bool alt = false);
   //store 1RDM in ASCII format
   void store1RDM(std::string filepname, std::string filename, bool uhf);
+  //gen integrals for Hubbard model
+  void gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, double Upar, const std::vector<double>& tpar);
+  void gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar);
+  // add scal*S^2 to the Hamiltonian
+  void addS2(double scal = 1.0);
 
 private:
   // on input: first value (i,j,k,l,value,type)
@@ -226,6 +234,15 @@ private:
   // add antisymmetrized product of 1RDM pD1 and pD11 to 2RDM pD2
   template<typename T, typename U, typename V>
   void add1RDMto2RDM( T * pD2, const U * pD1, const V * pD11, double fact, bool exchange);
+  // scale integrals
+  template<typename SI2, typename SI4aa, typename SI4ab>
+  void scale_ints( SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, double scal);
+  // scale 4-index integrals
+  template<typename T>
+  void scale_int4( T * pInt, double scal);
+  // scale 2-index integrals
+  template<typename T>
+  void scale_int2( T * pInt, double scal);
   void check_addressing_integrals() const;
   // check input file for the number of orbitals in each symmetry
   void check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const;
@@ -540,8 +557,68 @@ public:
   Overlapdump() {};
   // construct from file
   Overlapdump(std::string ovdump, const PGSym& pgs, const FDPar& ncore, bool verbose = true);
+  // construct unity matrix (for restricted orbitals)
+  Overlapdump(const PGSym& pgs);
   Integ2ab overlap;
 };
+
+/*!
+ * Hubbard Site
+ */
+struct HubSite : public std::vector<int> {
+  HubSite() : std::vector<int>() {};
+  HubSite(const std::vector<uint>& dims, const std::vector<int>& pbcs) {
+    _dims = dims;
+    resize(dims.size(),0);
+    _pbcs = pbcs;
+    assert(_dims.size() == _pbcs.size());
+  }
+  void zero() {
+    for (auto & i: *this) i = 0;
+  }
+  bool next() {
+    assert(_dims.size() == size());
+
+    for ( uint id = 0; id < size(); ++id ) {
+      ++(*this)[id];
+      if ((*this)[id] < int(_dims[id]) )
+        return true;
+      else {
+        (*this)[id] = 0;
+      }
+    }
+    return false;
+  }
+  // square of the distance
+  uint dist2(const HubSite& hs) const {
+    assert(hs.size() == size());
+    assert(_dims.size() == size());
+    assert(_dims.size() == _pbcs.size());
+    uint dd = 0;
+    for ( uint i = 0; i < size(); ++i ) {
+      uint r = std::abs((*this)[i] - hs[i]);
+      if ( _pbcs[i] && r > _dims[i] - r )
+        r = _dims[i] - r;
+      dd += r*r;
+    }
+    return dd;
+  }
+  uint id() const {
+    assert(_dims.size() == size());
+    uint id = 0;
+    uint nn = 1;
+    for ( uint i = 0; i < size(); ++i ) {
+      id += (*this)[i]*nn;
+      nn *= _dims[i];
+    }
+    return id;
+  }
+  // dimensions of the Hubbard model
+  std::vector<uint> _dims;
+  // periodic boundary condition
+  std::vector<int> _pbcs;
+};
+std::ostream & operator << (std::ostream& o, const HubSite& hs);
 
 } //namespace HamDump
 

@@ -1,4 +1,4 @@
-#ifndef HDTYPES_H 
+#ifndef HDTYPES_H
 #define HDTYPES_H
 #include <vector>
 namespace HamDump {
@@ -18,6 +18,15 @@ struct SpinOrb {
   // spin
   Spin spin = alpha;
 };
+
+namespace Numbers
+{
+  // "zero"
+  static const double verysmall=1.e-16;
+  static const double small=1.e-10;
+  static const int big=1000;
+}
+
 
 } //namespace HamDump
 

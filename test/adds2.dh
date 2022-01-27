@@ -1,0 +1,8 @@
+output,fcinamtoupper=0
+ham,nosym=0,simtrasym=1
+ham,out="adds2.FCIDUMP"
+pert,S2=0.001
+
+\bham
+HO_SYM_UHF.FCIDUMP
+\eham

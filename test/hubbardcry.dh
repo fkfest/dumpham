@@ -1,0 +1,10 @@
+output,fcinamtoupper=1
+ham,nosym=0,store=0
+periodic,xyzout=hubbardcry.xyz
+\bham
+\hubbard{dimension={4,4,4}, pbc={1,0,1}, U=2.0, t={1.0,0.5},
+%print=1,
+lat={{1,0,0}{1,1,0}{1,0,1}},
+ucell={{0,0,0}{1,0,0}{1,0.4,0.4}}
+}
+\eham

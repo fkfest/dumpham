@@ -99,7 +99,7 @@ Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
       assert( iao >= uint(p_pgs->_firstorb4irrep[ir]) && iao < uint(p_pgs->_firstorb4irrep[ir]+p_pgs->norbs(ir)));
       occupied[iao-p_pgs->_firstorb4irrep[ir]] = true;
     }
-    uint imo = occs[ir].size()+p_pgs->_firstorb4irrep[ir]; 
+    uint imo = occs[ir].size()+p_pgs->_firstorb4irrep[ir];
     for ( uint iao4ir = 0; iao4ir < p_pgs->norbs(ir); ++iao4ir ) {
       if (!occupied[iao4ir]) {
         iao = iao4ir + p_pgs->_firstorb4irrep[ir];
@@ -114,7 +114,7 @@ Odump::Odump(const PGSym& pgs, Occupation occs ) : p_pgs(&pgs)
 }
 Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(&pgs)
 {
-  
+
   _orbs = Integ2ab(pgs);
   _ncore = ncore;
   assert( _ncore.size() == p_pgs->nIrreps() );
@@ -131,7 +131,7 @@ Odump::Odump(const PGSym& pgs, const FDPar& ncore, std::string orbdump) : p_pgs(
   BlkIdx idx = 0;
   while (oin.good()) {
     std::getline(oin,line);
-    if ( line.empty() || line[0] == '#' || 
+    if ( line.empty() || line[0] == '#' ||
          line.compare("BEGIN_DATA,") == 0 || line.compare("END_DATA,") == 0  ) continue;
     TParArray coefs_line = IL::parray(line);
     for ( const auto& ic: coefs_line ){
@@ -182,7 +182,7 @@ void Odump::store(std::string orbdump)
   xout << "will be written to file " << orbdump << std::endl;
   bool scientific = Input::iPars["output"]["scientificoef"];
   int precision = Input::iPars["output"]["precisioncoef"];
-  if ( scientific ) 
+  if ( scientific )
     outputStream << std::scientific;
   else
     outputStream << std::fixed;
@@ -195,11 +195,11 @@ void Odump::store(std::string orbdump)
         for ( uint j = 0; j < p_pgs->ntotorbs(); ++j ) {
           double val = _orbs.get_with_pgs(i,j);
           printval(outputStream,val,j,maxlen,scientific);
-        } 
+        }
         outputStream << std::endl;
       }
     } else {
-      if ( _nclos.size() != p_pgs->nIrreps() || _nocc.size() != p_pgs->nIrreps() ) 
+      if ( _nclos.size() != p_pgs->nIrreps() || _nocc.size() != p_pgs->nIrreps() )
         error("Cannot de-symmetrize orbitals without occupation information! Something to be implemented...");
       for ( uint i = 0; i < p_pgs->ntotorbs(); ++i ) {
         // closed-shell
@@ -236,7 +236,7 @@ void Odump::store(std::string orbdump)
         for ( uint j = p_pgs->_firstorb4irrep[ir]; j < uint(p_pgs->_firstorb4irrep[ir] + p_pgs->_norb4irrep[ir]); ++j ) {
           double val = _orbs.get(i,j);
           printval(outputStream,val,j-p_pgs->_firstorb4irrep[ir],maxlen,scientific);
-        } 
+        }
         outputStream << std::endl;
       }
     }

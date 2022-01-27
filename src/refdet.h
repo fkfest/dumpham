@@ -18,7 +18,7 @@
 
 namespace HamDump {
 
-// internal orbital order. 
+// internal orbital order.
 // e.g. from sorting ORBSYM symmetry-wise and store the order
 struct OrbOrder : public std::vector<std::size_t> {
   OrbOrder() : std::vector<std::size_t>() {}
@@ -47,13 +47,13 @@ struct RefDet {
   RefDet(const PGSym& pgs);
   // set from CLOSED, OCC and CORE (note that OCC includes CLOSED, which includes CORE!)
   // if wcore = false: core is not included in OCC and CLOSED specifications
-  RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_, 
+  RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
          const FDPar& core_ = FDPar(), bool wcore = false);
-  RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca, 
+  RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca,
          const std::vector<uint>& occorbb, const uint* noccb);
   bool operator==(const RefDet& rd) const;
   bool operator!=(const RefDet& rd) const {return !(*this == rd);}
-  
+
   // number of closed shell orbitals in each irrep including core
   FDPar nclos_wcore() const;
   // number of occupied orbitals in each irrep including core
@@ -62,17 +62,17 @@ struct RefDet {
   FDPar ncore() const { if ( core.size() > 0 ) return core;
                         else return FDPar(clos.size(),0); }
   // set core from an 8-integers array. Check consistancy if core already set
-  template<typename TINT> 
+  template<typename TINT>
   void set_ncore( TINT* pNCore );
   void set_ncore( const FDPar& core_ );
   // subtract or add core orbitals
   void add_or_subtract_core(FDPar& orb, const std::string& kind, bool add = true) const;
   // generate refso from refao and refbo and from occa/occb
   void gen_refso();
-  
+
   void sanity_check(uint nelec, uint ms2) const;
   void print(int verbosity = -1) const;
-  
+
   FDPar occ, clos, core;
   // number of occupied orbitals alpha and beta
   std::array<FDPar,2> nocc;
@@ -109,12 +109,12 @@ void RefDet::set_ncore(TINT* pNCore)
       norb4irs[ir] += core[ir];
     pgs_wcore = PGSym(norb4irs,false);
   } else {
-    // check consistency 
+    // check consistency
     for ( uint ir = 0; ir < core.size(); ++ir ) {
       if ( core[ir] != *(pNCore+ir) ) {
-        for ( auto io: core) xout << io << " "; 
+        for ( auto io: core) xout << io << " ";
         xout << std::endl;
-        for ( uint i = 0; i < 8; ++i ) xout << *(pNCore+i) << " "; 
+        for ( uint i = 0; i < 8; ++i ) xout << *(pNCore+i) << " ";
         xout << std::endl;
         error("Core already set and differs!");
       }

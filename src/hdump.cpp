@@ -76,6 +76,120 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   sanity_check();
 }
 
+Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar)
+{
+  assert(dims.size() == pbcs.size());
+  xout << "Hubbard model:";
+  for(uint i = 0; i < dims.size(); ++i ) {
+    xout << dims[i];
+    if ( i+1 < dims.size() ) xout << "x";
+  }
+  if ( charge != 0 ) xout << " charge=" << charge;
+  bool periodic = false;
+  for ( auto p: pbcs) if ( p != 0 ) periodic = true;
+  if ( periodic ) {
+    xout << " PBC:";
+    for ( auto p: pbcs) {
+      if ( p == 0 )
+        xout << "N";
+      else if ( p > 0 )
+        xout << "P";
+      else
+        xout << "A";
+    }
+  }
+  if ( tpar.size() == 0 ) {
+    error("No t parameter given!");
+  }
+  xout << " U/t=" << Upar/tpar[0];
+  if ( tpar.size() > 1 ) {
+    xout << " next-neighbour-t: ";
+    for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
+  }
+  xout << std::endl;
+
+  _norb = 1;
+  for (auto d: dims) _norb *= d;
+  if ( int(_norb) < charge ) error("Negative number of electrons!");
+  _nelec = _norb - charge;
+  if ( ms2 < 0 ) {
+    ms2 = _nelec%2;
+  }
+  _ms2 = ms2;
+  _sym = 0;
+  FDPar norbs;
+  norbs.push_back(_norb);
+  _pgs = PGSym(norbs,false);
+  _escal = 0.0;
+
+  _osord = OrbOrder(_norb);
+  FDPar OCC(1,0);
+  check_input_norbs(OCC,"occ",true);
+  FDPar CLOSED(1,0);
+  check_input_norbs(CLOSED,"closed",true);
+  FDPar CORE(1,0);
+  check_input_norbs(CORE,"core",true);
+  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+  sanity_check();
+
+  gen_hubbard(dims,pbcs,Upar,tpar);
+}
+
+Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar)
+{
+  xout << "Hubbard model:";
+  for(uint i = 0; i < pers.ncells().size(); ++i ) {
+    xout << pers.ncells()[i];
+    if ( i+1 < pers.ncells().size() ) xout << "x";
+  }
+  if ( charge != 0 ) xout << " charge=" << charge;
+  if ( pers.periodic() ) {
+    xout << " PBC:";
+    for ( auto p: pers.pbcs()) {
+      if ( p == 0 )
+        xout << "N";
+      else if ( p > 0 )
+        xout << "P";
+      else
+        xout << "A";
+    }
+  }
+  if ( tpar.size() == 0 ) {
+    error("No t parameter given!");
+  }
+  xout << " U/t=" << Upar/tpar[0];
+  if ( tpar.size() > 1 ) {
+    xout << " next-neighbour-t: ";
+    for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
+  }
+  xout << std::endl;
+
+  _norb = pers.nsites_in_supercell();
+  if ( int(_norb) < charge ) error("Negative number of electrons!");
+  _nelec = _norb - charge;
+  if ( ms2 < 0 ) {
+    ms2 = _nelec%2;
+  }
+  _ms2 = ms2;
+  _sym = 0;
+  FDPar norbs;
+  norbs.push_back(_norb);
+  _pgs = PGSym(norbs,false);
+  _escal = 0.0;
+
+  _osord = OrbOrder(_norb);
+  FDPar OCC(1,0);
+  check_input_norbs(OCC,"occ",true);
+  FDPar CLOSED(1,0);
+  check_input_norbs(CLOSED,"closed",true);
+  FDPar CORE(1,0);
+  check_input_norbs(CORE,"core",true);
+  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+  sanity_check();
+
+  gen_hubbard(pers,Upar,tpar);
+}
+
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
 {
 #define CHECKSET(xx,mes) if ( hd1.xx != hd2.xx ) error("Mismatch in "+ std::string(mes)); xx=hd1.xx;
@@ -348,6 +462,118 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
 }
 
 
+
+void Hdump::gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs,
+                        double Upar, const std::vector<double>& tpar)
+{
+  alloc_ints();
+  HubSite s1(dims,pbcs),s2(dims,pbcs);
+  for (auto p: pbcs) {
+    if ( p < 0 ) error("Antiperiodic boundaries not implemented!");
+  }
+#ifndef MOLPRO
+  if ( Input::iPars["hubbard"]["print"] > 0 ) {
+    // print geometry
+    xout << "Geometry: ";
+    do {
+      xout << s1;
+    } while (s1.next());
+    xout << std::endl;
+    s1.zero();
+  }
+#endif
+ // squares of distances to neighbours
+  std::vector<uint> next_site;
+  for ( uint i = 1; i < tpar.size()+1; ++i ) {
+    next_site.push_back(i*i);
+  }
+  if ( tpar.size() > 1 ) {
+    uint maxdd = tpar.size()*tpar.size();
+    std::vector<bool> distances(maxdd,false);
+    do {
+      do {
+        uint dd = s1.dist2(s2);
+        if (dd < maxdd) distances[dd] = true;
+      } while ( s2.next() );
+      s2.zero();
+    } while ( s1.next() );
+    s1.zero(); s2.zero();
+    // set distances to neighbours
+    uint nn = 0;
+    for ( uint i = 1; i < maxdd && nn < tpar.size(); ++i ) {
+      if (distances[i]) {
+        next_site[nn] = i;
+        ++nn;
+      }
+    }
+  }
+
+  do {
+    do {
+      uint dd = s1.dist2(s2);
+      if ( dd == 0 ) {
+        // set U
+        uint p = s1.id();
+        set_twoel_spa(p,p,p,p,Upar);
+      } else {
+        for ( uint i = 0; i < tpar.size(); ++i ) {
+          if ( dd == next_site[i] ) {
+            set_oneel_spa(s1.id(),s2.id(),-tpar[i]);
+            break;
+          }
+        }
+      }
+    } while ( s2.next() );
+    s2.zero();
+  } while ( s1.next() );
+}
+
+void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar)
+{
+#ifdef MOLPRO
+  double tol = 1.e-6;
+#else
+  double tol = Input::fPars["periodic"]["thrdist"];
+#endif
+  alloc_ints();
+  PSite s1(pers.ndim()),s2(pers.ndim());
+  if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
+#ifndef MOLPRO
+  if ( Input::iPars["hubbard"]["print"] > 0 ) {
+    // print geometry
+    xout << "Geometry: ";
+    do {
+      xout << pers.site_coords(s1);
+    } while (pers.next(s1));
+    xout << std::endl;
+    s1.zero();
+  }
+#endif
+  // squares of distances to neighbours
+  std::vector<double> dist2_neighbours = pers.dist2neighbours(tpar.size());
+  uint p = 0;
+  do {
+    uint q = 0;
+    do {
+      double dd = pers.dist2(s1,s2);
+      if ( dd < tol ) {
+        assert( p == q );
+        // set U
+        set_twoel_spa(p,p,p,p,Upar);
+      } else {
+        for ( uint i = 0; i < tpar.size(); ++i ) {
+          if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
+            set_oneel_spa(p,q,-tpar[i]);
+            break;
+          }
+        }
+      }
+      ++q;
+    } while ( pers.next(s2) );
+    s2.zero();
+    ++p;
+  } while ( pers.next(s1) );
+}
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
 {
@@ -710,13 +936,92 @@ void Hdump::import(const Hdump& hd, bool add)
     }
   }
 }
-
+template<typename T>
+void Hdump::scale_int4(T* pInt, double scal)
+{
+  uint i = 0, j = 0, k = 0, l = 0;
+  Irrep isym = 0;
+  do {
+    BlkIdx indxD = pInt->index(i,j,k,l);
+    pInt->set(indxD, pInt->get(indxD)*scal);
+  } while (pInt->next_indices(i,j,k,l,isym));
+}
+template<typename T>
+void Hdump::scale_int2(T* pInt, double scal)
+{
+  uint i = 0, j = 0;
+  do {
+    BlkIdx indxD = pInt->index(i,j);
+    pInt->set(indxD, pInt->get(indxD)*scal);
+  } while (pInt->next_indices(i,j));
+}
+template<typename SI2, typename SI4aa, typename SI4ab>
+void Hdump::scale_ints( SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, double scal)
+{
+  pSI4aa = dynamic_cast<SI4aa*>(_twoel[aaaa].get()); assert(pSI4aa);
+  scale_int4(pSI4aa,scal);
+  pSI2 = dynamic_cast<SI2*>(_oneel[aa].get()); assert(pSI2);
+  scale_int2(pSI2,scal);
+  if ( _uhf ) {
+    pSI4aa = dynamic_cast<SI4aa*>(_twoel[bbbb].get()); assert(pSI4aa);
+    scale_int4(pSI4aa,scal);
+    pSI4ab = dynamic_cast<SI4ab*>(_twoel[aabb].get()); assert(pSI4ab);
+    scale_int4(pSI4ab,scal);
+    pSI2 = dynamic_cast<SI2*>(_oneel[bb].get()); assert(pSI2);
+    scale_int2(pSI2,scal);
+  }
+  
+  _escal *= scal;
+}
 void Hdump::scale(double scal)
 {
-  (void) scal;
-  error("Not implemented!");
+  if ( _simtra ) {
+    // expand the permutation symmetry
+    Integ4st * pSI4aa = 0;
+    Integ4stab * pSI4ab = 0;
+    Integ2st * pSI2 = 0;
+    scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+  } else {
+    // create the permutation symmetry
+    Integ4 * pSI4aa = 0;
+    Integ4ab * pSI4ab = 0;
+    Integ2 * pSI2 = 0;
+    scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+  }
 }
 
+void Hdump::addS2(double scal)
+{
+  if (!_uhf) error("Use UHF FCIDUMPs to add S^2");
+  if (!_simtra) error("Use ST FCIDUMP to add S^2");
+  assert(allocated());
+  xout << "RESTRICTED ORBITALS ASSUMED!" << std::endl;
+  Overlapdump Overlap(_pgs);
+  auto ovrlp = Overlap.overlap;
+  uint p = 0, q = 0, s = 0, r = 0;
+  // 1-body
+  do {
+    BlkIdx indxD = _oneel[bb].get()->index(p,s);
+    double val = 0.0;
+    for ( uint q = 0; q < _norb; ++q ) {
+      val += ovrlp.get_with_pgs(q,p) * ovrlp.get_with_pgs(q,s);
+    }
+    val *= scal;
+    val += _oneel[bb].get()->get(indxD);
+    _oneel[bb].get()->set(indxD,val);
+  } while ( _oneel[bb].get()->next_indices(p,s) );
+  
+  // 2-body 
+  p = q = r = s = 0;
+  Irrep isym = 0;
+  auto pInt = _twoel[aabb].get();
+  do {
+    BlkIdx indxD = pInt->index(p,q,r,s);
+    double val = -scal * ovrlp.get_with_pgs(p,s)*ovrlp.get_with_pgs(q,r);
+    val += pInt->get(indxD);
+    pInt->set(indxD, val);
+  } while ( pInt->next_indices(p,q,r,s,isym) );
+}
 
 void Hdump::check_addressing_integrals() const
 {
@@ -1131,6 +1436,15 @@ Overlapdump::Overlapdump(std::string ovdump, const PGSym& pgs,
   }
 }
 
+Overlapdump::Overlapdump(const PGSym& pgs)
+{
+  overlap = Integ2ab(pgs);
+  uint p = 0, q = 0;
+  do {
+    if ( p == q ) overlap.set(p,q,1.0);
+  } while ( overlap.next_indices(p,q));
+}
+
 void Hdump::calc_Spin2(const Integ2ab& Overlap, bool alt){
   double spin = 0;
   double spinHF = 0;
@@ -1190,7 +1504,7 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
       uint norbwc4ir = norb4ir + ncore()[ir];
       for ( int r = 0; r < ncore()[ir]; r++ ){
         for ( uint s = 0; s < norbwc4ir; s++ ){
-          if ( r == s ) oneRDMFile << fmt::ff(2.0,15,8) << ",";
+          if ( r == int(s) ) oneRDMFile << fmt::ff(2.0,15,8) << ",";
           else oneRDMFile << fmt::ff(0.0,15,8) << ",";
           if( counter%5 == 0 || s == (norbwc4ir - 1) ){
             oneRDMFile << std::endl;
@@ -1241,7 +1555,7 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
       uint norbwc4ir = norb4ir + ncore()[ir];
       for ( int r = 0; r < ncore()[ir]; r++ ){
         for ( uint s = 0; s < norbwc4ir; s++ ){
-          if ( r == s ) {
+          if ( r == int(s) ) {
             oneRDMFile_aa << fmt::ff(1.0,15,8) << ",";
             oneRDMFile_bb << fmt::ff(1.0,15,8) << ",";
           }
@@ -1281,6 +1595,16 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
     oneRDMFile_aa.close();
     oneRDMFile_bb.close();
   }
+}
+
+std::ostream & operator << (std::ostream& o, const HubSite& hs) {
+  o << "{";
+  for ( uint i = 0; i < hs.size(); ++i ) {
+    o << hs[i];
+    if ( i < hs.size()-1 ) o << ",";
+  }
+  o << "}";
+  return o;
 }
 } //namespace HamDump
 

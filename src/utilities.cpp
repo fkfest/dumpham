@@ -76,13 +76,13 @@ std::size_t curlyfind(const std::string& str, const std::string& what, std::size
 }
 
 std::string lowercase(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), 
+    std::transform(s.begin(), s.end(), s.begin(),
                    [](unsigned char c){ return std::tolower(c); }
                   );
     return s;
 }
 std::string uppercase(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), 
+    std::transform(s.begin(), s.end(), s.begin(),
                    [](unsigned char c){ return std::toupper(c); }
                   );
     return s;
@@ -94,5 +94,5 @@ std::string ff(double num,int width, int prec )
   std::ostringstream oss;
   oss << std::setprecision(prec) << std::setw(width) << num;
   return oss.str();
-} 
+}
 }

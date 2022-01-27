@@ -25,11 +25,11 @@ namespace HamDump {
 #ifdef MOLPRO
 typedef memory::vector<double> DData;
 #else
-typedef std::vector<double> DData; 
+typedef std::vector<double> DData;
 #endif
 typedef uint64_t BlkIdx;
 
-/*! 
+/*!
  * Base class for tensors with permutational and group symmetry
  */
 class BaseTensors {
@@ -75,19 +75,19 @@ public:
   }
   virtual inline BlkIdx index( uint p, uint q ) const 
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;return 0;};
-  virtual inline BlkIdx index( uint p, uint q, Irrep ir ) const 
+  virtual inline BlkIdx index( uint p, uint q, Irrep ir ) const
           {error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)ir;return 0;};
-  virtual inline BlkIdx index( uint p, uint q, uint r, uint s ) const 
+  virtual inline BlkIdx index( uint p, uint q, uint r, uint s ) const
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return 0;}
   virtual inline BlkIdx index( uint p, uint q, uint r, uint s, uint t, uint u ) const
           { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)t;(void)u;return 0;}
   virtual inline bool next_indices( uint& p, uint& q ) const 
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;return false;};
-  virtual inline bool next_indices_nosym( uint& p, uint& q ) const 
+  virtual inline bool next_indices_nosym( uint& p, uint& q ) const
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;return false;};
-  virtual inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const 
+  virtual inline bool next_indices( uint& p, uint& q, uint& r, uint& s, Irrep& ir ) const
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)ir;return false;};
-  virtual inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const 
+  virtual inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;return false;};
   virtual inline bool next_indices( uint& p, uint& q, uint& r, uint& s, uint& t, uint& u, Irrep& ir ) const
           {error("Incompatible next_indices call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)t;(void)u;(void)ir;return false;};
@@ -104,12 +104,12 @@ protected:
   uint _nidx;
   // pointers to data for each block (according to irreps)
   // addressed as irrep(p)+irrep(q)*nIrrep+...
-  // but actually only symmetry unique blocks will be set! 
+  // but actually only symmetry unique blocks will be set!
   std::vector<BlkIdx> _blocks;
   DData _data;
 };
 
-/*! 
+/*!
  * Class for (pq) with permutational (triangular) and group symmetry
  * (pq)=(qp)
  */
@@ -118,16 +118,16 @@ public:
   Integ2() : BaseTensors(2) {};
   Integ2(const PGSym& pgs);
   // index of p,q value
-  inline BlkIdx index( uint p, uint q ) const; 
+  inline BlkIdx index( uint p, uint q ) const;
   // index of p,q value with p,q indices in irrep ir
-  inline BlkIdx index( uint p, uint q, Irrep ir ) const; 
+  inline BlkIdx index( uint p, uint q, Irrep ir ) const;
   // iterate to next index
   inline bool next_indices( uint& p, uint& q ) const;
   // iterate to next index without symmetry
   inline bool next_indices_nosym( uint& p, uint& q ) const;
 };
 
-/*! 
+/*!
  * Class for (pq) with group symmetry
  */
 class Integ2ab : public BaseTensors {
@@ -135,9 +135,9 @@ public:
   Integ2ab() : BaseTensors(2) {};
   Integ2ab(const PGSym& pgs);
   // index of p,q value
-  inline BlkIdx index( uint p, uint q ) const; 
+  inline BlkIdx index( uint p, uint q ) const;
   // index of p,q value with p,q indices in irrep ir
-  inline BlkIdx index( uint p, uint q, Irrep ir ) const; 
+  inline BlkIdx index( uint p, uint q, Irrep ir ) const;
   // iterate to next index
   inline bool next_indices( uint& p, uint& q ) const;
   // iterate to next index without symmetry
@@ -146,7 +146,7 @@ public:
 
 typedef Integ2ab Integ2st;
 
-/*! 
+/*!
  * Class for (pq|rs) with permutational (triangular) and group symmetry
  * (pq|rs)=(qp|rs)=(pq|sr)=(qp|sr)=(rs|pq)=(sr|pq)=(rs|qp)=(sr|qp)
  */
@@ -162,9 +162,9 @@ public:
   inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
-/*! 
+/*!
  * Class for (pq|rs) with incomplete permutational (triangular) and group symmetry
- * (pq|rs)=(qp|rs)=(pq|sr)=(qp|sr) 
+ * (pq|rs)=(qp|rs)=(pq|sr)=(qp|sr)
  * used for (aa|bb) integrals
  */
 class Integ4ab : public BaseTensors {
@@ -179,7 +179,7 @@ public:
   inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
-/*! 
+/*!
  * Class for (pq|rs) with incomplete permutational (particle) and group symmetry
  * (pq|rs)=(rs|pq)
  * used for similarity transformed integrals
@@ -196,7 +196,7 @@ public:
   inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s ) const;
 };
 
-/*! 
+/*!
  * Class for (pq|rs) with group symmetry
  * (pq|rs) without permutational symmetry
  * used for similarity transformed (aa|bb) integrals
@@ -334,9 +334,9 @@ inline BlkIdx Integ4::index(uint p, uint q, uint r, uint s ) const
   BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
   // indices relative to the block
   BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
-         qb = q - p_pgs->_firstorb4irrep[qir],  
-         rb = r - p_pgs->_firstorb4irrep[rir],  
-         sb = s - p_pgs->_firstorb4irrep[sir];  
+         qb = q - p_pgs->_firstorb4irrep[qir],
+         rb = r - p_pgs->_firstorb4irrep[rir],
+         sb = s - p_pgs->_firstorb4irrep[sir];
   BlkIdx pqb, rsb, lenrs;
   if ( pir == qir ) {
     // triangular index
@@ -365,7 +365,7 @@ inline bool Integ4::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir) 
           for ( ; s <= r; ++s ) {
             if ( p_pgs->totIrrep(r,s) == ir && (r+1)*r/2 + s <= (p+1)*p/2 + q ) return true;
           } s = 0;
-        ++r; } while ( r <= p ); r = 0; 
+        ++r; } while ( r <= p ); r = 0;
       ++q; } while ( q <= p ); q = 0;
     ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
   ++ir; } while ( ir < p_pgs->nIrreps() );
@@ -404,9 +404,9 @@ inline BlkIdx Integ4ab::index(uint p, uint q, uint r, uint s ) const
   BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
   // indices relative to the block
   BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
-         qb = q - p_pgs->_firstorb4irrep[qir],  
-         rb = r - p_pgs->_firstorb4irrep[rir],  
-         sb = s - p_pgs->_firstorb4irrep[sir];  
+         qb = q - p_pgs->_firstorb4irrep[qir],
+         rb = r - p_pgs->_firstorb4irrep[rir],
+         sb = s - p_pgs->_firstorb4irrep[sir];
   BlkIdx pqb, rsb, lenrs;
   if ( pir == qir ) {
     // triangular index
@@ -430,7 +430,7 @@ inline bool Integ4ab::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir
           for ( ; s <= r; ++s ) {
             if ( p_pgs->totIrrep(r,s) == ir ) return true;
           } s = 0;
-        ++r; } while ( r < p_pgs->ntotorbs() ); r = 0; 
+        ++r; } while ( r < p_pgs->ntotorbs() ); r = 0;
       ++q; } while ( q <= p ); q = 0;
     ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
   ++ir; } while ( ir < p_pgs->nIrreps() );
@@ -447,7 +447,7 @@ inline bool Integ4ab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) con
       ++r; } while ( r < p_pgs->ntotorbs() ); r = 0;
     ++q; } while ( q <= p ); q = 0;
   ++p; } while ( p < p_pgs->ntotorbs() );
-  
+
   return false;
 }
 
@@ -469,9 +469,9 @@ inline BlkIdx Integ4st::index(uint p, uint q, uint r, uint s ) const
   BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
   // indices relative to the block
   BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
-         qb = q - p_pgs->_firstorb4irrep[qir],  
-         rb = r - p_pgs->_firstorb4irrep[rir],  
-         sb = s - p_pgs->_firstorb4irrep[sir];  
+         qb = q - p_pgs->_firstorb4irrep[qir],
+         rb = r - p_pgs->_firstorb4irrep[rir],
+         sb = s - p_pgs->_firstorb4irrep[sir];
   BlkIdx pqb, rsb, lenrs;
   pqb = pb*p_pgs->_norb4irrep[qir]+qb,
   rsb = rb*p_pgs->_norb4irrep[sir]+sb;
@@ -489,22 +489,22 @@ inline bool Integ4st::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& ir
   do { // ir
     do { // p
       do { // q
-        if ( p_pgs->totIrrep(p,q) == ir ) do { // r 
+        if ( p_pgs->totIrrep(p,q) == ir ) do { // r
           if ( p == r ) {
             for ( ; s <= q; ++s ) {
               if ( p_pgs->totIrrep(r,s) == ir ) return true;
-            } 
+            }
           } else {
             for ( ; s < p_pgs->ntotorbs(); ++s ) {
               if ( p_pgs->totIrrep(r,s) == ir ) return true;
-            } 
-          } 
+            }
+          }
           s = 0;
-        ++r; } while ( r <= p ); r = 0; 
+        ++r; } while ( r <= p ); r = 0;
       ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
     ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
   ++ir; } while ( ir < p_pgs->nIrreps() );
-  
+
   return false;
 }
 inline bool Integ4st::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
@@ -521,8 +521,8 @@ inline bool Integ4st::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) con
         s = 0;
       ++r; } while ( r <= p ); r = 0;
     ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
-  ++p; } while ( p < p_pgs->ntotorbs() ); 
-  
+  ++p; } while ( p < p_pgs->ntotorbs() );
+
   return false;
 }
 
@@ -536,9 +536,9 @@ inline BlkIdx Integ4stab::index(uint p, uint q, uint r, uint s ) const
   BlkIdx blk_idx = _blocks[pir+nIrreps*(qir+nIrreps*(rir+nIrreps*sir))];
   // indices relative to the block
   BlkIdx pb = p - p_pgs->_firstorb4irrep[pir],
-         qb = q - p_pgs->_firstorb4irrep[qir],  
-         rb = r - p_pgs->_firstorb4irrep[rir],  
-         sb = s - p_pgs->_firstorb4irrep[sir];  
+         qb = q - p_pgs->_firstorb4irrep[qir],
+         rb = r - p_pgs->_firstorb4irrep[rir],
+         sb = s - p_pgs->_firstorb4irrep[sir];
   BlkIdx pqb, rsb, lenrs;
   pqb = pb*p_pgs->_norb4irrep[qir]+qb,
   rsb = rb*p_pgs->_norb4irrep[sir]+sb;
@@ -555,11 +555,11 @@ inline bool Integ4stab::next_indices(uint& p, uint& q, uint& r, uint& s, Irrep& 
           for ( ; s < p_pgs->ntotorbs(); ++s ) {
             if ( p_pgs->totIrrep(r,s) == ir ) return true;
           } s = 0;
-        ++r; } while ( r < p_pgs->ntotorbs() ); r = 0; 
+        ++r; } while ( r < p_pgs->ntotorbs() ); r = 0;
       ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
     ++p; } while ( p < p_pgs->ntotorbs() ); p = 0;
   ++ir; } while ( ir < p_pgs->nIrreps() );
-  
+
   return false;
 }
 inline bool Integ4stab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) const
@@ -573,7 +573,7 @@ inline bool Integ4stab::next_indices_nosym(uint& p, uint& q, uint& r, uint& s) c
       ++r; } while ( r < p_pgs->ntotorbs() ); r = 0;
     ++q; } while ( q < p_pgs->ntotorbs() ); q = 0;
   ++p; } while ( p < p_pgs->ntotorbs() );
-  
+
   return false;
 }
 
