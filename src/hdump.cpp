@@ -832,6 +832,7 @@ void Hdump::storerec6_nosym(const T * pInt) const
   outputStream<<std::scientific<<std::setprecision(15);
   std::string outputFile = FileName(_3body_file,true)+"_NEW.TCDUMP";
   outputStream.open(outputFile.c_str());
+  double value;
   if ( (outputStream.rdstate() & std::ifstream::failbit ) != 0 ) {
     outputStream.close();
     error("Hdump::storerec6_nosym failed to open "+ outputFile);
@@ -844,8 +845,9 @@ void Hdump::storerec6_nosym(const T * pInt) const
           for(uint q=1; q <= _norb; q++){
             for(uint p=1; p <= _norb; p++){
               //write out in physicist notation <ikm|jln>
-              if(abs(pInt->get(p,q,r,s,t,u)) > 1.e-8){
-              writeIntegral_3body(p,r,t,q,s,u,pInt->get(p,q,r,s,t,u),outputStream);}
+              value = 0.5*(pInt->get(p,q,r,s,t,u)+pInt->get(p,q,t,u,r,s));
+              if(abs(value) > 1.e-8){
+              writeIntegral_3body(p,r,t,q,s,u,value,outputStream);}
               //write out in chemist notation (ij|kl|mn)
               //writeIntegral_3body(i+1,j+1,k+1,l+1,m+1,n+1,pInt->get_with_pgs(i,j,k,l,m,n),outputStream);
             }
