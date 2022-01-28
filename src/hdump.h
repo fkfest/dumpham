@@ -58,6 +58,7 @@ public:
   void read_dump();
   // for 3 body integrals
   void read_3body_dump();
+  void read_3body_dump_nosym();
   void writeIntegral_3body(int i, int j, int k, int l, int m, int n, double value, std::ofstream& outputStream) const;
   void store(std::string fcidump);
   void alloc_ints();
@@ -203,6 +204,8 @@ private:
   void store_with_symmetry( I2 * pI2, I4aa * pI4aa, I4ab * pI4ab ) const;
   template<typename I6>
   void store_with_symmetry( I6 * pI6 ) const;
+  template<typename I6>
+  void store_without_symmetry( I6 * pI6 ) const;
   template<typename I2, typename I4aa, typename I4ab>
   void store_without_symmetry( I2 * pI2, I4aa * pI4aa, I4ab * pI4ab ) const;
   template<typename T>
@@ -211,6 +214,8 @@ private:
   void storerec4_sym(const T * pInt) const;
   template<typename T>
   void storerec6_sym(const T * pInt) const;
+  template<typename T>
+  void storerec6_nosym(const T * pInt) const;
   template<typename T>
   void storerec2_nosym(const T * pInt) const;
   template<typename T>
@@ -258,6 +263,7 @@ private:
   std::vector< std::unique_ptr<BaseTensors> > _oneel;
   // Three-electron integrals (one set for rhf, otherwise aaa, aab, abb, bbb)
   std::vector< std::unique_ptr<BaseTensors> > _threeel;
+  std::vector< std::unique_ptr<BaseTensors_nosym> > _threeel_nosym;
   // point group symmetry
   PGSym _pgs;
   // Scalar
@@ -277,6 +283,8 @@ private:
   bool _simtra = false;
   // three-body integrals
   bool _3body = false;
+  // three-body integrals with no symmetry at all
+  bool _3body_nosym = false;
   std::string _3body_file;
   // density matrix instead of integrals
   bool _dm = false;

@@ -61,6 +61,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
   _3body = bool(ThreeBody[0]);
+  _3body_nosym = (ThreeBody[0] == 5);
   _dm = bool(DM[0]);
   if ( _3body ) {
     // name of the 3 body file
@@ -264,12 +265,13 @@ void Hdump::alloc_ints()
     }
   }
   if (_3body) {
-      xout << "allocate 3body" << std::endl;
-      // atm only symmetric 3-body integrals are used
-      _threeel.emplace_back(new Integ6(_pgs));
-      if ( _uhf ) {
-          error("UHF 3-body not implemented!","hdump.cpp");
-      }
+    xout << "allocate 3body" << std::endl;
+    // atm only symmetric 3-body integrals are used
+    if(_3body_nosym) _threeel_nosym.emplace_back(new Integ6_nosym(_norb));
+    else _threeel.emplace_back(new Integ6(_pgs));
+    if ( _uhf ) {
+      error("UHF 3-body not implemented!","hdump.cpp");
+    }
   }
 
 #ifdef _DEBUG
@@ -292,17 +294,36 @@ void Hdump::alloc_ints()
   }
 //   check_addressing_integrals();
   if (_3body) {
-    Irrep isym = 0, jsym = 0;
-    uint i,j,k,l,m,n;
-    i=j=k=l=m=n=0;
-    Integ6 * pInt = dynamic_cast<Integ6*>(_threeel[aa].get());
-    assert( pInt );
-    BlkIdx indxRef = 0;
-    do {
-      BlkIdx indxD = pInt->index(i,j,k,l,m,n);
-      if (indxD != indxRef ) xout << "indx " << indxD << ":" << i << " " << j << " " << k << " " << l << " " << m << " " << n << "(" << isym << "," << jsym << ")" << std::endl;
-      ++indxRef;
-    } while (pInt->next_indices(i,j,k,l,m,n,isym,jsym));
+    if(_3body_nosym){
+      Integ6_nosym * pInt = dynamic_cast<Integ6_nosym*>(_threeel_nosym[aa].get());
+      assert( pInt );
+      for(uint u =1; u <= _norb; u++){
+        for(uint t =1; t <= _norb; t++){
+          for(uint s=1; s <= _norb; s++){
+            for(uint r=1; r <= _norb; r++){
+              for(uint q=1; q <= _norb; q++){
+                for(uint p=1; p <= _norb; p++){
+                  BlkIdx indxD = pInt->index(p,q,r,s,t,u);
+      //       xout << "indx " << indxD << ":" << p << " " << q << " " << r << " " << s << " " << t << " " << u << std::endl;
+                }
+              }
+            }
+          }
+        }
+      }
+    }else{
+      Irrep isym = 0, jsym = 0;
+      uint i,j,k,l,m,n;
+      i=j=k=l=m=n=1;
+      Integ6 * pInt = dynamic_cast<Integ6*>(_threeel[aa].get());
+      assert(pInt);
+      BlkIdx indxRef = 0;
+      do {
+        BlkIdx indxD = pInt->index(i,j,k,l,m,n);
+        if (indxD != indxRef ) xout << "indx " << indxD << ":" << i << " " << j << " " << k << " " << l << " " << m << " " << n << "(" << isym << "," << jsym <<
+        ++indxRef;
+      } while (pInt->next_indices(i,j,k,l,m,n,isym,jsym));
+    }
   }
 #endif
 }
@@ -368,7 +389,8 @@ void Hdump::read_dump()
 
   } while (type != FCIdump::endOfFile);
   if ( _3body ) {
-    read_3body_dump();
+    if(_3body_nosym) read_3body_dump_nosym();
+    else read_3body_dump();
   }
 }
 void Hdump::read_3body_dump()
@@ -384,6 +406,21 @@ void Hdump::read_3body_dump()
   while (ftcdump >> value >> i >> k >> m >> j >> l >> n) {
     //xout << value << "(" << i << " " << j << "|" << k << " " << l << "|" << m << " " << n << ")" << std::endl;
     pInt->set(i-1,j-1,k-1,l-1,m-1,n-1,value);
+  }
+  ftcdump.close();
+}
+void Hdump::read_3body_dump_nosym()
+{
+  int i,j,k,l,m,n;
+  double value;
+  std::ifstream ftcdump;
+  ftcdump.open(_3body_file.c_str());
+  if (!ftcdump.is_open()) error("Cannot open TCDUMP file "+_3body_file,"hdump.cpp");
+  Integ6_nosym * pInt = dynamic_cast<Integ6_nosym*>(_threeel_nosym[aa].get());
+  assert( pInt );
+  // order on TCDUMP: ikmjln == <ikm|jln> == (ij|kl|mn)
+  while (ftcdump >> value >> i >> k >> m >> j >> l >> n) {
+    pInt->set(i,j,k,l,m,n,value);
   }
   ftcdump.close();
 }
@@ -659,9 +696,14 @@ void Hdump::store(std::string fcidump)
     }
   }
   if (_3body) {
-    Integ6 * pI6 = 0;
-    //atm only symmetric 3-body integrals are used
-    store_with_symmetry(pI6);
+    if(_3body_nosym){
+      Integ6_nosym * pI6 = 0;
+      store_without_symmetry(pI6);
+    }else{
+      Integ6 * pI6 = 0;
+//       atm only symmetric 3-body integrals are used
+      store_with_symmetry(pI6);
+    }
   }
 #ifndef MOLPRO
   _dump.close_outputfile();
@@ -703,6 +745,16 @@ void Hdump::store_with_symmetry(I6* pI6) const
 {
   pI6 = dynamic_cast<I6*>(_threeel[aa].get()); assert(pI6);
   storerec6_sym(pI6);
+  if (_uhf) {
+    error("UHF 3-body not implemented!","hdump.cpp");
+  }
+}
+
+template<typename I6>
+void Hdump::store_without_symmetry(I6* pI6) const
+{
+  pI6 = dynamic_cast<I6*>(_threeel_nosym[aa].get()); assert(pI6);
+  storerec6_nosym(pI6);
   if (_uhf) {
     error("UHF 3-body not implemented!","hdump.cpp");
   }
@@ -771,6 +823,37 @@ void Hdump::storerec6_sym(const T * pInt) const
     //write out in chemist notation (ij|kl|mn)
     //writeIntegral_3body(i+1,j+1,k+1,l+1,m+1,n+1,pInt->get_with_pgs(i,j,k,l,m,n),outputStream);
   } while (pInt->next_indices(i,j,k,l,m,n,ijsym,klsym));
+}
+
+template<typename T>
+void Hdump::storerec6_nosym(const T * pInt) const
+{
+  std::ofstream outputStream;
+  outputStream<<std::scientific<<std::setprecision(15);
+  std::string outputFile = FileName(_3body_file,true)+"_NEW.TCDUMP";
+  outputStream.open(outputFile.c_str());
+  if ( (outputStream.rdstate() & std::ifstream::failbit ) != 0 ) {
+    outputStream.close();
+    error("Hdump::storerec6_nosym failed to open "+ outputFile);
+  }
+  xout << "will be written to file " << outputFile << std::endl;
+  for(uint u =1; u <= _norb; u++){
+    for(uint t =1; t <= _norb; t++){
+      for(uint s=1; s <= _norb; s++){
+        for(uint r=1; r <= _norb; r++){
+          for(uint q=1; q <= _norb; q++){
+            for(uint p=1; p <= _norb; p++){
+              //write out in physicist notation <ikm|jln>
+              if(abs(pInt->get(p,q,r,s,t,u)) > 1.e-8){
+              writeIntegral_3body(p,r,t,q,s,u,pInt->get(p,q,r,s,t,u),outputStream);}
+              //write out in chemist notation (ij|kl|mn)
+              //writeIntegral_3body(i+1,j+1,k+1,l+1,m+1,n+1,pInt->get_with_pgs(i,j,k,l,m,n),outputStream);
+            }
+          }
+        }
+      }
+    }
+  }
 }
 template<typename T>
 void Hdump::storerec4_nosym(const T * pInt) const

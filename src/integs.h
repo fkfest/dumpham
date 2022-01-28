@@ -110,6 +110,32 @@ protected:
 };
 
 /*!
+ * Base class for 6 index tensors with no symmetry at all
+ */
+class BaseTensors_nosym {
+public:
+  BaseTensors_nosym(uint nidx = 0) : _nidx(nidx) {}
+  virtual ~BaseTensors_nosym() = default;
+  BlkIdx nelem() const { return _data.size(); }
+  // set (pq|rs|tu) value
+  void set( uint p, uint q, uint r, uint s, uint t, uint u, double val ) {_data[index(p,q,r,s,t,u)] = val;}
+  double get( BlkIdx idx ) { assert(idx < _data.size()); return _data[idx]; }
+  // get (pq|rs|tu) value
+  double get( uint p, uint q, uint r, uint s, uint t, uint u ) const { return _data[index(p,q,r,s,t,u)]; }
+  virtual inline BlkIdx index( uint p, uint q, uint r, uint s, uint t, uint u ) const
+          { error("Incompatible index call!","BaseTensors");(void)p;(void)q;(void)r;(void)s;(void)t;(void)u;return 0;}
+
+#ifdef _DEBUG
+  bool redunwarn = false;
+#endif
+protected:
+  uint _norb;
+  // number of indices
+  uint _nidx;
+  DData _data;
+};
+
+/*!
  * Class for (pq) with permutational (triangular) and group symmetry
  * (pq)=(qp)
  */
@@ -228,6 +254,18 @@ public:
                             Irrep& irpq, Irrep& irrs ) const;
   // iterate to next index without symmetry
   inline bool next_indices_nosym( uint& p, uint& q, uint& r, uint& s, uint& t, uint& u ) const;
+};
+
+/*!
+ * Class for (pq|rs|tu) with no symmetry at all
+ */
+class Integ6_nosym : public BaseTensors_nosym {
+public:
+  Integ6_nosym(uint norb) : BaseTensors_nosym(6){_norb = norb; _data.resize((std::pow(_norb,6)+1),0.0);};
+  inline BlkIdx index( uint p, uint q, uint n ) const;
+  inline BlkIdx index( uint p, uint q, uint r, uint n ) const;
+  // index of p,q,r,s,t,u value
+  inline BlkIdx index( uint p, uint q, uint r, uint s, uint t, uint u ) const;
 };
 
 // inline functions
@@ -699,6 +737,22 @@ inline bool Integ6::next_indices_nosym(uint& p, uint& q, uint& r, uint& s, uint&
     ++q; } while ( q <= p ); q = 0;
   ++p; } while ( p < p_pgs->ntotorbs());
   return false;
+}
+inline BlkIdx Integ6_nosym::index(uint p, uint q, uint n) const
+{
+  return n*(q-1)+p;
+}
+inline BlkIdx Integ6_nosym::index(uint p, uint q, uint r, uint n) const
+{
+  int qr = index(q,r,n);
+  return n*(qr-1)+p;
+}
+
+inline BlkIdx Integ6_nosym::index(uint p, uint q, uint r, uint s, uint t, uint u ) const
+{
+  int pqr = index(p,q,r,_norb);
+  int stu = index(s,t,u,_norb);
+  return index(pqr,stu,std::pow(_norb,3));
 }
 
 #undef WARNRED2
