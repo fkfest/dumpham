@@ -873,6 +873,41 @@ void Hdump::storerec2_nosym(const T * pInt) const
     _dump.writeIntegral(i+1,j+1,0,0,pInt->get_with_pgs(i,j));
   } while (pInt->next_indices_nosym(i,j));
 }
+template<typename T, typename U>
+void Hdump::copy_int6(T* pDest, const U* pSrc, bool add)
+{
+  if ( add ) {
+      // add, no symmetrization
+    for(uint u =1; u <= _norb; u++){
+      for(uint t =1; t <= _norb; t++){
+        for(uint s=1; s <= _norb; s++){
+          for(uint r=1; r <= _norb; r++){
+            for(uint q=1; q <= _norb; q++){
+              for(uint p=1; p <= _norb; p++){
+                pDest->set(p,q,r,s,t,u,pSrc->get(p,q,r,s,t,u)+pDest->get(p,q,r,s,t,u));
+              }
+            }
+          }
+        }
+      }
+    }
+  } else {
+      // don't add, no symmetrization
+    for(uint u =1; u <= _norb; u++){
+      for(uint t =1; t <= _norb; t++){
+        for(uint s=1; s <= _norb; s++){
+          for(uint r=1; r <= _norb; r++){
+            for(uint q=1; q <= _norb; q++){
+              for(uint p=1; p <= _norb; p++){
+                pDest->set(p,q,r,s,t,u,pSrc->get(p,q,r,s,t,u));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 template<typename T, typename U>
 void Hdump::copy_int4(T* pDest, const U* pSrc, bool add, bool sym)
@@ -987,7 +1022,17 @@ void Hdump::import(const Hdump& hd, bool add)
   } else {
     assert(allocated());
   }
-  if ( _simtra ) {
+  if( _3body_nosym ){//TODO allow for adding FCI and TCDUMP simultaneously
+    Integ6_nosym * pDI6 = 0;
+    Integ6_nosym * pSI6 = 0;
+    pDI6 = dynamic_cast<Integ6_nosym*>(_threeel_nosym[aa].get());
+    assert(pDI6);
+    pSI6 = dynamic_cast<Integ6_nosym*>(hd._threeel_nosym[aa].get());
+    assert(pSI6);
+    assert(add);
+    copy_int6(pDI6,pSI6,add);
+  }
+  else if ( _simtra ) {
     // expand the permutation symmetry
     Integ4st * pDI4aa = 0;
     Integ4stab * pDI4ab = 0;

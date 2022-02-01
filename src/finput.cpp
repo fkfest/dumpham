@@ -58,6 +58,7 @@ void Finput::InitInpars(std::string paramspath)
 
 bool Finput::addline(const std::string& line)
 {
+  xout << "i'm in addline" << std::endl;
   const TParArray& bham = Input::aPars["syntax"]["bham"];
   const TParArray& eham = Input::aPars["syntax"]["eham"];
   const TParArray& newcs = Input::aPars["syntax"]["newcommand"];
@@ -234,7 +235,7 @@ bool Finput::analyzeham(const std::string& inputfile)
     if ( !_add ) error ("The Hamiltonian " + _dump->fcidump_filename() + " will be overwritten by "+inputfile);
     Hdump dump(inputfile);
     // check whether we will have to enlarge _dump
-    if ( ists ==0 && !_dump->simtra() && dump.simtra() ) {
+    if ( ists ==0 && !_dump->simtra() && dump.simtra() && !_dump->threebody_nosym()) {
       // transform old dump into similarity transformed version first!
       auto newdump = std::unique_ptr<Hdump>(new Hdump(*_dump,dump));
       newdump->import(*_dump);

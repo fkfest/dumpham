@@ -1,0 +1,7 @@
+output,fcinamtoupper=0
+ham,nosym=0
+
+\bham
+\output{adddump.TCDUMP}
+\input{TCDUMP} + \input{TCDUMP}
+\eham

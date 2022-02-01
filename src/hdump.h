@@ -98,6 +98,7 @@ public:
   void set_ncore( TINT* pNCore );
   // similarity transformed
   bool simtra() const { return _simtra; }
+  bool threebody_nosym() const { return _3body_nosym; }
   // in spatial orbitals (hdump order), PG symmetry is handled outside
   double oneel_spa(uint p, uint q, onetype xx = aa) const {
           if (!( (_uhf?xx:aa) < _oneel.size() )) {
@@ -226,6 +227,8 @@ private:
   template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI4aa, typename SI4ab>
   void copy_ints( DI2 * pDI2, DI4aa * pDI4aa, DI4ab * pDI4ab,
                   SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, const Hdump& hd, bool add = false, bool sym = false);
+  template<typename T, typename U>
+  void copy_int6( T * pDest, const U * pSrc, bool add );
   // copy 4-index integrals from pSrc to pDest
   // if add = true: add integrals to the existing ones
   // if sym = true: symmetrize simtra to normal integrals
