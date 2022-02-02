@@ -1,7 +1,6 @@
 &FCI NORB=  3,NELEC= 4,MS2=0,
  ORBSYM=1,1,1,
  ISYM=1,
- ST=1,
  III=5,
  OCC=2,0,
  CLOSED=2,0,

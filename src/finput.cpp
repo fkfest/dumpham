@@ -58,7 +58,6 @@ void Finput::InitInpars(std::string paramspath)
 
 bool Finput::addline(const std::string& line)
 {
-  xout << "i'm in addline" << std::endl;
   const TParArray& bham = Input::aPars["syntax"]["bham"];
   const TParArray& eham = Input::aPars["syntax"]["eham"];
   const TParArray& newcs = Input::aPars["syntax"]["newcommand"];
@@ -220,7 +219,8 @@ bool Finput::analyzeham(const std::string& inputfile)
 
   if ( !_dump ) {
     _dump = std::unique_ptr<Hdump>(new Hdump(inputfile));
-    _dump->read_dump();
+    if(_dump->threebody_nosym()) _dump->read_3body_dump_nosym();
+    else _dump->read_dump();
     if (scale()) _dump->scale(_scale);
     if ( ists != 0 ) { // check similarity transformation flag
       bool simtra = (ists > 0);
@@ -241,7 +241,8 @@ bool Finput::analyzeham(const std::string& inputfile)
       newdump->import(*_dump);
       _dump = std::move(newdump);
     }
-    dump.read_dump();
+    if(_dump->threebody_nosym()) dump.read_3body_dump_nosym();
+    else dump.read_dump();
     if (scale()) dump.scale(_scale);
     // add to the old dump
     _dump->add(dump);

@@ -65,6 +65,9 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _dm = bool(DM[0]);
   if ( _3body ) {
     // name of the 3 body file
+    if (fcidump == "TCDUMP" ){
+      warning("I assume you want to add TCDUMPs");
+      fcidump = "FCIDUMP";}
     if ( fcidump == "FCIDUMP" ) _3body_file = "TCDUMP";
     else if ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ) {
       _3body_file = fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
@@ -264,15 +267,15 @@ void Hdump::alloc_ints()
       _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
     }
   }
-  if (_3body) {
-    xout << "allocate 3body" << std::endl;
-    // atm only symmetric 3-body integrals are used
-    if(_3body_nosym) _threeel_nosym.emplace_back(new Integ6_nosym(_norb));
-    else _threeel.emplace_back(new Integ6(_pgs));
-    if ( _uhf ) {
-      error("UHF 3-body not implemented!","hdump.cpp");
-    }
-  }
+//   if (_3body) {
+//     xout << "allocate 3body" << std::endl;
+//     // atm only symmetric 3-body integrals are used
+//     if(_3body_nosym) _threeel_nosym.emplace_back(new Integ6_nosym(_norb));
+//     else _threeel.emplace_back(new Integ6(_pgs));
+//     if ( _uhf ) {
+//       error("UHF 3-body not implemented!","hdump.cpp");
+//     }
+//   }
 
 #ifdef _DEBUG
   if (_simtra) {
@@ -388,10 +391,10 @@ void Hdump::read_dump()
     }
 
   } while (type != FCIdump::endOfFile);
-  if ( _3body ) {
-    if(_3body_nosym) read_3body_dump_nosym();
-    else read_3body_dump();
-  }
+//   if ( _3body ) {
+//     if(_3body_nosym) read_3body_dump_nosym();
+//     else read_3body_dump();
+//   }
 }
 void Hdump::read_3body_dump()
 {
@@ -411,6 +414,14 @@ void Hdump::read_3body_dump()
 }
 void Hdump::read_3body_dump_nosym()
 {
+  assert(_3body_nosym);
+    xout << "allocate 3body" << std::endl;
+    // atm only symmetric 3-body integrals are used
+    if(_3body_nosym) _threeel_nosym.emplace_back(new Integ6_nosym(_norb));
+    else _threeel.emplace_back(new Integ6(_pgs));
+    if ( _uhf ) {
+      error("UHF 3-body not implemented!","hdump.cpp");
+    }
   int i,j,k,l,m,n;
   double value;
   std::ifstream ftcdump;
@@ -418,7 +429,8 @@ void Hdump::read_3body_dump_nosym()
   if (!ftcdump.is_open()) error("Cannot open TCDUMP file "+_3body_file,"hdump.cpp");
   Integ6_nosym * pInt = dynamic_cast<Integ6_nosym*>(_threeel_nosym[aa].get());
   assert( pInt );
-  // order on TCDUMP: ikmjln == <ikm|jln> == (ij|kl|mn)
+  //skip FCIDUMP header for now...
+  for(uint i = 0; i < 7; i++) ftcdump.ignore(256,'\n');
   while (ftcdump >> value >> i >> k >> m >> j >> l >> n) {
     pInt->set(i,j,k,l,m,n,value);
   }
@@ -670,31 +682,31 @@ void Hdump::store(std::string fcidump)
 #endif
   }
   if (_dump.write(fcidump,FCIdump::FileFormatted,false))
-    xout << "will be written to file " << fcidump << std::endl;
+    xout << "will be written to file2 " << fcidump << std::endl;
   else
     error("failure to write to file "+fcidump);
 
-  if (_simtra) {
-    // similarity transformed
-    Integ4st * pI4aa = 0;
-    Integ4stab * pI4ab = 0;
-    Integ2st * pI2 = 0;
-    if (nosym) {
-      store_without_symmetry(pI2,pI4aa,pI4ab);
-    } else {
-      store_with_symmetry(pI2,pI4aa,pI4ab);
-    }
-  } else {
-    // normal case
-    Integ4 * pI4aa = 0;
-    Integ4ab * pI4ab = 0;
-    Integ2 * pI2 = 0;
-    if (nosym) {
-      store_without_symmetry(pI2,pI4aa,pI4ab);
-    } else {
-      store_with_symmetry(pI2,pI4aa,pI4ab);
-    }
-  }
+//   if (_simtra) {
+//     // similarity transformed
+//     Integ4st * pI4aa = 0;
+//     Integ4stab * pI4ab = 0;
+//     Integ2st * pI2 = 0;
+//     if (nosym) {
+//       store_without_symmetry(pI2,pI4aa,pI4ab);
+//     } else {
+//       store_with_symmetry(pI2,pI4aa,pI4ab);
+//     }
+//   } else {
+//     // normal case
+//     Integ4 * pI4aa = 0;
+//     Integ4ab * pI4ab = 0;
+//     Integ2 * pI2 = 0;
+//     if (nosym) {
+//       store_without_symmetry(pI2,pI4aa,pI4ab);
+//     } else {
+//       store_with_symmetry(pI2,pI4aa,pI4ab);
+//     }
+//   }
   if (_3body) {
     if(_3body_nosym){
       Integ6_nosym * pI6 = 0;
@@ -1020,7 +1032,7 @@ void Hdump::import(const Hdump& hd, bool add)
   if (!add) {
     alloc_ints();
   } else {
-    assert(allocated());
+    if(!_3body_nosym) assert(allocated());
   }
   if( _3body_nosym ){//TODO allow for adding FCI and TCDUMP simultaneously
     Integ6_nosym * pDI6 = 0;
