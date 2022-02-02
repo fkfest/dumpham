@@ -64,17 +64,18 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _3body_nosym = (ThreeBody[0] == 5);
   _dm = bool(DM[0]);
   if ( _3body ) {
+    _3body_file = fcidump;
     // name of the 3 body file
-    if (fcidump == "TCDUMP" ){
-      warning("I assume you want to add TCDUMPs");
-      fcidump = "FCIDUMP";}
-    if ( fcidump == "FCIDUMP" ) _3body_file = "TCDUMP";
-    else if ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ) {
-      _3body_file = fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
-      xout << "Three body integrals will be read from " << _3body_file << std::endl;
-    } 
-    else
-      error("Cannot generate filename for 3body terms, use *.FCIDUMP format for fcidump","hdump.cpp");
+//     if (fcidump == "TCDUMP" ){
+//       warning("I assume you want to add TCDUMPs");
+//       fcidump = "DUMMY.FCIDUMP";}
+// //     if ( fcidump == "DUMMY.FCIDUMP" ) _3body_file = "TCDUMP";
+//     else if ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ) {
+//       _3body_file = fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
+//       xout << "Three body integrals will be read from " << _3body_file << std::endl;
+//     } 
+//     else
+//       error("Cannot generate filename for 3body terms, use *.FCIDUMP format for fcidump","hdump.cpp");
   }
 
   sanity_check();
