@@ -858,7 +858,8 @@ void Hdump::storerec6_nosym(const T * pInt) const
           for(uint q=1; q <= _norb; q++){
             for(uint p=1; p <= _norb; p++){
               //write out in physicist notation <ikm|jln>
-              value = 0.5*(pInt->get(p,q,r,s,t,u)+pInt->get(p,q,t,u,r,s));
+//               value = 0.5*(pInt->get(p,q,r,s,t,u)+pInt->get(p,q,t,u,r,s));
+              value = pInt->get(p,q,r,s,t,u);
               if(abs(value) > 1.e-8){
               writeIntegral_3body(p,r,t,q,s,u,value,outputStream);}
               //write out in chemist notation (ij|kl|mn)
