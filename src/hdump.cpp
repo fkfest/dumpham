@@ -1078,6 +1078,25 @@ void Hdump::import(const Hdump& hd, bool add)
     }
   }
 }
+
+template<typename T>
+void Hdump::scale_int6(T* pInt, double scal)
+{
+    for(uint u =1; u <= _norb; u++){
+      for(uint t =1; t <= _norb; t++){
+        for(uint s=1; s <= _norb; s++){
+          for(uint r=1; r <= _norb; r++){
+            for(uint q=1; q <= _norb; q++){
+              for(uint p=1; p <= _norb; p++){
+                pInt->set(p,q,r,s,t,u,(pInt->get(p,q,r,s,t,u)*scal));
+              }
+            }
+          }
+        }
+      }
+    }
+}
+
 template<typename T>
 void Hdump::scale_int4(T* pInt, double scal)
 {
@@ -1117,18 +1136,24 @@ void Hdump::scale_ints( SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, double scal)
 }
 void Hdump::scale(double scal)
 {
-  if ( _simtra ) {
-    // expand the permutation symmetry
-    Integ4st * pSI4aa = 0;
-    Integ4stab * pSI4ab = 0;
-    Integ2st * pSI2 = 0;
-    scale_ints(pSI2,pSI4aa,pSI4ab,scal);
-  } else {
-    // create the permutation symmetry
-    Integ4 * pSI4aa = 0;
-    Integ4ab * pSI4ab = 0;
-    Integ2 * pSI2 = 0;
-    scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+  if (_3body){
+    Integ6_nosym * pInt = 0;
+    pInt = dynamic_cast<Integ6_nosym*>(_threeel_nosym[aa].get()); assert(pInt);
+    scale_int6(pInt,scal);
+  }else{
+    if ( _simtra ) {
+      // expand the permutation symmetry
+      Integ4st * pSI4aa = 0;
+      Integ4stab * pSI4ab = 0;
+      Integ2st * pSI2 = 0;
+      scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+    } else {
+      // create the permutation symmetry
+      Integ4 * pSI4aa = 0;
+      Integ4ab * pSI4ab = 0;
+      Integ2 * pSI2 = 0;
+      scale_ints(pSI2,pSI4aa,pSI4ab,scal);
+    }
   }
 }
 

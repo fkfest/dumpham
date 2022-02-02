@@ -245,6 +245,9 @@ private:
   // scale integrals
   template<typename SI2, typename SI4aa, typename SI4ab>
   void scale_ints( SI2 * pSI2, SI4aa * pSI4aa, SI4ab * pSI4ab, double scal);
+  // scale 6-index integrals
+  template<typename T>
+  void scale_int6( T * pInt, double scal);
   // scale 4-index integrals
   template<typename T>
   void scale_int4( T * pInt, double scal);
