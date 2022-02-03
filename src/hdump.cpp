@@ -698,6 +698,7 @@ void Hdump::store(std::string fcidump)
   if (_3body) {
     if(_3body_nosym){
       Integ6_nosym * pI6 = 0;
+      check_sym();
       store_without_symmetry(pI6);
     }else{
       Integ6 * pI6 = 0;
@@ -712,6 +713,23 @@ void Hdump::store(std::string fcidump)
     _dump.modifyParameter("ORBSYM",ORBSYM_SAV);
   }
 #endif
+}
+
+void Hdump::check_sym() const{
+  Integ6_nosym * pI6 = dynamic_cast<Integ6_nosym*>(_threeel_nosym[aa].get()); assert(pI6);
+  for(uint u =1; u <= _norb; u++){
+    for(uint t =1; t <= _norb; t++){
+      for(uint s=1; s <= _norb; s++){
+        for(uint r=1; r <= _norb; r++){
+          for(uint q=1; q <= _norb; q++){
+            for(uint p=1; p <= _norb; p++){
+              if(pI6->get(p,q,r,s,t,u) != pI6 ->get(p,q,t,u,r,s)) error("missing particle-exchange symmetry of last two particles!");
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 template<typename I2, typename I4aa, typename I4ab>

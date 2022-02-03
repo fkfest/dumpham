@@ -257,6 +257,8 @@ private:
   double spinsum_1DM(uint p, uint q, Irrep ir);
   // check for nelec, ms2, norb, occ, clos, core...
   void sanity_check() const;
+  // check DUMP for expected symmetry
+  void check_sym() const;
   // Two-electron integrals (one set for rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
   // One-electron integrals (one set for rhf, otherwise alpha and beta)
