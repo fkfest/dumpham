@@ -698,7 +698,7 @@ void Hdump::store(std::string fcidump)
   if (_3body) {
     if(_3body_nosym){
       Integ6_nosym * pI6 = 0;
-      check_sym();
+      //check_sym();
       store_without_symmetry(pI6);
     }else{
       Integ6 * pI6 = 0;
