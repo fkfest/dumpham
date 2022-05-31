@@ -18,7 +18,8 @@ OrbOrder::OrbOrder(const FDPar& ORBSYM) : std::vector<std::size_t>(ORBSYM.size()
   }
 }
 
-OrbOrder::OrbOrder(const std::vector<uint>& occorb, const uint* nocc, const PGSym& pgs)
+OrbOrder::OrbOrder(const std::vector<uint>& occorb, const uint* nocc, 
+                   const std::vector< std::vector<uint> >& openorb, const PGSym& pgs)
                   : std::vector<std::size_t>(pgs.ntotorbs())
 {
   uint iocc = 0;
@@ -26,12 +27,36 @@ OrbOrder::OrbOrder(const std::vector<uint>& occorb, const uint* nocc, const PGSy
   for (uint ir = 0; ir < pgs.nIrreps(); ++ir ) {
     uint ioff = pgs.beginorb(ir);
     std::vector<bool> occupied(pgs.norbs(ir),false);
-    // occupied orbitals first
-    for ( uint i = 0; i < nocc[ir]; ++i, ++iocc, ++iorb ) {
-      (*this)[iorb] = occorb[iocc];
+    std::vector<bool> openshell(pgs.norbs(ir),false);
+    for ( uint ioporb: openorb[ir] ) {
+      assert ( ioff <= ioporb );
+      openshell[ioporb-ioff] = true;
+    }
+    // closed-shell orbitals first
+    for ( uint i = 0; i < nocc[ir]; ++i, ++iocc ) {
       assert ( ioff <= occorb[iocc] );
+      if (!openshell[occorb[iocc]-ioff]) {
+        (*this)[iorb] = occorb[iocc];
+        ++iorb;
+      }
       occupied[occorb[iocc]-ioff] = true;
     }
+    // open-shell occupied orbitals
+    for ( uint ioporb: openorb[ir] ) {
+      if ( occupied[ioporb-ioff] ) {
+        (*this)[iorb] = ioporb;
+        ++iorb;
+      }
+    }
+    // open-shell virtual orbitals
+    for ( uint ioporb: openorb[ir] ) {
+      if ( !occupied[ioporb-ioff] ) {
+        (*this)[iorb] = ioporb;
+        ++iorb;
+        occupied[ioporb-ioff] = true;
+      }
+    }
+
     // virtual orbitals
     for ( uint i = 0; i < pgs.norbs(ir); ++i ) {
       if ( !occupied[i] ) {
@@ -73,7 +98,9 @@ RefDet::RefDet(const PGSym& pgs)
   p_pgs = &pgs;
   ref[alpha] = OrbOrder(p_pgs->ntotorbs());
   ref[beta] = ref[alpha];
-  gen_refso();
+  clos.resize(pgs.nIrreps(),0);
+  occ.resize(pgs.nIrreps(),0);
+  generate_additional_info();
 }
 RefDet::RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
          const FDPar& core_, bool wcore)
@@ -114,7 +141,7 @@ RefDet::RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
   nocc[alpha] = occ;
   nocc[beta] = clos;
 
-  gen_refso();
+  generate_additional_info();
   print();
 }
 RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca,
@@ -127,25 +154,44 @@ RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* n
   clos.resize(pgs.nIrreps());
   nocc[alpha].resize(pgs.nIrreps());
   nocc[beta].resize(pgs.nIrreps());
+  // list of open-shell orbitals
+  std::vector< std::vector<uint> > openo(pgs.nIrreps());
   for (uint ir = 0; ir < pgs.nIrreps(); ++ir ) {
-      assert(ita+nocca[ir]-occorba.begin() <= int(occorba.size()));
-      assert(itb+noccb[ir]-occorbb.begin() <= int(occorbb.size()));
-      std::vector<uint> occo(nocca[ir]+noccb[ir]);
-      std::vector<uint>::iterator last;
-      last = std::set_union(ita,ita+nocca[ir],itb,itb+noccb[ir],occo.begin());
-      occ[ir] = last - occo.begin();
-      clos[ir] = nocca[ir]+noccb[ir]-occ[ir];
-      nocc[alpha][ir] = nocca[ir];
-      nocc[beta][ir] = noccb[ir];
-      ita += nocca[ir];
-      itb += noccb[ir];
+    assert(ita+nocca[ir]-occorba.begin() <= int(occorba.size()));
+    assert(itb+noccb[ir]-occorbb.begin() <= int(occorbb.size()));
+    std::vector<uint>::iterator last;
+    openo[ir].resize(nocca[ir]+noccb[ir]);
+    last = std::set_symmetric_difference(ita,ita+nocca[ir],itb,itb+noccb[ir],openo[ir].begin());
+    openo[ir].resize(last - openo[ir].begin());
+    clos[ir] = (nocca[ir]+noccb[ir] - (openo[ir].size()))/2;
+    occ[ir] = nocca[ir]+noccb[ir]-clos[ir];
+    nocc[alpha][ir] = nocca[ir];
+    nocc[beta][ir] = noccb[ir];
+    ita += nocca[ir];
+    itb += noccb[ir];
   }
   assert( ita == occorba.end() && itb == occorbb.end() );
-  ref[alpha] = OrbOrder(occorba, nocca, pgs);
-  ref[beta] = OrbOrder(occorbb, noccb, pgs);
+  ref[alpha] = OrbOrder(occorba, nocca, openo, pgs);
+  ref[beta] = OrbOrder(occorbb, noccb, openo, pgs);
+//  xout << "ref[alpha]:" << ref[alpha] << std::endl;
+//  xout << "ref[beta]:" << ref[beta] << std::endl;
 
-  gen_refso();
+  generate_additional_info();
   print(1);
+}
+
+int RefDet::RefSym() const
+{
+  if (nocc[alpha].size() == 0) return -1;
+  assert(p_pgs);
+  assert(nocc[alpha].size() == nocc[beta].size());
+  uint refsym = 0;
+  for ( uint ir = 0; ir < nocc[alpha].size(); ++ir ){
+    if ( nocc[alpha][ir]+nocc[beta][ir]%2 == 1 ) {
+      refsym = p_pgs->product(refsym,ir);
+    }
+  }
+  return refsym;
 }
 
 bool RefDet::operator==(const RefDet& rd) const
@@ -199,7 +245,11 @@ void RefDet::add_or_subtract_core(FDPar& orb, const std::string& kind, bool add)
     }
   }
 }
-
+void RefDet::generate_additional_info()
+{
+  gen_refso(); 
+  gen_orbspacetype();
+}
 void RefDet::gen_refso()
 {
   // order of spin orbitals
@@ -245,6 +295,29 @@ void RefDet::gen_refso()
       }
       oorb += norbs;
     }
+  }
+}
+void RefDet::gen_orbspacetype()
+{
+  orbspacetype.clear();
+  uint orbtype;
+  for (uint ir = 0; ir < p_pgs->nIrreps(); ++ir ) {
+    uint iorb4ir = 0;
+    orbtype = OS_closed|OS_occupied;
+    if ( ir < clos.size() )
+      for ( ; iorb4ir < uint(clos[ir]); ++iorb4ir) {
+        orbspacetype.push_back(orbtype);
+      }
+    orbtype = OS_open|OS_active|OS_occupied;
+    if ( ir < occ.size() )
+      for ( ; iorb4ir < uint(occ[ir]); ++iorb4ir) {
+        orbspacetype.push_back(orbtype);
+      }
+    orbtype = OS_empty;
+    for ( ; iorb4ir < p_pgs->norbs(ir); ++iorb4ir) {
+      orbspacetype.push_back(orbtype);
+    }
+    
   }
 }
 

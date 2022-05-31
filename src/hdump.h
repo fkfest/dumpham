@@ -3,21 +3,27 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cmath>
 
 #ifdef MOLPRO
 #include "hdtypes.h"
 #include "hdcommon.h"
 #include "global/fmt.h"
+#include <molpro/FCIdump.h>
 #else
 #include "globals.h"
 #include "utilities.h"
-#endif
 #include "FCIdump.h"
+#endif
 
 #include "pgsym.h"
 #include "integs.h"
 #include "refdet.h"
 #include "periodic.h"
+
+#ifdef MOLPRO
+using molpro::FCIdump;
+#endif
 
 namespace HamDump {
 typedef std::vector<uint64_t> BlockIndices;
@@ -31,7 +37,7 @@ public:
   Hdump(std::string fcidump, bool verbose = true);
   // construct from PGSym
   Hdump(const PGSym& pgs_, uint nelec_ = 0, uint ms2_ = 0,
-        uint sym_ = 0, bool uhf_ = false, bool simtra_ = false, bool dm_ = false) :
+        uint sym_ = 0, bool uhf_ = false, bool simtra_ = false, int dm_ = 0) :
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_),
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_), _dm(dm_) { _rd = RefDet(_pgs); }
   Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar);
@@ -56,6 +62,8 @@ public:
   void set_occupationAB(const std::vector<uint>& occorba, const uint* nocca,
                         const std::vector<uint>& occorbb, const uint* noccb);
   void read_dump();
+  // for 3 body integrals
+  void read_3body_dump();
   void store(std::string fcidump);
   void alloc_ints();
   // import integrals from hd. If add is true: add to the current integrals, otherwise the integrals are allocated
@@ -65,7 +73,7 @@ public:
   uint norb() const { return _norb; }
   uint nelec() const { return _nelec; }
   uint ms2() const { return _ms2; }
-  uint sym() const { return _sym; }
+  uint sym() const { int rs = _rd.RefSym(); if (rs < 0) return _sym; return rs; }
   bool uhf() const { return _uhf; }
   // file name (empty if not set)
   std::string fcidump_filename() const { return _dump.fileName(); }
@@ -119,6 +127,14 @@ public:
           const OrbOrder& o1 = _rd.ref[spin4el[0][xxxx]];
           const OrbOrder& o2 = _rd.ref[spin4el[1][xxxx]];
           (_twoel[xxxx].get())->set(o1[p],o1[q],o2[r],o2[s],val);}
+  // in spatial orbitals (hdump order), PG symmetry is handled outside
+  inline double threeel_spa(uint p, uint q, uint r, uint s, uint t, uint u, twotype xxxx = aaaa) const {
+          assert(!_uhf);
+          assert(!_abb);
+          const OrbOrder& o1 = _rd.ref[alpha];
+          const OrbOrder& o2 = _rd.ref[alpha];
+          const OrbOrder& o3 = _rd.ref[alpha];
+          return (_threeel[_uhf?xxxx:aaaa].get())->get(o1[p],o1[q],o2[r],o2[s],o3[t],o3[u]);}
   // in spin orbitals, PG symmetry is handled outside
   inline double oneel_spi(uint p, uint q) const;
   // in spin orbitals, PG symmetry is handled outside
@@ -127,6 +143,8 @@ public:
   inline double twoel_spi(uint p, uint q, uint r, uint s) const;
   // in spin orbitals, PG symmetry is handled outside
   inline void set_twoel_spi(uint p, uint q, uint r, uint s, double val);
+  // in spin orbitals, PG symmetry is handled outside
+  inline double threeel_spi(uint p, uint q, uint r, uint s, uint t, uint u) const;
   // in spatial orbitals (hdump order)
   double oneel_spa_pgs(uint p, uint q, onetype xx = aa) const {
           assert( (_uhf?xx:aa) < _oneel.size() );
@@ -144,6 +162,8 @@ public:
   inline double twoel_spi_pgs(uint p, uint q, uint r, uint s) const;
   // spin-projection, PG symmetry is handled outside
   inline double spinprojector(uint p, uint q, Spin spintype) const;
+  // orbital-space-projection, PG symmetry is handled outside
+  inline double orbspaceprojector(uint p, uint q, OrbSpace spacetype) const;
   // get block of integrals defined by start and end indices
   // type of integrals depends on start.size()
   // index order given by Ham[i] <=> Data[order[i]]
@@ -172,7 +192,7 @@ public:
   //calculates total spin expectation value
   void calc_Spin2(const Integ2ab& Overlap, bool alt = false);
   //store 1RDM in ASCII format
-  void store1RDM(std::string filepname, std::string filename, bool uhf);
+  void store1RDM(std::string filepname, std::string filename, bool symmetrize, bool uhf);
   //gen integrals for Hubbard model
   void gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, double Upar, const std::vector<double>& tpar);
   void gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar);
@@ -236,10 +256,12 @@ private:
   double spinsum_1DM(uint p, uint q, Irrep ir);
   // check for nelec, ms2, norb, occ, clos, core...
   void sanity_check() const;
-  // Two-electron integrals (one set for cs rhf, otherwise aa, bb, and ab)
+  // Two-electron integrals (one set for rhf, otherwise aa, bb, and ab)
   std::vector< std::unique_ptr<BaseTensors> > _twoel;
-  // One-electron integrals (one set for cs rhf, otherwise alpha and beta)
+  // One-electron integrals (one set for rhf, otherwise alpha and beta)
   std::vector< std::unique_ptr<BaseTensors> > _oneel;
+  // Three-electron integrals (one set for rhf, otherwise aaa, aab, abb, bbb)
+  std::vector< std::unique_ptr<BaseTensors> > _threeel;
   // point group symmetry
   PGSym _pgs;
   // Scalar
@@ -257,8 +279,16 @@ private:
   bool _uhf = false;
   // doesn't have the bra-ket symmetry
   bool _simtra = false;
-  // density matrix instead of integrals
-  bool _dm = false;
+  // density matrix instead of integrals (1: 1RDM only, 2: 1 and 2RDM)
+  int _dm = 0;
+  // three-body integrals
+  bool _3body = false;
+  // three-body integrals don't have the bra-ket symmetry
+  bool _simtra3 = false;
+  // three-body integrals don't have full particle symmetry: the first particle has an opposite spin
+  // to the other two particles,i.e., (aa|bb|bb)+(bb|aa|aa)
+  bool _abb = false;
+  std::string _3body_file;
   // reference determinant
   RefDet _rd;
 };
@@ -301,6 +331,38 @@ inline double Hdump::twoel_spi(uint p, uint q, uint r, uint s) const {
       return -(_twoel[aabb].get())->get(pso.orb,sso.orb,rso.orb,qso.orb);
     else
       return -(_twoel[aabb].get())->get(rso.orb,qso.orb,pso.orb,sso.orb);
+  }
+  return 0.0;
+}
+
+inline double Hdump::threeel_spi(uint p, uint q, uint r, uint s, uint t, uint u) const {
+  assert( p < _rd.refso.size() && q < _rd.refso.size() && r < _rd.refso.size() && s < _rd.refso.size() && t < _rd.refso.size() && u < _rd.refso.size() );
+  assert( !_dm && !_uhf );
+  const SpinOrb
+    & pso = _rd.refso[p],
+    & qso = _rd.refso[q],
+    & rso = _rd.refso[r],
+    & sso = _rd.refso[s],
+    & tso = _rd.refso[t],
+    & uso = _rd.refso[u];
+  if (pso.spin == qso.spin && rso.spin == sso.spin && tso.spin == uso.spin) {
+    if (!_abb) {
+      // normal case
+      return (_threeel[aa].get())->get(pso.orb,qso.orb,rso.orb,sso.orb,tso.orb,uso.orb);
+    }
+    if (pso.spin != rso.spin) {
+      if (rso.spin == tso.spin) {
+        // spin1 != spin2 == spin3
+        return (_threeel[aa].get())->get(pso.orb,qso.orb,rso.orb,sso.orb,tso.orb,uso.orb);
+      } else {
+        // spin2 != spin1 == spin3
+        return (_threeel[aa].get())->get(rso.orb,sso.orb,pso.orb,qso.orb,tso.orb,uso.orb);
+      }
+    } else {
+      // spin3 != spin1 == spin2
+      return (_threeel[aa].get())->get(tso.orb,uso.orb,pso.orb,qso.orb,rso.orb,sso.orb);
+    }
+
   }
   return 0.0;
 }
@@ -405,8 +467,29 @@ inline void Hdump::get_block(double* pData, const BlockIndices& start, const Blo
         }
       }
     }
+  } else if (start.size() == 6) {
+    // (pq|rs|tu)
+    uint64_t indx[6];
+    for ( indx[5] = start[5]; indx[5] < end[5]; ++indx[5] ) {
+      for ( indx[4] = start[4]; indx[4] < end[4]; ++indx[4] ) {
+        for ( indx[3] = start[3]; indx[3] < end[3]; ++indx[3] ) {
+          for ( indx[2] = start[2]; indx[2] < end[2]; ++indx[2] ) {
+            for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
+              for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
+                if (spinorb)
+                  *p_Data = threeel_spi(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],indx[order[4]],indx[order[5]]);
+                else
+                  *p_Data = threeel_spa(indx[order[0]],indx[order[1]],indx[order[2]],indx[order[3]],indx[order[4]],indx[order[5]],aaaa);
+                ++p_Data;
+              }
+            }
+          }
+        }
+      }
+    }
+
   } else {
-    error("Number of indices is neither 2 nor 4","Hdump::get_block");
+    error("Number of indices is neither 2 nor 4 nor 6","Hdump::get_block");
   }
 }
 inline void Hdump::set_block(double* pData, const BlockIndices& start, const BlockIndices& end,
@@ -455,6 +538,12 @@ inline double Hdump::spinprojector(uint p, uint q, Spin spintype) const {
   if ( _rd.refso[p].spin == spintype ) return 1.0;
   return 0.0;
 }
+inline double Hdump::orbspaceprojector(uint p, uint q, OrbSpace spacetype) const {
+  assert( p < _rd.ref[0].size() && q < _rd.refso.size() );
+  if ( p != q ) return 0.0;
+  if ( _rd.check_orbspace_spatial(p, spacetype) ) return 1.0;
+  return 0.0;
+}
 inline void Hdump::get_block_spinprojector(double* pData, const BlockIndices& start, const BlockIndices& end,
                              const BlockIndices& order, uint spintype) const
 {
@@ -466,7 +555,11 @@ inline void Hdump::get_block_spinprojector(double* pData, const BlockIndices& st
   uint64_t indx[2];
   for ( indx[1] = start[1]; indx[1] < end[1]; ++indx[1] ) {
     for ( indx[0] = start[0]; indx[0] < end[0]; ++indx[0] ) {
-      *p_Data = spinprojector(indx[order[0]],indx[order[1]],Spin(spintype));
+      if (spintype <= beta) {
+        *p_Data = spinprojector(indx[order[0]],indx[order[1]],Spin(spintype));
+      } else {
+        *p_Data = orbspaceprojector(indx[order[0]],indx[order[1]],OrbSpace(spintype));
+      }
       ++p_Data;
     }
   }

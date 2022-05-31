@@ -1,6 +1,7 @@
 #include "periodic.h"
 
 #include <fstream>
+#include <cmath>
 
 namespace HamDump {
 

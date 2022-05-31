@@ -2,6 +2,10 @@
 #include <iomanip>
 #include <fstream>
 #include <algorithm>
+#include <cmath>
+#ifdef MOLPRO
+using molpro::FCIdump;
+#endif
 
 namespace HamDump {
 
@@ -41,6 +45,11 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   check_input_norbs(CORE,"core",verbose);
 
   FDPar ST = _dump.parameter("ST");
+  // =1: standard 3body
+  // =2: 3body without hermitian symmetry
+  // =3: 3body with particle-exchange symmetry only of last two electrons, type \alpha\beta\beta and \beta\alpha\alpha
+  // =4: without hermitian symmetry and partial particle-exchange symmetry (i.e.,options 2 and 3 combined)
+  FDPar ThreeBody = _dump.parameter("III");
   FDPar DM = _dump.parameter("DM");
 
   int nn = NORB[0];
@@ -55,11 +64,32 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _pgs = PGSym(ORBSYM);
   _escal = 0.0;
 
+  xout << "hi there" << std::endl;
   _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+  xout << "after there" << std::endl;
 
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
-  _dm = bool(DM[0]);
+  _dm = DM[0];
+  _3body = bool(ThreeBody[0]);
+  _simtra3 = (ThreeBody[0] == 2 || ThreeBody[0] == 4 );
+  _abb = (ThreeBody[0] == 3 || ThreeBody[0] == 4 );
+
+  if ( _3body ) {
+    // name of the 3 body file
+    // looks unnecessary long, but therefore also catches FCIDUMP.*
+    if ( (fcidump.compare(fcidump.find_last_of("/")+1,
+                      fcidump.size()-fcidump.find_last_of("/"),"FCIDUMP") == 0)
+          || ( fcidump.compare(fcidump.size()-8,8,".FCIDUMP") == 0 ))
+        _3body_file=fcidump.substr(0,fcidump.size()-7)+"TCDUMP";
+    else
+      error("Cannot generate filename for 3body terms, use *.FCIDUMP format for fcidump","hdump.cpp");
+    { // check existence
+      std::ifstream infile(_3body_file);
+      if (!infile.good()) error("Cannot access the tcdump file "+_3body_file);
+    }
+    xout << "Three body integrals will be read from " << _3body_file << std::endl;
+  }
   sanity_check();
 }
 
@@ -231,45 +261,81 @@ void Hdump::alloc_ints()
 {
   assert(!allocated());
   assert(int(aaaa) == int(aa) && int(aa) == int(alpha) && int(bbbb) == int(bb) && int(bb) == int(beta));
+  bool onebody_only = (_dm == 1);
   if (_simtra) {
     // similarity transformed integrals
     _oneel.emplace_back(new Integ2st(_pgs));
-    _twoel.emplace_back(new Integ4st(_pgs));
+    if (!onebody_only) _twoel.emplace_back(new Integ4st(_pgs));
     if ( _uhf ) {
       _oneel.emplace_back(new Integ2st(_pgs)); // h_bb
-      _twoel.emplace_back(new Integ4st(_pgs)); // (bb|bb)
-      _twoel.emplace_back(new Integ4stab(_pgs)); // (aa|bb)
+      if (!onebody_only) {
+        _twoel.emplace_back(new Integ4st(_pgs)); // (bb|bb)
+        _twoel.emplace_back(new Integ4stab(_pgs)); // (aa|bb)
+      }
     }
   } else {
     // normal case
     _oneel.emplace_back(new Integ2(_pgs));
-    _twoel.emplace_back(new Integ4(_pgs));
+    if (!onebody_only) _twoel.emplace_back(new Integ4(_pgs));
     if ( _uhf ) {
       _oneel.emplace_back(new Integ2(_pgs)); // h_bb
-      _twoel.emplace_back(new Integ4(_pgs)); // (bb|bb)
-      _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
+      if (!onebody_only) {
+        _twoel.emplace_back(new Integ4(_pgs)); // (bb|bb)
+        _twoel.emplace_back(new Integ4ab(_pgs)); // (aa|bb)
+      }
+    }
+  }
+  if (_3body) {
+    xout << "allocate 3body" << std::endl;
+    if ( _simtra3 && _abb ) {
+      // non-hermitian abb + baa type integrals
+      _threeel.emplace_back(new Integ6stabb(_pgs));
+    } else if ( _simtra3 ) {
+      // non-hermitian integrals
+      _threeel.emplace_back(new Integ6st(_pgs));
+    } else if ( _abb ) {
+      // abb + baa type integrals
+      _threeel.emplace_back(new Integ6abb(_pgs));
+    } else {
+      _threeel.emplace_back(new Integ6(_pgs));
+    }
+    if ( _uhf ) {
+      error("UHF 3-body not implemented!","hdump.cpp");
     }
   }
 
 #ifdef _DEBUG
   if (_simtra) {
-    assert( dynamic_cast<Integ4st*>(_twoel[aaaa].get()) );
+    assert( onebody_only || dynamic_cast<Integ4st*>(_twoel[aaaa].get()) );
     assert( dynamic_cast<Integ2st*>(_oneel[aa].get()) );
     if ( _uhf ) {
       assert( dynamic_cast<Integ2st*>(_oneel[bb].get()) );
-      assert( dynamic_cast<Integ4st*>(_twoel[bbbb].get()) );
-      assert( dynamic_cast<Integ4stab*>(_twoel[aabb].get()) );
+      assert( onebody_only || dynamic_cast<Integ4st*>(_twoel[bbbb].get()) );
+      assert( onebody_only || dynamic_cast<Integ4stab*>(_twoel[aabb].get()) );
     }
   } else {
-    assert( dynamic_cast<Integ4*>(_twoel[aaaa].get()) );
+    assert( onebody_only || dynamic_cast<Integ4*>(_twoel[aaaa].get()) );
     assert( dynamic_cast<Integ2*>(_oneel[aa].get()) );
     if ( _uhf ) {
       assert( dynamic_cast<Integ2*>(_oneel[bb].get()) );
-      assert( dynamic_cast<Integ4*>(_twoel[bbbb].get()) );
-      assert( dynamic_cast<Integ4ab*>(_twoel[aabb].get()) );
+      assert( onebody_only || dynamic_cast<Integ4*>(_twoel[bbbb].get()) );
+      assert( onebody_only || dynamic_cast<Integ4ab*>(_twoel[aabb].get()) );
     }
   }
 //   check_addressing_integrals();
+  if (_3body) {
+    Irrep isym = 0, jsym = 0;
+    uint i,j,k,l,m,n;
+    i=j=k=l=m=n=0;
+    BaseTensors * pInt = _threeel[aa].get();
+    assert( pInt );
+    BlkIdx indxRef = 0;
+    do {
+      BlkIdx indxD = pInt->index(i,j,k,l,m,n);
+      if (indxD != indxRef ) xout << "indx " << indxD << ":" << i << " " << j << " " << k << " " << l << " " << m << " " << n << "(" << isym << "," << jsym << ")" << std::endl;
+      ++indxRef;
+    } while (pInt->next_indices(i,j,k,l,m,n,isym,jsym));
+  }
 #endif
 }
 
@@ -333,7 +399,29 @@ void Hdump::read_dump()
     }
 
   } while (type != FCIdump::endOfFile);
+
+  if ( _3body ) {
+    read_3body_dump();
+  }
 }
+
+void Hdump::read_3body_dump()
+{
+  int i,j,k,l,m,n;
+  double value;
+  std::ifstream ftcdump;
+  ftcdump.open(_3body_file.c_str());
+  if (!ftcdump.is_open()) error("Cannot open TCDUMP file "+_3body_file,"hdump.cpp");
+  BaseTensors * pInt = _threeel[aa].get();
+  assert( pInt );
+  // order on TCDUMP: ikmjln == <ikm|jln> == (ij|kl|mn)
+  while (ftcdump >> value >> i >> k >> m >> j >> l >> n) {
+//     xout << value << "(" << i << " " << j << "|" << k << " " << l << "|" << m << " " << n << ")" << std::endl;
+    pInt->set(_osord[i-1],_osord[j-1],_osord[k-1],_osord[l-1],_osord[m-1],_osord[n-1],value);
+  }
+  ftcdump.close();
+}
+
 template<typename T>
 void Hdump::readrec(T* pInt, int& i, int& j, int& k, int& l, double& value, FCIdump::integralType& curtype)
 {
@@ -524,7 +612,7 @@ void Hdump::store(std::string fcidump)
     if (_rd.occ.size() > 0) _dump.addParameter("OCC",nocc_wcore());
     if (_rd.clos.size() > 0) _dump.addParameter("CLOSED",nclos_wcore());
     if (_rd.core.size() > 0) _dump.addParameter("CORE",_rd.core);
-    if ( _dm ) _dump.addParameter("DM",std::vector<int>(1,1));
+    if ( _dm ) _dump.addParameter("DM",std::vector<int>(1,_dm));
     if ( _simtra ) _dump.addParameter("ST",std::vector<int>(1,1));
     if ( _uhf ) _dump.addParameter("IUHF",std::vector<int>(1,1));
     _dump.addParameter("ISYM",std::vector<int>(1,_sym+1));
@@ -590,16 +678,18 @@ void Hdump::store(std::string fcidump)
 template<typename I2, typename I4aa, typename I4ab>
 void Hdump::store_with_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
 {
-  pI4aa = dynamic_cast<I4aa*>(_twoel[aaaa].get()); assert(pI4aa);
-  storerec4_sym(pI4aa);
-  if (_uhf) {
-    _dump.writeIntegral(0,0,0,0,0.0);
-    pI4aa = dynamic_cast<I4aa*>(_twoel[bbbb].get()); assert(pI4aa);
+  if ( _dm != 1 ) {
+    pI4aa = dynamic_cast<I4aa*>(_twoel[aaaa].get()); assert(pI4aa);
     storerec4_sym(pI4aa);
-    _dump.writeIntegral(0,0,0,0,0.0);
-    pI4ab = dynamic_cast<I4ab*>(_twoel[aabb].get()); assert(pI4ab);
-    storerec4_sym(pI4ab);
-    _dump.writeIntegral(0,0,0,0,0.0);
+    if (_uhf) {
+      _dump.writeIntegral(0,0,0,0,0.0);
+      pI4aa = dynamic_cast<I4aa*>(_twoel[bbbb].get()); assert(pI4aa);
+      storerec4_sym(pI4aa);
+      _dump.writeIntegral(0,0,0,0,0.0);
+      pI4ab = dynamic_cast<I4ab*>(_twoel[aabb].get()); assert(pI4ab);
+      storerec4_sym(pI4ab);
+      _dump.writeIntegral(0,0,0,0,0.0);
+    }
   }
   pI2 = dynamic_cast<I2*>(_oneel[aa].get()); assert(pI2);
   storerec2_sym(pI2);
@@ -616,16 +706,18 @@ void Hdump::store_with_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
 template<typename I2, typename I4aa, typename I4ab>
 void Hdump::store_without_symmetry(I2* pI2, I4aa* pI4aa, I4ab* pI4ab) const
 {
-  pI4aa = dynamic_cast<I4aa*>(_twoel[aaaa].get()); assert(pI4aa);
-  storerec4_nosym(pI4aa);
-  if (_uhf) {
-    _dump.writeIntegral(0,0,0,0,0.0);
-    pI4aa = dynamic_cast<I4aa*>(_twoel[bbbb].get()); assert(pI4aa);
+  if ( _dm != 1 ) {
+    pI4aa = dynamic_cast<I4aa*>(_twoel[aaaa].get()); assert(pI4aa);
     storerec4_nosym(pI4aa);
-    _dump.writeIntegral(0,0,0,0,0.0);
-    pI4ab = dynamic_cast<I4ab*>(_twoel[aabb].get()); assert(pI4ab);
-    storerec4_nosym(pI4ab);
-    _dump.writeIntegral(0,0,0,0,0.0);
+    if (_uhf) {
+      _dump.writeIntegral(0,0,0,0,0.0);
+      pI4aa = dynamic_cast<I4aa*>(_twoel[bbbb].get()); assert(pI4aa);
+      storerec4_nosym(pI4aa);
+      _dump.writeIntegral(0,0,0,0,0.0);
+      pI4ab = dynamic_cast<I4ab*>(_twoel[aabb].get()); assert(pI4ab);
+      storerec4_nosym(pI4ab);
+      _dump.writeIntegral(0,0,0,0,0.0);
+    }
   }
   pI2 = dynamic_cast<I2*>(_oneel[aa].get()); assert(pI2);
   storerec2_nosym(pI2);
@@ -745,24 +837,28 @@ template<typename DI2, typename DI4aa, typename DI4ab, typename SI2, typename SI
 void Hdump::copy_ints(DI2* pDI2, DI4aa* pDI4aa, DI4ab* pDI4ab,
                       SI2* pSI2, SI4aa* pSI4aa, SI4ab* pSI4ab, const Hdump& hd, bool add, bool sym)
 {
-  pDI4aa = dynamic_cast<DI4aa*>(_twoel[aaaa].get()); assert(pDI4aa);
-  pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[aaaa].get()); assert(pSI4aa);
-  copy_int4(pDI4aa,pSI4aa,add,sym);
+  if ( _dm != 1 ) {
+    pDI4aa = dynamic_cast<DI4aa*>(_twoel[aaaa].get()); assert(pDI4aa);
+    pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[aaaa].get()); assert(pSI4aa);
+    copy_int4(pDI4aa,pSI4aa,add,sym);
+  }
   pDI2 = dynamic_cast<DI2*>(_oneel[aa].get()); assert(pDI2);
   pSI2 = dynamic_cast<SI2*>(hd._oneel[aa].get()); assert(pSI2);
   copy_int2(pDI2,pSI2,add,sym);
   if ( _uhf ) {
-    pDI4aa = dynamic_cast<DI4aa*>(_twoel[bbbb].get()); assert(pDI4aa);
-    if ( hd._uhf ) {
-      pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[bbbb].get()); assert(pSI4aa);
-    }
-    copy_int4(pDI4aa,pSI4aa,add,sym);
-    pDI4ab = dynamic_cast<DI4ab*>(_twoel[aabb].get()); assert(pDI4ab);
-    if ( hd._uhf ) {
-      pSI4ab = dynamic_cast<SI4ab*>(hd._twoel[aabb].get()); assert(pSI4ab);
-      copy_int4(pDI4ab,pSI4ab,add,sym);
-    } else {
-      copy_int4(pDI4ab,pSI4aa,add,sym);
+    if ( _dm != 1 ) {
+      pDI4aa = dynamic_cast<DI4aa*>(_twoel[bbbb].get()); assert(pDI4aa);
+      if ( hd._uhf ) {
+        pSI4aa = dynamic_cast<SI4aa*>(hd._twoel[bbbb].get()); assert(pSI4aa);
+      }
+      copy_int4(pDI4aa,pSI4aa,add,sym);
+      pDI4ab = dynamic_cast<DI4ab*>(_twoel[aabb].get()); assert(pDI4ab);
+      if ( hd._uhf ) {
+        pSI4ab = dynamic_cast<SI4ab*>(hd._twoel[aabb].get()); assert(pSI4ab);
+        copy_int4(pDI4ab,pSI4ab,add,sym);
+      } else {
+        copy_int4(pDI4ab,pSI4aa,add,sym);
+      }
     }
     pDI2 = dynamic_cast<DI2*>(_oneel[bb].get()); assert(pDI2);
     if ( hd._uhf ) {
@@ -983,12 +1079,17 @@ void Hdump::correct_2DM()
   assert(_simtra);
   Integ2st * pDa = dynamic_cast<Integ2st*>(_oneel[aa].get()); assert(pDa);
   Integ2st * pDb = dynamic_cast<Integ2st*>(_oneel[bb].get()); assert(pDb);
-  Integ4st * pDaa = dynamic_cast<Integ4st*>(_twoel[aaaa].get()); assert(pDaa);
-  Integ4st * pDbb = dynamic_cast<Integ4st*>(_twoel[bbbb].get()); assert(pDbb);
-  Integ4stab * pDab = dynamic_cast<Integ4stab*>(_twoel[aabb].get()); assert(pDab);
-  add1RDMto2RDM(pDaa,pDa,pDa,-1.0,true);
-  add1RDMto2RDM(pDbb,pDb,pDb,-1.0,true);
-  add1RDMto2RDM(pDab,pDa,pDb,-1.0,false);
+  Integ4st * pDaa = 0;
+  Integ4st * pDbb = 0;
+  Integ4stab * pDab = 0;
+  if ( _dm != 1 ) {
+    pDaa = dynamic_cast<Integ4st*>(_twoel[aaaa].get()); assert(pDaa);
+    pDbb = dynamic_cast<Integ4st*>(_twoel[bbbb].get()); assert(pDbb);
+    pDab = dynamic_cast<Integ4stab*>(_twoel[aabb].get()); assert(pDab);
+    add1RDMto2RDM(pDaa,pDa,pDa,-1.0,true);
+    add1RDMto2RDM(pDbb,pDb,pDb,-1.0,true);
+    add1RDMto2RDM(pDab,pDa,pDb,-1.0,false);
+  }
 
   double val;
 
@@ -1006,9 +1107,11 @@ void Hdump::correct_2DM()
     }
   }
   assert(_simtra);
-  add1RDMto2RDM(pDaa,pDa,pDa,1.0,true);
-  add1RDMto2RDM(pDbb,pDb,pDb,1.0,true);
-  add1RDMto2RDM(pDab,pDa,pDb,1.0,false);
+  if ( _dm != 1 ) {
+    add1RDMto2RDM(pDaa,pDa,pDa,1.0,true);
+    add1RDMto2RDM(pDbb,pDb,pDb,1.0,true);
+    add1RDMto2RDM(pDab,pDa,pDb,1.0,false);
+  }
 //       xout << "after correction: " << std::endl;
 //   for(uint p = 0; p < _norb; p++){
 //         for(uint q = 0; q < _norb; q++){
@@ -1364,7 +1467,7 @@ void Hdump::calc_Spin2(const Integ2ab& Overlap, bool alt){
   xout << "Expectation value of S**2: " << spin << std::endl;
 }
 
-void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
+void Hdump::store1RDM(std::string filepname, std::string filename, bool symmetrize, bool uhf){
   //change upper to lowercase in filename...
   std::string ucfilename = filename;
   std::for_each(filename.begin(), filename.end(), [](char & c){
@@ -1382,30 +1485,39 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
     oneRDMFile << "BEGIN_DATA," << std::endl;
     oneRDMFile << "# ONE BODY DENSITY MATRIX" << std::endl;
     for ( uint ir = 0; ir < _pgs.nIrreps(); ++ir ){
-      uint counter=1;
+      uint counter;
       uint norb4ir = _pgs.norbs(ir);
       uint norbwc4ir = norb4ir + ncore()[ir];
       for ( int r = 0; r < ncore()[ir]; r++ ){
+        counter = 0;
         for ( uint s = 0; s < norbwc4ir; s++ ){
+          counter += 1;
           if ( r == int(s) ) oneRDMFile << fmt::ff(2.0,15,8) << ",";
           else oneRDMFile << fmt::ff(0.0,15,8) << ",";
-          if( counter%5 == 0 || s == (norbwc4ir - 1) ){
+          if( counter == 5 || s == (norbwc4ir - 1) ){
             oneRDMFile << std::endl;
+            counter = 0;
           }
-          counter += 1;
         }
-        counter = 1;
       }
-      counter = 0;
       for( uint p4ir = 0; p4ir < norb4ir; p4ir++ ){
+        counter = 0;
         for( int r = 0; r < ncore()[ir]; r++ ){
-          oneRDMFile << fmt::ff(0.0,15,8) << ",";
           counter += 1;
+          oneRDMFile << fmt::ff(0.0,15,8) << ",";
+          if( counter == 5 || r == int(norbwc4ir - 1) ){
+            oneRDMFile << std::endl;
+            counter = 0;
+          }
         }
         for( uint q4ir = 0; q4ir < norb4ir; q4ir++ ){
-          oneRDMFile << fmt::ff((spinsum_1DM(p4ir,q4ir,ir)+spinsum_1DM(q4ir,p4ir,ir))/2,15,8) << ",";
           counter += 1;
-          if( counter%5 == 0 || q4ir == (norb4ir - 1)){
+          if (symmetrize) {
+            oneRDMFile << fmt::ff((spinsum_1DM(p4ir,q4ir,ir)+spinsum_1DM(q4ir,p4ir,ir))/2,15,8) << ",";
+          } else {
+            oneRDMFile << fmt::ff(spinsum_1DM(p4ir,q4ir,ir),15,8) << ",";
+          }
+          if( counter == 5 || q4ir == (norb4ir - 1)){
             oneRDMFile << std::endl;
             counter = 0;
           }
@@ -1430,14 +1542,16 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
     oneRDMFile_bb.open(filepname_bb);
     oneRDMFile_aa << "BEGIN_DATA," << std::endl;
     oneRDMFile_bb << "BEGIN_DATA," << std::endl;
-    oneRDMFile_aa << "# ONE BODY DENSITY MATRIX ALPHA ALPHA" << std::endl;
-    oneRDMFile_bb << "# ONE BODY DENSITY MATRIX BETA BETA" << std::endl;
+    oneRDMFile_aa << "# ALPHA ALPHA" << std::endl;
+    oneRDMFile_bb << "# BETA BETA" << std::endl;
     for ( uint ir = 0; ir < _pgs.nIrreps(); ++ir ){
-      uint counter=1;
+      uint counter;
       uint norb4ir = _pgs.norbs(ir);
       uint norbwc4ir = norb4ir + ncore()[ir];
       for ( int r = 0; r < ncore()[ir]; r++ ){
+        counter = 0;
         for ( uint s = 0; s < norbwc4ir; s++ ){
+          counter += 1;
           if ( r == int(s) ) {
             oneRDMFile_aa << fmt::ff(1.0,15,8) << ",";
             oneRDMFile_bb << fmt::ff(1.0,15,8) << ",";
@@ -1446,26 +1560,35 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool uhf){
             oneRDMFile_aa << fmt::ff(0.0,15,8) << ",";
             oneRDMFile_bb << fmt::ff(0.0,15,8) << ",";
           }
-          if( counter%5 == 0 || s == (norbwc4ir - 1) ){
+          if( counter == 5 || s == (norbwc4ir - 1) ){
             oneRDMFile_aa << std::endl;
             oneRDMFile_bb << std::endl;
+            counter = 0;
           }
-          counter += 1;
         }
-        counter = 1;
       }
-      counter = 0;
       for( uint p4ir = 0; p4ir < norb4ir; p4ir++ ){
+        counter = 0;
         for( int r = 0; r < ncore()[ir]; r++ ){
+          counter += 1;
           oneRDMFile_aa << fmt::ff(0.0,15,8) << ","; //WRONG there some non-zeros in molpro reference
           oneRDMFile_bb << fmt::ff(0.0,15,8) << ","; //WRONG there some non-zeros in molpro reference
-          counter += 1;
+          if( counter == 5 || r == int(norbwc4ir - 1) ){
+            oneRDMFile_aa << std::endl;
+            oneRDMFile_bb << std::endl;
+            counter = 0;
+          }
         }
         for( uint q4ir = 0; q4ir < norb4ir; q4ir++ ){
-          oneRDMFile_aa << fmt::ff((_oneel[aa].get()->get(p4ir, q4ir, ir)+_oneel[aa].get()->get(q4ir, p4ir, ir))/2,15,8) << ",";
-          oneRDMFile_bb << fmt::ff((_oneel[bb].get()->get(p4ir, q4ir, ir) + _oneel[bb].get()->get(q4ir, p4ir, ir))/2,15,8) << ",";
           counter += 1;
-          if( counter%5 == 0 || q4ir == (norb4ir - 1)){
+          if (symmetrize) {
+            oneRDMFile_aa << fmt::ff((_oneel[aa].get()->get(p4ir, q4ir, ir)+_oneel[aa].get()->get(q4ir, p4ir, ir))/2,15,8) << ",";
+            oneRDMFile_bb << fmt::ff((_oneel[bb].get()->get(p4ir, q4ir, ir) + _oneel[bb].get()->get(q4ir, p4ir, ir))/2,15,8) << ",";
+          } else {
+            oneRDMFile_aa << fmt::ff(_oneel[aa].get()->get(p4ir, q4ir, ir),15,8) << ",";
+            oneRDMFile_bb << fmt::ff(_oneel[bb].get()->get(p4ir, q4ir, ir),15,8) << ",";
+          }
+          if( counter == 5 || q4ir == (norb4ir - 1)){
             oneRDMFile_aa << std::endl;
             oneRDMFile_bb << std::endl;
             counter = 0;

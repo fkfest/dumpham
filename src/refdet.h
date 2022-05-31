@@ -25,7 +25,9 @@ struct OrbOrder : public std::vector<std::size_t> {
   // order from list of orbitals
   OrbOrder(const FDPar& ORBSYM);
   // put occupied orbitals first for each symmetry
-  OrbOrder(const std::vector<uint>& occorb, const uint* nocc, const PGSym& pgs);
+  // order: closed|open(occupied) | open(virtual)|virtual
+  OrbOrder(const std::vector<uint>& occorb, const uint* nocc, 
+           const std::vector< std::vector<uint> >& openorb, const PGSym& pgs);
   // unity order
   OrbOrder(uint norbs) : std::vector<std::size_t>(norbs) { std::iota(begin(),end(),0); }
   void reorder(FDPar& orbsym) {
@@ -41,6 +43,7 @@ std::ostream & operator << (std::ostream& o, const OrbOrder& oo);
 
 // reference determinant information
 // also contains data from the embedding (e.g., number of core orbitals)
+// the orbital spaces are sorted as (core)|closed|open|virtual
 // data should be modified by member functions only
 struct RefDet {
   RefDet(){}
@@ -51,6 +54,8 @@ struct RefDet {
          const FDPar& core_ = FDPar(), bool wcore = false);
   RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca,
          const std::vector<uint>& occorbb, const uint* noccb);
+  // reference symmetry (from nocc). Returns -1 if not set.
+  int RefSym() const;
   bool operator==(const RefDet& rd) const;
   bool operator!=(const RefDet& rd) const {return !(*this == rd);}
 
@@ -67,12 +72,23 @@ struct RefDet {
   void set_ncore( const FDPar& core_ );
   // subtract or add core orbitals
   void add_or_subtract_core(FDPar& orb, const std::string& kind, bool add = true) const;
+  // generate additional arrays, has to be called after any modification of ref/occ/clos
+  void generate_additional_info();
   // generate refso from refao and refbo and from occa/occb
   void gen_refso();
+  // generate orbspacetype to store the OrbSpace info for each orbital
+  void gen_orbspacetype();
+
+  bool check_orbspace_spatial(uint orb, OrbSpace spacetype) const {
+          assert(orb < orbspacetype.size());
+          return (spacetype & orbspacetype[orb]);
+        }
 
   void sanity_check(uint nelec, uint ms2) const;
   void print(int verbosity = -1) const;
 
+  // number of occupied and closed-shell orbitals in each irrep excl. core
+  // and number of core orbitals in each irrep
   FDPar occ, clos, core;
   // number of occupied orbitals alpha and beta
   std::array<FDPar,2> nocc;
@@ -80,6 +96,9 @@ struct RefDet {
   std::vector<SpinOrb> refso;
   // reference determinant for spatial orbitals (alpha and beta): occ + virt
   std::array<OrbOrder,2> ref;
+  // orbspace types for each spatial orbital
+  std::vector<uint> orbspacetype;
+  // put 
   const PGSym * p_pgs = 0;
   PGSym pgs_wcore;
 };
