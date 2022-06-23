@@ -93,65 +93,6 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   sanity_check();
 }
 
-Hdump::Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar)
-{
-  assert(dims.size() == pbcs.size());
-  xout << "Hubbard model:";
-  for(uint i = 0; i < dims.size(); ++i ) {
-    xout << dims[i];
-    if ( i+1 < dims.size() ) xout << "x";
-  }
-  if ( charge != 0 ) xout << " charge=" << charge;
-  bool periodic = false;
-  for ( auto p: pbcs) if ( p != 0 ) periodic = true;
-  if ( periodic ) {
-    xout << " PBC:";
-    for ( auto p: pbcs) {
-      if ( p == 0 )
-        xout << "N";
-      else if ( p > 0 )
-        xout << "P";
-      else
-        xout << "A";
-    }
-  }
-  if ( tpar.size() == 0 ) {
-    error("No t parameter given!");
-  }
-  xout << " U/t=" << Upar/tpar[0];
-  if ( tpar.size() > 1 ) {
-    xout << " next-neighbour-t: ";
-    for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
-  }
-  xout << std::endl;
-
-  _norb = 1;
-  for (auto d: dims) _norb *= d;
-  if ( int(_norb) < charge ) error("Negative number of electrons!");
-  _nelec = _norb - charge;
-  if ( ms2 < 0 ) {
-    ms2 = _nelec%2;
-  }
-  _ms2 = ms2;
-  _sym = 0;
-  FDPar norbs;
-  norbs.push_back(_norb);
-  _pgs = PGSym(norbs,false);
-  _escal = 0.0;
-
-  _osord = OrbOrder(_norb);
-  FDPar OCC(1,0);
-  check_input_norbs(OCC,"occ",true);
-  FDPar CLOSED(1,0);
-  check_input_norbs(CLOSED,"closed",true);
-  FDPar CORE(1,0);
-  check_input_norbs(CORE,"core",true);
-  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
-  sanity_check();
-
-  gen_hubbard(dims,pbcs,Upar,tpar);
-}
-
 Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar)
 {
   xout << "Hubbard model:";
@@ -467,73 +408,6 @@ void Hdump::skiprec(int& i, int& j, int& k, int& l, double& value, FCIdump::inte
   do {
   } while ( (type = _dump.nextIntegral(i,j,k,l,value)) == curtype );
   curtype = type;
-}
-
-
-
-void Hdump::gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs,
-                        double Upar, const std::vector<double>& tpar)
-{
-  alloc_ints();
-  HubSite s1(dims,pbcs),s2(dims,pbcs);
-  for (auto p: pbcs) {
-    if ( p < 0 ) error("Antiperiodic boundaries not implemented!");
-  }
-#ifndef MOLPRO
-  if ( Input::iPars["hubbard"]["print"] > 0 ) {
-    // print geometry
-    xout << "Geometry: ";
-    do {
-      xout << s1;
-    } while (s1.next());
-    xout << std::endl;
-    s1.zero();
-  }
-#endif
- // squares of distances to neighbours
-  std::vector<uint> next_site;
-  for ( uint i = 1; i < tpar.size()+1; ++i ) {
-    next_site.push_back(i*i);
-  }
-  if ( tpar.size() > 1 ) {
-    uint maxdd = tpar.size()*tpar.size();
-    std::vector<bool> distances(maxdd,false);
-    do {
-      do {
-        uint dd = s1.dist2(s2);
-        if (dd < maxdd) distances[dd] = true;
-      } while ( s2.next() );
-      s2.zero();
-    } while ( s1.next() );
-    s1.zero(); s2.zero();
-    // set distances to neighbours
-    uint nn = 0;
-    for ( uint i = 1; i < maxdd && nn < tpar.size(); ++i ) {
-      if (distances[i]) {
-        next_site[nn] = i;
-        ++nn;
-      }
-    }
-  }
-
-  do {
-    do {
-      uint dd = s1.dist2(s2);
-      if ( dd == 0 ) {
-        // set U
-        uint p = s1.id();
-        set_twoel_spa(p,p,p,p,Upar);
-      } else {
-        for ( uint i = 0; i < tpar.size(); ++i ) {
-          if ( dd == next_site[i] ) {
-            set_oneel_spa(s1.id(),s2.id(),-tpar[i]);
-            break;
-          }
-        }
-      }
-    } while ( s2.next() );
-    s2.zero();
-  } while ( s1.next() );
 }
 
 void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar)
@@ -1603,14 +1477,5 @@ void Hdump::store1RDM(std::string filepname, std::string filename, bool symmetri
   }
 }
 
-std::ostream & operator << (std::ostream& o, const HubSite& hs) {
-  o << "{";
-  for ( uint i = 0; i < hs.size(); ++i ) {
-    o << hs[i];
-    if ( i < hs.size()-1 ) o << ",";
-  }
-  o << "}";
-  return o;
-}
 } //namespace HamDump
 

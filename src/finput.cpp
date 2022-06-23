@@ -308,43 +308,39 @@ bool Finput::analyzehabham()
     tpars.push_back(x);
   }
 
-  if ( Input::iPars["hubbard"]["simple"] ) {
-    _dump = std::unique_ptr<Hdump>(new Hdump(dims,charge,ms2,pbcs,Upar,tpars));
-  } else {
-    // unit cell
-    UCell ucell;
-    for (auto site: ucell_str) {
-      TParArray coord_str = IL::parray(site);
-      double x;
-      Coords coords;
-      for ( auto c: coord_str) {
-        if (!str2num<double>(x,c,std::dec))
-          error("coord in ucell not float "+c);
-        coords.push_back(x);
-      }
-      ucell.add(coords);
+  // unit cell
+  UCell ucell;
+  for (auto site: ucell_str) {
+    TParArray coord_str = IL::parray(site);
+    double x;
+    Coords coords;
+    for ( auto c: coord_str) {
+      if (!str2num<double>(x,c,std::dec))
+        error("coord in ucell not float "+c);
+      coords.push_back(x);
     }
-    if ( ucell.nsites() == 0 ) ucell.set_default(dims.size());
-//    xout << "Unit cell: " << ucell << std::endl;
-    // lattice vectors
-    Lattice lat;
-    for (auto lv: lat_str) {
-      TParArray coord_str = IL::parray(lv);
-      double x;
-      Coords coords;
-      for ( auto c: coord_str) {
-        if (!str2num<double>(x,c,std::dec))
-          error("coord in lat not float "+c);
-        coords.push_back(x);
-      }
-      lat.add(coords);
-    }
-    if ( lat.ndim() == 0 ) lat.set_default(dims.size());
-//    xout << "Lattice: " << lat << std::endl;
-
-    Periodic persym(ucell,lat,dims,pbcs);
-    _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,tpars));
+    ucell.add(coords);
   }
+  if ( ucell.nsites() == 0 ) ucell.set_default(dims.size());
+//  xout << "Unit cell: " << ucell << std::endl;
+  // lattice vectors
+  Lattice lat;
+  for (auto lv: lat_str) {
+    TParArray coord_str = IL::parray(lv);
+    double x;
+    Coords coords;
+    for ( auto c: coord_str) {
+      if (!str2num<double>(x,c,std::dec))
+        error("coord in lat not float "+c);
+      coords.push_back(x);
+    }
+    lat.add(coords);
+  }
+  if ( lat.ndim() == 0 ) lat.set_default(dims.size());
+//  xout << "Lattice: " << lat << std::endl;
+
+  Periodic persym(ucell,lat,dims,pbcs);
+  _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,tpars));
   return true;
 }
 

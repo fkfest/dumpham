@@ -597,64 +597,6 @@ public:
   Integ2ab overlap;
 };
 
-/*!
- * Hubbard Site
- */
-struct HubSite : public std::vector<int> {
-  HubSite() : std::vector<int>() {};
-  HubSite(const std::vector<uint>& dims, const std::vector<int>& pbcs) {
-    _dims = dims;
-    resize(dims.size(),0);
-    _pbcs = pbcs;
-    assert(_dims.size() == _pbcs.size());
-  }
-  void zero() {
-    for (auto & i: *this) i = 0;
-  }
-  bool next() {
-    assert(_dims.size() == size());
-
-    for ( uint id = 0; id < size(); ++id ) {
-      ++(*this)[id];
-      if ((*this)[id] < int(_dims[id]) )
-        return true;
-      else {
-        (*this)[id] = 0;
-      }
-    }
-    return false;
-  }
-  // square of the distance
-  uint dist2(const HubSite& hs) const {
-    assert(hs.size() == size());
-    assert(_dims.size() == size());
-    assert(_dims.size() == _pbcs.size());
-    uint dd = 0;
-    for ( uint i = 0; i < size(); ++i ) {
-      uint r = std::abs((*this)[i] - hs[i]);
-      if ( _pbcs[i] && r > _dims[i] - r )
-        r = _dims[i] - r;
-      dd += r*r;
-    }
-    return dd;
-  }
-  uint id() const {
-    assert(_dims.size() == size());
-    uint id = 0;
-    uint nn = 1;
-    for ( uint i = 0; i < size(); ++i ) {
-      id += (*this)[i]*nn;
-      nn *= _dims[i];
-    }
-    return id;
-  }
-  // dimensions of the Hubbard model
-  std::vector<uint> _dims;
-  // periodic boundary condition
-  std::vector<int> _pbcs;
-};
-std::ostream & operator << (std::ostream& o, const HubSite& hs);
-
 } //namespace HamDump
 
 #endif
