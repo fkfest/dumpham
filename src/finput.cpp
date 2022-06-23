@@ -269,61 +269,30 @@ bool Finput::analyzeham(const std::string& inputfile)
   return true;
 }
 
-bool Finput::analyzehubham()
+Periodic Finput::analyzegeom()
 {
   const TParArray& dim = Input::aPars["geom"]["dimension"];
-  int charge = Input::iPars["hubbard"]["charge"];
-  int ms2 = Input::iPars["hubbard"]["ms2"];
   TParArray pbc = Input::aPars["geom"]["pbc"];
-  double Upar = Input::fPars["hubbard"]["U"];
-  const TParArray& tparsarray = Input::aPars["hubbard"]["t"];
   const TParArray& ucell_str = Input::aPars["geom"]["ucell"];
   const TParArray& lat_str = Input::aPars["geom"]["lat"];
 
   // dimensions
   std::vector<uint> dims;
-  for (auto d: dim) {
-    uint x;
-    if (str2num<uint>(x,d,std::dec)) {
-      dims.push_back(x);
-    } else {
-      error("Dimensions in Hubbard are not integer:"+d);
-    }
-  }
+  apars2nums<uint>(dims,dim,std::dec,"Dimensions in Hubbard are not integer");;
   // PBC
   if ( pbc.size() == 0 ) pbc.push_back("0");
   if ( pbc.size() != dim.size() && pbc.size() != 1 )
     error("Define PBC-type for each dimension!");
   pbc.resize(dim.size(), pbc.front());
   std::vector<int> pbcs;
-  for (auto p: pbc) {
-    int x;
-    if (str2num<int>(x,p,std::dec)) {
-      pbcs.push_back(x);
-    } else {
-      error("PBC is not integer:"+p);
-    }
-  }
-  // hopping
-  std::vector<double> tpars;
-  for (auto tt: tparsarray) {
-    double x;
-    if (!str2num<double>(x,tt,std::dec))
-      error("t parameter is not float in "+tt);
-    tpars.push_back(x);
-  }
+  apars2nums<int>(pbcs,pbc,std::dec,"PBC is not integer");
 
   // unit cell
   UCell ucell;
   for (auto site: ucell_str) {
     TParArray coord_str = IL::parray(site);
-    double x;
     Coords coords;
-    for ( auto c: coord_str) {
-      if (!str2num<double>(x,c,std::dec))
-        error("coord in ucell not float "+c);
-      coords.push_back(x);
-    }
+    apars2nums<double>(coords,coord_str,std::dec,"coord in ucell not float");
     ucell.add(coords);
   }
   if ( ucell.nsites() == 0 ) ucell.set_default(dims.size());
@@ -332,22 +301,53 @@ bool Finput::analyzehubham()
   Lattice lat;
   for (auto lv: lat_str) {
     TParArray coord_str = IL::parray(lv);
-    double x;
     Coords coords;
-    for ( auto c: coord_str) {
-      if (!str2num<double>(x,c,std::dec))
-        error("coord in lat not float "+c);
-      coords.push_back(x);
-    }
+    apars2nums<double>(coords,coord_str,std::dec,"coord in lat not float");
     lat.add(coords);
   }
   if ( lat.ndim() == 0 ) lat.set_default(dims.size());
 //  xout << "Lattice: " << lat << std::endl;
 
-  Periodic persym(ucell,lat,dims,pbcs);
+  return Periodic(ucell,lat,dims,pbcs);
+}
+
+bool Finput::analyzehubham()
+{
+  int charge = Input::iPars["hubbard"]["charge"];
+  int ms2 = Input::iPars["hubbard"]["ms2"];
+  double Upar = Input::fPars["hubbard"]["U"];
+  const TParArray& tparsarray = Input::aPars["hubbard"]["t"];
+
+  // hopping
+  std::vector<double> tpars;
+  apars2nums<double>(tpars,tparsarray,std::dec,"t parameter is not float");
+
+  Periodic persym = analyzegeom();
   _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,tpars));
   return true;
 }
+
+/*
+bool Finput::analyzeheisham()
+{
+  int ms2 = Input::iPars["heisenberg"]["ms2"];
+  const TParArray& jparsarray = Input::aPars["heisenberg"]["j"];
+  const TParArray& kparsarray = Input::aPars["heisenberg"]["k"];
+
+  // J
+  std::vector<double> jpars;
+  for (auto tt: jparsarray) {
+    double x;
+    if (!str2num<double>(x,tt,std::dec))
+      error("j parameter is not float in "+tt);
+    jpars.push_back(x);
+  }
+
+  Periodic persym = analyzegeom();
+  _dump = std::unique_ptr<Hdump>(new Hdump(persym,0,ms2,jpars));
+  return true;
+}
+*/
 
 void Finput::process_dump(Hdump& dump)
 {

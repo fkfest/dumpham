@@ -73,12 +73,14 @@ std::string any2str(const T& t)
 template <class T>
 inline
 void apars2nums(std::vector<T>& t, const TParArray& s,
-             std::ios_base& (*f)(std::ios_base&))
+             std::ios_base& (*f)(std::ios_base&), const std::string& error_message="")
 {
   for ( const auto& is: s){
     T x;
     if ( str2num<T>(x,is,f) )
       t.push_back(x);
+    else if (error_message != "")
+      error(error_message+": "+is);
     else
       error("Not a number: "+is);
   }

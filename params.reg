@@ -63,21 +63,15 @@ set="fm",type=s,name="outmat",value="",desc="fock matrix from density matrices i
 set="fm",type=s,name="ips",value="",desc="eigenvalues of the generalized fock matrix (EKT-IPs) as a diagonal matrix"
 
 %HUBBARD
-%set="hubbard",type=a,name="dimension",value={10},desc="Dimensions"
 set="hubbard",type=f,name="U",value=1.0,desc="U parameter"
 set="hubbard",type=a,name="t",value={0.5},desc="t parameters"
 set="hubbard",type=i,name="charge",value=0,desc="charge wrt half filling"
 set="hubbard",type=i,name="ms2",value=-1,desc="ms"
 
 %HEISENBERG
-set="heisenberg",type=a,name="dimension",value={10},desc="Dimensions"
 set="heisenberg",type=a,name="j",value={0.5},desc="J parameters"
-set="heisenberg",type=a,name="k",value={0.5},desc="onsite K parameters"
+set="heisenberg",type=a,name="k",value={10},desc="onsite K parameters"
 set="heisenberg",type=i,name="ms2",value=-1,desc="ms"
-set="heisenberg",type=a,name="pbc",value={0},desc="PBC in each dimension"
-set="heisenberg",type=i,name="print",value=0,desc="print geometry"
-set="hubbard",type=a,name="lat",value={},desc="lattice vectors"
-set="hubbard",type=a,name="ucell",value={},desc="unit cell defined in cartesian coordinates for each site. Last site is equivalent to the first"
 
 %GEOMETRY
 set="geom",type=a,name="dimension",value={10},desc="Dimensions"
