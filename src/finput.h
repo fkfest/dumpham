@@ -33,7 +33,7 @@ public:
   // analyze hamiltonian
   bool analyzeham(const std::string& inputfile);
   // analyze Hubbard Hamiltonian
-  bool analyzehabham();
+  bool analyzehubham();
   // clear all arrays
   void clear() {_inlines.clear(); _inham.clear(); _input.clear(); _ham = false;};
   // return input lines

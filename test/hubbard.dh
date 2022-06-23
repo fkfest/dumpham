@@ -3,5 +3,6 @@ ham,nosym=0
 
 \bham
 \output{hubbard.FCIDUMP}
-\hubbard{dimension=10, pbc=1, U=1.0, t={0.5,0.25}}
+\geom{dimension=10, pbc=1}
+\hubbard{U=1.0, t={0.5,0.25}}
 \eham

@@ -168,13 +168,19 @@ lui Finput::analyzecommand(lui ipos)
     ipos = IL::skip(_input,ipos,"{} ");
     lui ipos2 = IL::skipr(_input,ipos1,"{} ");
     Input::sPars["ham"]["out"] = _input.substr(ipos,ipos2-ipos);
+  } else if ( str == commands["geom"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} :");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    std::string geomdef = "geom,"+_input.substr(ipos,ipos2-ipos);
+    IL::changePars(geomdef, 0);
   } else if ( str == commands["hubbard"] ) {
     ipos1 = IL::nextwordpos(_input,ipos);
     ipos = IL::skip(_input,ipos,"{} :");
     lui ipos2 = IL::skipr(_input,ipos1,"{} ");
     std::string hubdef = "hubbard,"+_input.substr(ipos,ipos2-ipos);
     IL::changePars(hubdef, 0);
-    analyzehabham();
+    analyzehubham();
   }
   return ipos1;
 }
@@ -263,17 +269,16 @@ bool Finput::analyzeham(const std::string& inputfile)
   return true;
 }
 
-bool Finput::analyzehabham()
+bool Finput::analyzehubham()
 {
-  const TParArray& dim = Input::aPars["hubbard"]["dimension"];
+  const TParArray& dim = Input::aPars["geom"]["dimension"];
   int charge = Input::iPars["hubbard"]["charge"];
   int ms2 = Input::iPars["hubbard"]["ms2"];
-  TParArray pbc = Input::aPars["hubbard"]["pbc"];
-//   int pbc = Input::iPars["hubbard"]["pbc"];
+  TParArray pbc = Input::aPars["geom"]["pbc"];
   double Upar = Input::fPars["hubbard"]["U"];
   const TParArray& tparsarray = Input::aPars["hubbard"]["t"];
-  const TParArray& ucell_str = Input::aPars["hubbard"]["ucell"];
-  const TParArray& lat_str = Input::aPars["hubbard"]["lat"];
+  const TParArray& ucell_str = Input::aPars["geom"]["ucell"];
+  const TParArray& lat_str = Input::aPars["geom"]["lat"];
 
   // dimensions
   std::vector<uint> dims;
