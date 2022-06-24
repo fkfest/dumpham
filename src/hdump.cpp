@@ -148,6 +148,57 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::
   gen_hubbard(pers,Upar,tpar);
 }
 
+Hdump::Hdump(const Periodic& pers, int ms2, int norbs_per_site, 
+        const std::vector<double>& jpar, const std::vector<double>& kpar)
+{
+  xout << "Heisenberg model:";
+  for(uint i = 0; i < pers.ncells().size(); ++i ) {
+    xout << pers.ncells()[i];
+    if ( i+1 < pers.ncells().size() ) xout << "x";
+  }
+  if ( pers.periodic() ) {
+    xout << " PBC:";
+    for ( auto p: pers.pbcs()) {
+      if ( p == 0 )
+        xout << "N";
+      else if ( p > 0 )
+        xout << "P";
+      else
+        xout << "A";
+    }
+  }
+  if ( jpar.size() == 0 ) {
+    error("No j parameter given!");
+  }
+  if ( kpar.size() == 0 && norbs_per_site > 1) {
+    error("No on-site interaction parameter k given!");
+  }
+
+  _norb = pers.nsites_in_supercell()*norbs_per_site;
+  _nelec = _norb;
+  if ( ms2 < 0 ) {
+    ms2 = _nelec%2;
+  }
+  _ms2 = ms2;
+  _sym = 0;
+  FDPar norbs;
+  norbs.push_back(_norb);
+  _pgs = PGSym(norbs,false);
+  _escal = 0.0;
+
+  _osord = OrbOrder(_norb);
+  FDPar OCC(1,0);
+  check_input_norbs(OCC,"occ",true);
+  FDPar CLOSED(1,0);
+  check_input_norbs(CLOSED,"closed",true);
+  FDPar CORE(1,0);
+  check_input_norbs(CORE,"core",true);
+  _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
+  sanity_check();
+
+  gen_heisenberg(pers,norbs_per_site,jpar,kpar);
+}
+
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
 {
 #define CHECKSET(xx,mes) if ( hd1.xx != hd2.xx ) error("Mismatch in "+ std::string(mes)); xx=hd1.xx;
@@ -421,7 +472,7 @@ void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<dou
   PSite s1(pers.ndim()),s2(pers.ndim());
   if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
 #ifndef MOLPRO
-  if ( Input::iPars["hubbard"]["print"] > 0 ) {
+  if ( Input::iPars["geom"]["print"] > 0 ) {
     // print geometry
     xout << "Geometry: ";
     do {
@@ -454,6 +505,69 @@ void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<dou
     } while ( pers.next(s2) );
     s2.zero();
     ++p;
+  } while ( pers.next(s1) );
+}
+
+void Hdump::set_j(uint p_site, uint q_site, uint norbs_per_site, double jval) {
+  for (uint p = p_site*norbs_per_site; p < (p_site+1)*norbs_per_site; ++p){
+    for (uint q = q_site*norbs_per_site; q < (q_site+1)*norbs_per_site; ++q){
+        if (p != q){
+          set_twoel_spa(p,q,q,p,-jval/2.0);
+          set_twoel_spa(p,p,q,q,-jval/4.0);
+        } else {
+          set_twoel_spa(p,p,p,p,-jval*3.0/4.0);
+        }
+    }
+  }
+}
+
+void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::vector<double>& jpar, const std::vector<double>& kpar)
+{
+#ifdef MOLPRO
+  double tol = 1.e-6;
+#else
+  double tol = Input::fPars["periodic"]["thrdist"];
+#endif
+  alloc_ints();
+  PSite s1(pers.ndim()),s2(pers.ndim());
+  if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
+#ifndef MOLPRO
+  if ( Input::iPars["geom"]["print"] > 0 ) {
+    // print geometry
+    xout << "Geometry: ";
+    do {
+      xout << pers.site_coords(s1);
+    } while (pers.next(s1));
+    xout << std::endl;
+    s1.zero();
+  }
+#endif
+  // squares of distances to neighbours
+  std::vector<double> dist2_neighbours = pers.dist2neighbours(jpar.size());
+  uint p_site = 0;
+  do {
+    uint q_site = 0;
+    do {
+      double dd = pers.dist2(s1,s2);
+      if ( dd < tol ) {
+        // same site, set kpar (if norbs_per_site > 1) 
+        assert( p_site == q_site );
+        if (norbs_per_site > 1) {
+          assert(kpar.size() == 1);
+          set_j(p_site,q_site,norbs_per_site,kpar[0]);
+        }
+      } else {
+        for ( uint i = 0; i < jpar.size(); ++i ) {
+          if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
+            set_j(p_site,q_site,norbs_per_site,jpar[i]);
+            break;
+          }
+        }
+      }
+      ++q_site;
+    } while ( pers.next(s2) );
+    s2.zero();
+    ++p_site;
   } while ( pers.next(s1) );
 }
 

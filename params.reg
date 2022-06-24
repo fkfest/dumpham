@@ -71,6 +71,7 @@ set="hubbard",type=i,name="ms2",value=-1,desc="ms"
 %HEISENBERG
 set="heisenberg",type=a,name="j",value={0.5},desc="J parameters"
 set="heisenberg",type=a,name="k",value={10},desc="onsite K parameters"
+set="heisenberg",type=i,name="norbs",value=1,desc="number of orbitals per site"
 set="heisenberg",type=i,name="ms2",value=-1,desc="ms"
 
 %GEOMETRY

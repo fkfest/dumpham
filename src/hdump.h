@@ -41,7 +41,11 @@ public:
         _pgs(pgs_),_norb(pgs_.ntotorbs()),_nelec(nelec_),
         _ms2(ms2_),_sym(sym_),_uhf(uhf_),_simtra(simtra_), _dm(dm_) { _rd = RefDet(_pgs); }
   Hdump(std::vector<uint> dims, int charge, int ms2, std::vector<int> pbcs, double Upar, const std::vector<double>& tpar);
+  // Hubbard
   Hdump(const Periodic& pers, int charge, int ms2, double Upar, const std::vector<double>& tpar);
+  // Heisenberg
+  Hdump(const Periodic& pers, int ms2, int norbs_per_site, 
+        const std::vector<double>& jpar, const std::vector<double>& kpar);
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
   // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true)
@@ -194,8 +198,9 @@ public:
   //store 1RDM in ASCII format
   void store1RDM(std::string filepname, std::string filename, bool symmetrize, bool uhf);
   //gen integrals for Hubbard model
-  void gen_hubbard(const std::vector<uint>& dims, const std::vector<int>& pbcs, double Upar, const std::vector<double>& tpar);
   void gen_hubbard(const Periodic& pers, double Upar, const std::vector<double>& tpar);
+  //gen integrals for Heisenberg model
+  void gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::vector<double>& jpar, const std::vector<double>& kpar);
   // add scal*S^2 to the Hamiltonian
   void addS2(double scal = 1.0);
 
@@ -254,6 +259,8 @@ private:
   double spinsum_2DM(uint p, uint q, uint r, uint s);
   // calculates spin-summed 1RDM value from spatial orbital indices
   double spinsum_1DM(uint p, uint q, Irrep ir);
+  // set J for heisenberg
+  void set_j(uint p_site, uint q_site, uint norbs_per_site, double jval);
   // check for nelec, ms2, norb, occ, clos, core...
   void sanity_check() const;
   // Two-electron integrals (one set for rhf, otherwise aa, bb, and ab)

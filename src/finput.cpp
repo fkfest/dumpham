@@ -181,6 +181,13 @@ lui Finput::analyzecommand(lui ipos)
     std::string hubdef = "hubbard,"+_input.substr(ipos,ipos2-ipos);
     IL::changePars(hubdef, 0);
     analyzehubham();
+  } else if ( str == commands["heisenberg"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} :");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    std::string hubdef = "heisenberg,"+_input.substr(ipos,ipos2-ipos);
+    IL::changePars(hubdef, 0);
+    analyzeheisham();
   }
   return ipos1;
 }
@@ -327,27 +334,24 @@ bool Finput::analyzehubham()
   return true;
 }
 
-/*
 bool Finput::analyzeheisham()
 {
   int ms2 = Input::iPars["heisenberg"]["ms2"];
+  int norbs = Input::iPars["heisenberg"]["norbs"];
   const TParArray& jparsarray = Input::aPars["heisenberg"]["j"];
   const TParArray& kparsarray = Input::aPars["heisenberg"]["k"];
 
+
   // J
-  std::vector<double> jpars;
-  for (auto tt: jparsarray) {
-    double x;
-    if (!str2num<double>(x,tt,std::dec))
-      error("j parameter is not float in "+tt);
-    jpars.push_back(x);
-  }
+  std::vector<double> jpars, kpars;
+  apars2nums<double>(jpars,jparsarray,std::dec,"j parameter is not float");
+  apars2nums<double>(kpars,kparsarray,std::dec,"k parameter is not float");
+
 
   Periodic persym = analyzegeom();
-  _dump = std::unique_ptr<Hdump>(new Hdump(persym,0,ms2,jpars));
+  _dump = std::unique_ptr<Hdump>(new Hdump(persym,ms2,norbs,jpars,kpars));
   return true;
 }
-*/
 
 void Finput::process_dump(Hdump& dump)
 {

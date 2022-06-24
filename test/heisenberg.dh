@@ -1,0 +1,8 @@
+output,fcinamtoupper=0
+ham,nosym=0
+
+\bham
+\output{heisenberg.FCIDUMP}
+\geom{dimension=2, pbc=0}
+\heisenberg{j={2}, k={-10}, norbs=2}
+\eham
