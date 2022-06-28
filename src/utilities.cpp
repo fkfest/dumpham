@@ -95,4 +95,10 @@ std::string ff(double num,int width, int prec )
   oss << std::setprecision(prec) << std::setw(width) << num;
   return oss.str();
 }
+std::string fe(double num,int width, int prec )
+{
+  std::ostringstream oss;
+  oss << std::scientific << std::setprecision(prec) << std::setw(width) << num;
+  return oss.str();
+}
 }

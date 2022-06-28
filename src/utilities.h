@@ -272,6 +272,7 @@ bool next_combination( std::bitset<N>& bset)
 
 namespace fmt {
 std::string ff(double num,int width, int prec );
+std::string fe(double num,int width, int prec );
 }
 
 #endif

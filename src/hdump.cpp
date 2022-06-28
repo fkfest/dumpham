@@ -521,12 +521,28 @@ void Hdump::set_j(uint p_site, uint q_site, uint norbs_per_site, double jval) {
   }
 }
 
+static void store_rectangular_matrix(const std::vector<double>& mat, uint nA, std::string filename) {
+  uint nB = mat.size()/nA;
+  assert(nA*nB == mat.size());
+  std::ofstream matfile;
+  matfile.open(filename);
+  matfile << "# MATRIX " << nA << " " << nB << std::endl;
+  for ( uint ia = 0; ia < nA; ++ia) {
+    for ( uint ib = 0; ib < nB; ++ib) {
+      matfile << fmt::fe(mat[ia+ib*nA],18,15) << " ";
+    }
+    matfile << std::endl;
+  }
+}
+
 void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::vector<double>& jpar, const std::vector<double>& kpar)
 {
 #ifdef MOLPRO
   double tol = 1.e-6;
+  std::string hueckelfile("");
 #else
   double tol = Input::fPars["periodic"]["thrdist"];
+  std::string hueckelfile = Input::sPars["heisenberg"]["hueckel"];
 #endif
   alloc_ints();
   PSite s1(pers.ndim()),s2(pers.ndim());
@@ -542,6 +558,12 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
     s1.zero();
   }
 #endif
+  bool gen_hueckel = (hueckelfile != "");
+  uint nsites = pers.nsites_in_supercell(); 
+  std::vector<double> hueckmat;
+  if (gen_hueckel) {
+    hueckmat.resize(nsites*nsites,0.0); 
+  }
   // squares of distances to neighbours
   std::vector<double> dist2_neighbours = pers.dist2neighbours(jpar.size());
   uint p_site = 0;
@@ -555,11 +577,18 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
         if (norbs_per_site > 1) {
           assert(kpar.size() == 1);
           set_j(p_site,q_site,norbs_per_site,kpar[0]);
+          if (gen_hueckel) {
+            hueckmat[p_site*(nsites+1)] = -kpar[0];
+          }
         }
       } else {
         for ( uint i = 0; i < jpar.size(); ++i ) {
           if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
             set_j(p_site,q_site,norbs_per_site,jpar[i]);
+            if (gen_hueckel) {
+              hueckmat[p_site+q_site*nsites] = -jpar[i];
+              hueckmat[q_site+p_site*nsites] = -jpar[i];
+            }
             break;
           }
         }
@@ -569,6 +598,11 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
     s2.zero();
     ++p_site;
   } while ( pers.next(s1) );
+
+  if (gen_hueckel) {
+    // store the Hueckel matrix 
+    store_rectangular_matrix(hueckmat,nsites,hueckelfile);
+  }
 }
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
