@@ -88,6 +88,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
     }
     xout << "Three body integrals will be read from " << _3body_file << std::endl;
   }
+
   sanity_check();
 }
 
@@ -239,12 +240,12 @@ void Hdump::sanity_check() const
 }
 
 void Hdump::set_occupationAB(const std::vector<uint>& occorba, const uint* nocca,
-                      const std::vector<uint>& occorbb, const uint* noccb)
+                      const std::vector<uint>& occorbb, const uint* noccb, bool reorder_open)
 {
   // set _clos and _occ
   if (occorba.size() + occorbb.size() != _nelec)
     error("Mismatch in number of electrons in dump and in OccA+OccB");
-  _rd = RefDet(_pgs,occorba,nocca,occorbb,noccb);
+  _rd = RefDet(_pgs,occorba,nocca,occorbb,noccb,reorder_open);
 }
 
 void Hdump::alloc_ints()

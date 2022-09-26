@@ -63,8 +63,9 @@ public:
   static constexpr Spin spin4el[2][3] = { { alpha, beta, alpha }, { alpha, beta, beta} };
   // set occupation from alpha and beta orbital sets
   // adapt _clos and _occ accordingly
+  // if reorder_open: orbitals are reordered as closed|open-shell-occ|open-shell-virt|virtual
   void set_occupationAB(const std::vector<uint>& occorba, const uint* nocca,
-                        const std::vector<uint>& occorbb, const uint* noccb);
+                        const std::vector<uint>& occorbb, const uint* noccb, bool reorder_open=true);
   void read_dump();
   // for 3 body integrals
   void read_3body_dump();
