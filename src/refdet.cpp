@@ -145,7 +145,7 @@ RefDet::RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
   print();
 }
 RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca,
-         const std::vector<uint>& occorbb, const uint* noccb)
+         const std::vector<uint>& occorbb, const uint* noccb, bool reorder_open)
 {
   p_pgs = &pgs;
   auto ita = occorba.begin();
@@ -165,6 +165,10 @@ RefDet::RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* n
     openo[ir].resize(last - openo[ir].begin());
     clos[ir] = (nocca[ir]+noccb[ir] - (openo[ir].size()))/2;
     occ[ir] = nocca[ir]+noccb[ir]-clos[ir];
+    if (!reorder_open) {
+      // reset to switch off the reordering of open-shell orbitals
+      openo[ir].clear();
+    }
     nocc[alpha][ir] = nocca[ir];
     nocc[beta][ir] = noccb[ir];
     ita += nocca[ir];

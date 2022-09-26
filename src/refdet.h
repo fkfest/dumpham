@@ -52,8 +52,9 @@ struct RefDet {
   // if wcore = false: core is not included in OCC and CLOSED specifications
   RefDet(const PGSym& pgs, const FDPar& occ_, const FDPar& clos_,
          const FDPar& core_ = FDPar(), bool wcore = false);
+  // if reorder_open: reorder orbitals to closed|open-shell-occ|open-shell-virt|virtual
   RefDet(const PGSym& pgs, const std::vector<uint>& occorba, const uint* nocca,
-         const std::vector<uint>& occorbb, const uint* noccb);
+         const std::vector<uint>& occorbb, const uint* noccb, bool reorder_open);
   // reference symmetry (from nocc). Returns -1 if not set.
   int RefSym() const;
   bool operator==(const RefDet& rd) const;
