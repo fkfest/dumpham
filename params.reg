@@ -74,6 +74,7 @@ set="heisenberg",type=a,name="k",value={10},desc="onsite K parameters"
 set="heisenberg",type=i,name="norbs",value=1,desc="number of orbitals per site"
 set="heisenberg",type=i,name="ms2",value=-1,desc="ms"
 set="heisenberg",type=s,name="hueckel",value="",desc="generate Hueckel matrix and store in the file"
+set="heisenberg",type=i,name="realorb",value=1,desc="real-orbitals (Hermitian, symmetric) Heisenberg Hamiltonian"
 
 
 %GEOMETRY

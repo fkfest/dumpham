@@ -64,9 +64,7 @@ Hdump::Hdump(std::string fcidump, bool verbose) : _dump(fcidump)
   _pgs = PGSym(ORBSYM);
   _escal = 0.0;
 
-  xout << "hi there" << std::endl;
   _rd = RefDet(_pgs,OCC,CLOSED,CORE,true);
-  xout << "after there" << std::endl;
 
   _uhf = bool(IUHF[0]);
   _simtra = bool(ST[0]);
@@ -540,10 +538,14 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
 #ifdef MOLPRO
   double tol = 1.e-6;
   std::string hueckelfile("");
+  bool realorb = true;
 #else
   double tol = Input::fPars["periodic"]["thrdist"];
   std::string hueckelfile = Input::sPars["heisenberg"]["hueckel"];
+  bool realorb = (bool) Input::iPars["heisenberg"]["realorb"];
 #endif
+  // with realorb use the usual 8-fold symmetry of the integrals
+  _simtra = !realorb;
   alloc_ints();
   PSite s1(pers.ndim()),s2(pers.ndim());
   if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
