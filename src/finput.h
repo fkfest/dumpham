@@ -38,6 +38,8 @@ public:
   bool analyzehubham();
   // analyze Heisenberg Hamiltonian
   bool analyzeheisham();
+  // analyze PPP Hamiltonian
+  bool analyzepppham();
   // clear all arrays
   void clear() {_inlines.clear(); _inham.clear(); _input.clear(); _ham = false;};
   // return input lines

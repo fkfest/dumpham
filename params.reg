@@ -50,6 +50,7 @@ set="command",type=s,name="fcidump",value="input",desc="command for FCIDUMP inpu
 set="command",type=s,name="outfcidump",value="output",desc="command for FCIDUMP output"
 set="command",type=s,name="hubbard",value="hubbard",desc="command for Hubbard input"
 set="command",type=s,name="heisenberg",value="heisenberg",desc="command for Heisenberg input"
+set="command",type=s,name="ppp",value="ppp",desc="command for PPP input"
 set="command",type=s,name="geom",value="geom",desc="command for geometry input"
 
 %DM
@@ -76,6 +77,12 @@ set="heisenberg",type=i,name="ms2",value=-1,desc="ms"
 set="heisenberg",type=s,name="hueckel",value="",desc="generate Hueckel matrix and store in the file"
 set="heisenberg",type=i,name="realorb",value=1,desc="real-orbitals (Hermitian, symmetric) Heisenberg Hamiltonian"
 
+%PPP
+set="ppp",type=f,name="U",value=1.0,desc="U parameter"
+set="ppp",type=f,name="a",value=1.0,desc="\alpha parameter in the Coulomb term U/sqrt(1+ar^2)"
+set="ppp",type=a,name="t",value={0.5},desc="t parameters"
+set="ppp",type=i,name="charge",value=0,desc="charge wrt half filling"
+set="ppp",type=i,name="ms2",value=-1,desc="ms"
 
 %GEOMETRY
 set="geom",type=a,name="dimension",value={10},desc="Dimensions"

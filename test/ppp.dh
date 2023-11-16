@@ -1,0 +1,12 @@
+output,fcinamtoupper=1
+ham,nosym=0
+periodic,xyzout=ppp.xyz
+\bham
+\output{1.0.FD}
+\geom{
+dimension={4,1}, pbc={1,0},
+lat={{1,0}{0,2}},
+ucell={{0,0}{0,2}}
+}
+\ppp{U=1.0, a=0.5, t={1.0}}
+\eham

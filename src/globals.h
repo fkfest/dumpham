@@ -6,6 +6,7 @@
 #include <map>
 #include <list>
 #include <cmath>
+#include <cstdint>
 #include <assert.h>
 #include "hdtypes.h"
 

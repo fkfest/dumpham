@@ -185,9 +185,16 @@ lui Finput::analyzecommand(lui ipos)
     ipos1 = IL::nextwordpos(_input,ipos);
     ipos = IL::skip(_input,ipos,"{} :");
     lui ipos2 = IL::skipr(_input,ipos1,"{} ");
-    std::string hubdef = "heisenberg,"+_input.substr(ipos,ipos2-ipos);
-    IL::changePars(hubdef, 0);
+    std::string heidef = "heisenberg,"+_input.substr(ipos,ipos2-ipos);
+    IL::changePars(heidef, 0);
     analyzeheisham();
+  } else if ( str == commands["ppp"] ) {
+    ipos1 = IL::nextwordpos(_input,ipos);
+    ipos = IL::skip(_input,ipos,"{} :");
+    lui ipos2 = IL::skipr(_input,ipos1,"{} ");
+    std::string pppdef = "ppp,"+_input.substr(ipos,ipos2-ipos);
+    IL::changePars(pppdef, 0);
+    analyzepppham();
   }
   return ipos1;
 }
@@ -350,6 +357,23 @@ bool Finput::analyzeheisham()
 
   Periodic persym = analyzegeom();
   _dump = std::unique_ptr<Hdump>(new Hdump(persym,ms2,norbs,jpars,kpars));
+  return true;
+}
+
+bool Finput::analyzepppham()
+{
+  int charge = Input::iPars["ppp"]["charge"];
+  int ms2 = Input::iPars["ppp"]["ms2"];
+  double Upar = Input::fPars["ppp"]["U"];
+  double apar = Input::fPars["ppp"]["a"];
+  const TParArray& tparsarray = Input::aPars["ppp"]["t"];
+
+  // hopping
+  std::vector<double> tpars;
+  apars2nums<double>(tpars,tparsarray,std::dec,"t parameter is not float");
+
+  Periodic persym = analyzegeom();
+  _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,apar,tpars));
   return true;
 }
 
