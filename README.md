@@ -88,7 +88,9 @@ The supercell can be stored in a `xyz` file, e.g., for visualization,
 ### Hubbard model
 
 The Hubbard model 
-$$ \hat H = -t \sum_{\langle i,j \rangle, \sigma} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma}$$
+```math
+\hat H = -t \sum_{\langle i,j \rangle, \sigma} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma}
+```
 is specified by the `\hubbard` command. The following parameters can be specified:
 
     \bham
@@ -102,7 +104,9 @@ is specified by the `\hubbard` command. The following parameters can be specifie
 ### Heisenberg model
 
 The Heisenberg model
-$$ \hat H = J \sum_{\langle i,j \rangle} \hat S_i \hat S_j$$
+```math
+\hat H = J \sum_{\langle i,j \rangle} \hat S_i \hat S_j
+```
 is specified by the `\heisenberg` command. The following parameters can be specified:
 
     \bham
@@ -117,7 +121,10 @@ is specified by the `\heisenberg` command. The following parameters can be speci
 ### Pariser-Parr-Pople model
 
 The Pariser-Parr-Pople model
-$$ \hat H = -t \sum_{\langle i,j \rangle, \sigma} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma} +  \sum_{i<j,\sigma,\rho}\frac{U}{\sqrt{1+ar_{ij}^2}} \hat a^\dagger_{i\sigma} \hat a^\dagger_{j\rho} \hat a_{j\rho} \hat a_{i\sigma}$$
+```math
+\hat H = -t \sum_{\langle i,j \rangle, \sigma} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma}
+ + \sum_{i\lt j,\sigma,\rho} \frac{U}{\sqrt{1+ar_{ij}^2}} \hat a^\dagger_{i\sigma} \hat a^\dagger_{j\rho} \hat a_{j\rho} \hat a_{i\sigma}
+```
 is specified by the `\ppp` command. The following parameters can be specified:
 
     \bham
