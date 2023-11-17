@@ -1,8 +1,7 @@
-output,fcinamtoupper=1
-ham,nosym=0
+output,fcinamtoupper=0
 periodic,xyzout=ppp.xyz
 \bham
-\output{1.0.FD}
+\output{ppp.FCIDUMP}
 \geom{
 dimension={4,1}, pbc={1,0},
 lat={{1,0}{0,2}},

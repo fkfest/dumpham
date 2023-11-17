@@ -629,7 +629,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
         // set U
         set_twoel_spa(p,p,p,p,Upar);
       } else {
-        set_twoel_spa(p,p,q,q,Upar/sqrt(1.0+apar*dd));
+        set_twoel_spa(p,p,q,q,0.5*Upar/sqrt(1.0+apar*dd));
         for ( uint i = 0; i < tpar.size(); ++i ) {
           if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
             set_oneel_spa(p,q,-tpar[i]);
