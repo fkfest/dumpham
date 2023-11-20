@@ -74,8 +74,8 @@ For all model Hamiltonians one has to specify the geometry of the system using t
 More complicated geometries can be specified by defining coordinates of all sites within a unit-cell and lattice vectors. For example, the following command specifies fused benzene rings system with the periodic boundary condition in `y` direction (and the supercell of 3 rings):
 
     \geom{dimension={1,3}, pbc={0,1},
-          lat={{5.2,0}{0,4.5}},
-          ucell={{1.3,0}{3.9,0}{0,2.25}{5.2,2.25}{1.3,4.5}{3.9,4.5}} }
+          lat={{5.2,0}{0,4.503332}},
+          ucell={{1.3,0}{3.9,0}{0,2.251666}{5.2,2.251666}{1.3,4.503332}{3.9,4.503332}} }
 
 The supercell can be stored in a `xyz` file, e.g., for visualization,
 
