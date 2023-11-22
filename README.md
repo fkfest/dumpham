@@ -122,7 +122,7 @@ is specified by the `\heisenberg` command. The following parameters can be speci
 
 The Pariser-Parr-Pople model
 ```math
-\hat H = -t \sum_{\langle i,j \rangle, \sigma} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma}
+\hat H = -t \sum_{\langle i,j \rangle, \sigma} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + \frac{1}{2} U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma}
  + \sum_{i\lt j,\sigma,\rho} \frac{U}{\sqrt{1+ar_{ij}^2}} \hat a^\dagger_{i\sigma} \hat a^\dagger_{j\rho} \hat a_{j\rho} \hat a_{i\sigma}
 ```
 is specified by the `\ppp` command. The following parameters can be specified:
