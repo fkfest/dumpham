@@ -135,3 +135,5 @@ is specified by the `\ppp` command. The following parameters can be specified:
 * `U` - the on-site Coulomb repulsion
 * `t` - the hopping parameters. The hopping parameters can be specified as a single number (nearest-neighbour hopping) or as a list of numbers (to include next-nearest neighbour hoppings etc)
 * `a` - the parameter of the long-range Coulomb repulsion
+
+By default a shift is applied to the Hamiltonian to make the interaction behave as fluctuation potential. The shift can be disabled by setting `add_shift=0` in the `ppp` command.

@@ -606,6 +606,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
   alloc_ints();
   PSite s1(pers.ndim()),s2(pers.ndim());
   if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
+  bool add_shift = true;
 #ifndef MOLPRO
   if ( Input::iPars["geom"]["print"] > 0 ) {
     // print geometry
@@ -616,11 +617,14 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
     xout << std::endl;
     s1.zero();
   }
+  add_shift = (Input::iPars["ppp"]["add_shift"] > 0);
 #endif
   // squares of distances to neighbours
   std::vector<double> dist2_neighbours = pers.dist2neighbours(tpar.size());
+  double const_shift = 0.0;
   uint p = 0;
   do {
+    double diag_shift = 0.0;
     uint q = 0;
     do {
       double dd = pers.dist2(s1,s2);
@@ -628,8 +632,13 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
         assert( p == q );
         // set U
         set_twoel_spa(p,p,p,p,Upar);
+        diag_shift -= 0.5 * Upar;
+        const_shift += 0.25 * Upar;
       } else {
-        set_twoel_spa(p,p,q,q,Upar/sqrt(1.0+apar*dd));
+        double Vpq = Upar/sqrt(1.0+apar*dd);
+        set_twoel_spa(p,p,q,q,Vpq);
+        diag_shift -= Vpq;
+        const_shift += 0.5 * Vpq;
         for ( uint i = 0; i < tpar.size(); ++i ) {
           if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
             set_oneel_spa(p,q,-tpar[i]);
@@ -640,8 +649,14 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
       ++q;
     } while ( pers.next(s2) );
     s2.zero();
+    if ( add_shift ) {
+      set_oneel_spa(p,p,diag_shift);
+    }
     ++p;
   } while ( pers.next(s1) );
+  if ( add_shift ) {
+    _escal = const_shift;
+  }
 }
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
