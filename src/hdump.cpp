@@ -471,6 +471,7 @@ void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<dou
 #endif
   // squares of distances to neighbours
   std::vector<double> dist2_neighbours = pers.dist2neighbours(tpar.size());
+  std::vector<int> number_neighbours(tpar.size(),0);
   uint p = 0;
   do {
     uint q = 0;
@@ -484,6 +485,7 @@ void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<dou
         for ( uint i = 0; i < tpar.size(); ++i ) {
           if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
             set_oneel_spa(p,q,-tpar[i]);
+            if (p < q) ++number_neighbours[i];
             break;
           }
         }
@@ -493,6 +495,12 @@ void Hdump::gen_hubbard(const Periodic& pers, double Upar, const std::vector<dou
     s2.zero();
     ++p;
   } while ( pers.next(s1) );
+  xout << "Number of neighbours: ";
+  for ( uint i = 0; i < number_neighbours.size(); ++i ) {
+    if ( i > 0 ) xout << ", ";
+    xout << number_neighbours[i];
+  }
+  xout << std::endl;
 }
 
 void Hdump::set_j(uint p_site, uint q_site, uint norbs_per_site, double jval) {
@@ -557,6 +565,7 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
   }
   // squares of distances to neighbours
   std::vector<double> dist2_neighbours = pers.dist2neighbours(jpar.size());
+  std::vector<int> number_neighbours(jpar.size(),0);
   uint p_site = 0;
   do {
     uint q_site = 0;
@@ -580,6 +589,7 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
               hueckmat[p_site+q_site*nsites] = -jpar[i];
               hueckmat[q_site+p_site*nsites] = -jpar[i];
             }
+            if (p_site < q_site) ++number_neighbours[i];
             break;
           }
         }
@@ -589,6 +599,12 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
     s2.zero();
     ++p_site;
   } while ( pers.next(s1) );
+  xout << "Number of neighbours: ";
+  for ( uint i = 0; i < number_neighbours.size(); ++i ) {
+    if ( i > 0 ) xout << ", ";
+    xout << number_neighbours[i];
+  }
+  xout << std::endl;
 
   if (gen_hueckel) {
     // store the Hueckel matrix 
@@ -621,6 +637,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
 #endif
   // squares of distances to neighbours
   std::vector<double> dist2_neighbours = pers.dist2neighbours(tpar.size());
+  std::vector<int> number_neighbours(tpar.size(),0);
   double const_shift = 0.0;
   uint p = 0;
   do {
@@ -642,6 +659,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
         for ( uint i = 0; i < tpar.size(); ++i ) {
           if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
             set_oneel_spa(p,q,-tpar[i]);
+            if (p < q) ++number_neighbours[i];
             break;
           }
         }
@@ -657,6 +675,12 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
   if ( add_shift ) {
     _escal = const_shift;
   }
+  xout << "Number of neighbours: ";
+  for ( uint i = 0; i < number_neighbours.size(); ++i ) {
+    if ( i > 0 ) xout << ", ";
+    xout << number_neighbours[i];
+  }
+  xout << std::endl;
 }
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
