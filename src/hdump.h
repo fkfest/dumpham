@@ -46,8 +46,8 @@ public:
   // Heisenberg
   Hdump(const Periodic& pers, int ms2, int norbs_per_site, 
         const std::vector<double>& jpar, const std::vector<double>& kpar);
-  // PPP
-  Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar, const std::vector<double>& tpar);
+  // PPP and expPPP
+  Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar, const std::vector<double>& tpar, double tdecay=0.0);
   // construct as a union of two dumps properties (only _uhf and _simtra can differ!)
   Hdump(const Hdump& hd1, const Hdump& hd2);
   // copy info from hd, changing optionally _uhf and _simtra (-1: false, 0: not changed, 1: true)
@@ -206,6 +206,8 @@ public:
   void gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::vector<double>& jpar, const std::vector<double>& kpar);
   //gen integrals for PPP model
   void gen_PPP(const Periodic& pers, double Upar, double apar, const std::vector<double>& tpar);
+  //gen integrals for exponential PPP (PPP + charge transfer) model
+  void gen_expPPP(const Periodic& pers, double Upar, double apar, double tpar, double tdecay);
   // add scal*S^2 to the Hamiltonian
   void addS2(double scal = 1.0);
 

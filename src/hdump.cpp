@@ -125,22 +125,35 @@ Hdump::Hdump(const Periodic& pers, int ms2, int norbs_per_site,
   gen_heisenberg(pers,norbs_per_site,jpar,kpar);
 }
 
-Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar, const std::vector<double>& tpar)
+Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar, 
+             const std::vector<double>& tpar, double tdecay)
 {
-  xout << "PPP model:";
+  bool exppp = ( tdecay > 1.e-14 );
+  if ( exppp ) {
+    xout << "PPP + charge-transfer model:";
+  } else {
+    xout << "PPP model:";
+  }
   if ( tpar.size() == 0 ) {
     error("No t parameter given!");
   }
   xout << " U/t=" << Upar/tpar[0] << " a=" << apar;
-  if ( tpar.size() > 1 ) {
+  if ( exppp ) {
+    xout << " tdecay=" << tdecay;
+  } else if ( tpar.size() > 1 ) {
     xout << " next-neighbour-t: ";
     for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
   }
   xout << std::endl;
   setup_ham_header(pers,charge,ms2,1);
 
-  gen_PPP(pers,Upar,apar,tpar);
+  if ( exppp ) {
+    gen_expPPP(pers,Upar,apar,tpar[0],tdecay);
+  } else {
+    gen_PPP(pers,Upar,apar,tpar);
+  }
 }
+
 
 Hdump::Hdump(const Hdump& hd1, const Hdump& hd2)
 {
@@ -682,6 +695,71 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
   }
   xout << std::endl;
 }
+
+void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tpar, double tdecay)
+{
+#ifdef MOLPRO
+  double tol = 1.e-6;
+#else
+  double tol = Input::fPars["periodic"]["thrdist"];
+#endif
+  alloc_ints();
+  PSite s1(pers.ndim()),s2(pers.ndim());
+  if ( pers.antiperiodic() ) error("Antiperiodic boundaries not implemented!");
+  bool add_shift = true;
+#ifndef MOLPRO
+  if ( Input::iPars["geom"]["print"] > 0 ) {
+    // print geometry
+    xout << "Geometry: ";
+    do {
+      xout << pers.site_coords(s1);
+    } while (pers.next(s1));
+    xout << std::endl;
+    s1.zero();
+  }
+  add_shift = (Input::iPars["ppp"]["add_shift"] > 0);
+#endif
+  // squares of distances to the next neighbour
+  std::vector<double> dist2_neighbours = pers.dist2neighbours(1);
+  double shortest_dist = sqrt(dist2_neighbours[0]);
+  int number_neighbours = 0;
+  double const_shift = 0.0;
+  uint p = 0;
+  do {
+    double diag_shift = 0.0;
+    uint q = 0;
+    do {
+      double dd = pers.dist2(s1,s2);
+      if ( dd < tol ) {
+        assert( p == q );
+        // set U
+        set_twoel_spa(p,p,p,p,Upar);
+        diag_shift -= 0.5 * Upar;
+        const_shift += 0.25 * Upar;
+      } else {
+        double Vpq = Upar/sqrt(1.0+apar*dd);
+        set_twoel_spa(p,p,q,q,Vpq);
+        diag_shift -= Vpq;
+        const_shift += 0.5 * Vpq;
+        double dist = sqrt(dd);
+        double t = tpar * exp(-tdecay*(dist-shortest_dist));
+        set_oneel_spa(p,q,-t);
+        if (p < q && std::abs(dd - dist2_neighbours[0]) < tol ) ++number_neighbours;
+      }
+      ++q;
+    } while ( pers.next(s2) );
+    s2.zero();
+    if ( add_shift ) {
+      set_oneel_spa(p,p,diag_shift);
+    }
+    ++p;
+  } while ( pers.next(s1) );
+  if ( add_shift ) {
+    _escal = const_shift;
+  }
+  xout << "Number of the next neighbours at the shortest distance: " << number_neighbours << std::endl;
+}
+
 
 void Hdump::check_input_norbs(FDPar& orb, const std::string& kind, bool verbose) const
 {

@@ -137,3 +137,12 @@ is specified by the `\ppp` command. The following parameters can be specified:
 * `a` - the parameter of the long-range Coulomb repulsion
 
 By default a shift is applied to the Hamiltonian to make the interaction behave as fluctuation potential. The shift can be disabled by setting `add_shift=0` in the `ppp` command.
+
+### Pariser-Parr-Pople + charge-transfer model
+
+The PPP model is modified such that the hopping term is not restricted to the next-neighbours, but instead is exponentially decaying,
+```math
+\hat H = -t \sum_{i,j, \sigma} e^{-d\left(r_{ij}-r_0\right)} \hat a^\dagger_{i,\sigma} \hat a_{j,\sigma} + \frac{1}{2} U \sum_{i,\sigma,\rho} \hat a^\dagger_{i\sigma} \hat a^\dagger_{i\rho} \hat a_{i\rho} \hat a_{i\sigma}
+ + \sum_{i\lt j,\sigma,\rho} \frac{U}{\sqrt{1+ar_{ij}^2}} \hat a^\dagger_{i\sigma} \hat a^\dagger_{j\rho} \hat a_{j\rho} \hat a_{i\sigma}.
+```
+The model is activated by specifying the decay parameter in the `\ppp` command as `tdecay`. Note that in this model only one `t` can be provided. 
