@@ -368,13 +368,14 @@ bool Finput::analyzepppham()
   double apar = Input::fPars["ppp"]["a"];
   const TParArray& tparsarray = Input::aPars["ppp"]["t"];
   double tdecay = Input::fPars["ppp"]["tdecay"];
+  double udecay = Input::fPars["ppp"]["udecay"];
 
   // hopping
   std::vector<double> tpars;
   apars2nums<double>(tpars,tparsarray,std::dec,"t parameter is not float");
 
   Periodic persym = analyzegeom();
-  _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,apar,tpars,tdecay));
+  _dump = std::unique_ptr<Hdump>(new Hdump(persym,charge,ms2,Upar,apar,tpars,tdecay,udecay));
   return true;
 }
 

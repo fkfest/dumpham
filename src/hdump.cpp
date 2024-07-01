@@ -126,7 +126,7 @@ Hdump::Hdump(const Periodic& pers, int ms2, int norbs_per_site,
 }
 
 Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar, 
-             const std::vector<double>& tpar, double tdecay)
+             const std::vector<double>& tpar, double tdecay, double udecay)
 {
   bool exppp = ( tdecay > 1.e-14 );
   if ( exppp ) {
@@ -148,9 +148,9 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar
   setup_ham_header(pers,charge,ms2,1);
 
   if ( exppp ) {
-    gen_expPPP(pers,Upar,apar,tpar[0],tdecay);
+    gen_expPPP(pers,Upar,apar,tpar[0],tdecay,udecay);
   } else {
-    gen_PPP(pers,Upar,apar,tpar);
+    gen_PPP(pers,Upar,apar,tpar,udecay);
   }
 }
 
@@ -625,7 +625,7 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
   }
 }
 
-void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::vector<double>& tpar)
+void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::vector<double>& tpar, double udecay)
 {
 #ifdef MOLPRO
   double tol = 1.e-6;
@@ -665,7 +665,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
         diag_shift -= 0.5 * Upar;
         const_shift += 0.25 * Upar;
       } else {
-        double Vpq = Upar/sqrt(1.0+apar*dd);
+        double Vpq = Upar*(exp(-udecay*sqrt(dd)))/sqrt(1.0+apar*dd);
         set_twoel_spa(p,p,q,q,Vpq);
         diag_shift -= Vpq;
         const_shift += 0.5 * Vpq;
@@ -696,7 +696,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
   xout << std::endl;
 }
 
-void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tpar, double tdecay)
+void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tpar, double tdecay, double udecay)
 {
 #ifdef MOLPRO
   double tol = 1.e-6;
@@ -737,7 +737,7 @@ void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tp
         diag_shift -= 0.5 * Upar;
         const_shift += 0.25 * Upar;
       } else {
-        double Vpq = Upar/sqrt(1.0+apar*dd);
+        double Vpq = Upar*exp(-udecay*sqrt(dd))/sqrt(1.0+apar*dd);
         set_twoel_spa(p,p,q,q,Vpq);
         diag_shift -= Vpq;
         const_shift += 0.5 * Vpq;
