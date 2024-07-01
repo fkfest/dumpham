@@ -650,6 +650,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
 #endif
   // squares of distances to neighbours
   std::vector<double> dist2_neighbours = pers.dist2neighbours(tpar.size());
+  double shortest_dist = sqrt(dist2_neighbours[0]);
   std::vector<int> number_neighbours(tpar.size(),0);
   double const_shift = 0.0;
   uint p = 0;
@@ -665,7 +666,8 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
         diag_shift -= 0.5 * Upar;
         const_shift += 0.25 * Upar;
       } else {
-        double Vpq = Upar*(exp(-udecay*sqrt(dd)))/sqrt(1.0+apar*dd);
+        double dist = sqrt(dd);
+        double Vpq = Upar*exp(-udecay*(dist-shortest_dist))/sqrt(1.0+apar*dd);
         set_twoel_spa(p,p,q,q,Vpq);
         diag_shift -= Vpq;
         const_shift += 0.5 * Vpq;
@@ -737,11 +739,11 @@ void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tp
         diag_shift -= 0.5 * Upar;
         const_shift += 0.25 * Upar;
       } else {
-        double Vpq = Upar*exp(-udecay*sqrt(dd))/sqrt(1.0+apar*dd);
+        double dist = sqrt(dd);
+        double Vpq = Upar*exp(-udecay*(dist-shortest_dist))/sqrt(1.0+apar*dd);
         set_twoel_spa(p,p,q,q,Vpq);
         diag_shift -= Vpq;
         const_shift += 0.5 * Vpq;
-        double dist = sqrt(dd);
         double t = tpar * exp(-tdecay*(dist-shortest_dist));
         set_oneel_spa(p,q,-t);
         if (p < q && std::abs(dd - dist2_neighbours[0]) < tol ) ++number_neighbours;
