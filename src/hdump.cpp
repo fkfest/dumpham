@@ -126,7 +126,7 @@ Hdump::Hdump(const Periodic& pers, int ms2, int norbs_per_site,
 }
 
 Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar, 
-             const std::vector<double>& tpar, double tdecay, double udecay)
+             const std::vector<double>& tpar, double tdecay, double udecay, double frozen)
 {
   bool exppp = ( tdecay > 1.e-14 );
   if ( exppp ) {
@@ -145,12 +145,15 @@ Hdump::Hdump(const Periodic& pers, int charge, int ms2, double Upar, double apar
     for ( uint i = 1; i < tpar.size(); ++i ) xout << tpar[i]/tpar[0] << ",";
   }
   xout << std::endl;
+  if ( std::abs(frozen) > 1.e-14 ) {
+    xout << "Frozen core on each center: " << frozen << std::endl;
+  } 
   setup_ham_header(pers,charge,ms2,1);
 
   if ( exppp ) {
-    gen_expPPP(pers,Upar,apar,tpar[0],tdecay,udecay);
+    gen_expPPP(pers,Upar,apar,tpar[0],tdecay,udecay,frozen);
   } else {
-    gen_PPP(pers,Upar,apar,tpar,udecay);
+    gen_PPP(pers,Upar,apar,tpar,udecay,frozen);
   }
 }
 
@@ -625,7 +628,8 @@ void Hdump::gen_heisenberg(const Periodic& pers, int norbs_per_site, const std::
   }
 }
 
-void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::vector<double>& tpar, double udecay)
+void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::vector<double>& tpar, 
+                    double udecay, double frozen)
 {
 #ifdef MOLPRO
   double tol = 1.e-6;
@@ -653,6 +657,7 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
   double shortest_dist = sqrt(dist2_neighbours[0]);
   std::vector<int> number_neighbours(tpar.size(),0);
   double const_shift = 0.0;
+  double const_diag_shift = 0.0;
   uint p = 0;
   do {
     double diag_shift = 0.0;
@@ -669,7 +674,8 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
         double dist = sqrt(dd);
         double Vpq = Upar*exp(-udecay*(dist-shortest_dist))/sqrt(1.0+apar*dd);
         set_twoel_spa(p,p,q,q,Vpq);
-        diag_shift -= Vpq;
+        diag_shift -= Vpq + frozen * Vpq;
+        const_diag_shift += frozen * Vpq;
         const_shift += 0.5 * Vpq;
         for ( uint i = 0; i < tpar.size(); ++i ) {
           if ( std::abs(dd - dist2_neighbours[i]) < tol ) {
@@ -688,6 +694,14 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
     ++p;
   } while ( pers.next(s1) );
   if ( add_shift ) {
+    if ( std::abs(const_diag_shift) > 1.e-14 ) {
+      p = 0;
+      s1.zero();
+      do {
+        set_oneel_spa(p,p,oneel_spa(p,p) + const_diag_shift/_norb);
+        ++p;
+      } while ( pers.next(s1) );
+    }
     _escal = const_shift;
   }
   xout << "Number of neighbours: ";
@@ -698,7 +712,8 @@ void Hdump::gen_PPP(const Periodic& pers, double Upar, double apar, const std::v
   xout << std::endl;
 }
 
-void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tpar, double tdecay, double udecay)
+void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tpar, double tdecay, 
+                       double udecay, double frozen)
 {
 #ifdef MOLPRO
   double tol = 1.e-6;
@@ -726,6 +741,7 @@ void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tp
   double shortest_dist = sqrt(dist2_neighbours[0]);
   int number_neighbours = 0;
   double const_shift = 0.0;
+  double const_diag_shift = 0.0;
   uint p = 0;
   do {
     double diag_shift = 0.0;
@@ -742,7 +758,8 @@ void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tp
         double dist = sqrt(dd);
         double Vpq = Upar*exp(-udecay*(dist-shortest_dist))/sqrt(1.0+apar*dd);
         set_twoel_spa(p,p,q,q,Vpq);
-        diag_shift -= Vpq;
+        diag_shift -= Vpq + frozen * Vpq;
+        const_diag_shift += frozen * Vpq;
         const_shift += 0.5 * Vpq;
         double t = tpar * exp(-tdecay*(dist-shortest_dist));
         set_oneel_spa(p,q,-t);
@@ -757,6 +774,14 @@ void Hdump::gen_expPPP(const Periodic& pers, double Upar, double apar, double tp
     ++p;
   } while ( pers.next(s1) );
   if ( add_shift ) {
+    if ( std::abs(const_diag_shift) > 1.e-14 ) {
+      p = 0;
+      s1.zero();
+      do {
+        set_oneel_spa(p,p,oneel_spa(p,p) + const_diag_shift/_norb);
+        ++p;
+      } while ( pers.next(s1) );
+    }
     _escal = const_shift;
   }
   xout << "Number of the next neighbours at the shortest distance: " << number_neighbours << std::endl;
