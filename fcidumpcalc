@@ -2,7 +2,7 @@
 
 MEM=100
 # prefered number of basis functions per atom
-NBAS=10
+NBAS=1
 # orbitals file
 ORBS=
 PROGNAME=$(basename $0)
